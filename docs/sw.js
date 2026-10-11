@@ -9,6 +9,7 @@ const SHELL = [
   './icon-180.png',
   './icon-192.png',
   './icon-512.png',
+  './favicon.ico',
   './favicon-32.png',
 ];
 

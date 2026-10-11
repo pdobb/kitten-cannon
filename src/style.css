@@ -402,6 +402,10 @@ button#start, button#again, #pad button {
   box-shadow: 4px 4px 0 #2b2118;
 }
 
+button#again {
+  margin-top: 22px;
+}
+
 button#start:active, button#again:active, #pad button:active {
   transform: translate(3px, 3px);
   box-shadow: none;
