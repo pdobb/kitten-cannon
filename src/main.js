@@ -473,7 +473,7 @@ function startAim() {
 
 function beginShot(forcedPower) {
   safeAudio(() => audio.unlock());
-  const power = forcedPower == null ? powerFromClock(performance.now() / 1000) : forcedPower;
+  const power = forcedPower == null ? powerFromClock(playSeconds()) : forcedPower;
   game.power = power;
   game.was = { furthest: game.furthest, highest: game.highest, fastest: game.fastest };
   game.kitten = makeState(game.angle, power);
@@ -773,6 +773,12 @@ bindTap(muteEl, () => {
 let clockOffset = 0;
 let pausedAt = 0;
 
+// The aim bar and the shot both read this. A pause adds to clockOffset, so a
+// raw performance.now() would fire a different percent than the bar shows.
+function playSeconds(now = performance.now()) {
+  return (now - clockOffset) / 1000;
+}
+
 function setPaused(on) {
   if (on === game.paused) return;
   game.paused = on;
@@ -1023,7 +1029,7 @@ function updateCamera(dt) {
 }
 
 function updateHud() {
-  const power = powerFromClock((performance.now() - clockOffset) / 1000);
+  const power = powerFromClock(playSeconds());
   const pct = powerPercent(power);
   angleEl.textContent = `${Math.round(game.angle)}°`;
   powerEl.style.width = `${pct}%`;
@@ -1095,7 +1101,7 @@ function frame(now) {
   if (game.paused && game.checked) return;
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  const time = (now - clockOffset) / 1000;
+  const time = playSeconds(now);
   applyHold(dt);
   game.recoil *= Math.exp(-dt * 6);
   game.squash *= Math.exp(-dt * 9);

@@ -596,6 +596,9 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
 
 #pad button { padding: 10px 14px; min-width: 52px; }
 
+#app[data-phase="title"] #pause-btn,
+#app[data-phase="aim"] #pause-btn,
+#app[data-phase="result"] #pause-btn,
 #app[data-phase="aim"] #title,
 #app[data-phase="flight"] #title,
 #app[data-phase="result"] #title,
@@ -632,7 +635,7 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   #hint { display: none; }
   #meter {
     bottom: calc(14px + var(--safe-bottom));
-    left: calc(128px + var(--safe-left));
+    left: calc(72px + var(--safe-left));
     right: calc(12px + var(--safe-right));
     width: auto;
     transform: none;
@@ -705,7 +708,7 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   #meter {
     top: auto;
     bottom: calc(8px + var(--safe-bottom));
-    left: calc(128px + var(--safe-left));
+    left: calc(72px + var(--safe-left));
     right: calc(210px + var(--safe-right));
     transform: none;
     width: auto;
