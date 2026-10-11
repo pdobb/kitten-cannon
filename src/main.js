@@ -30,6 +30,7 @@ import {
   feetFromTravel,
   formatFt,
   formatMph,
+  shareLine,
   launchPoint,
   mphFromSpeed,
   peekPoint,
@@ -69,6 +70,8 @@ const altitudeEl = document.querySelector('#altitude');
 const speedEl = document.querySelector('#speed');
 const recordsEl = document.querySelector('#records');
 const titleBestEl = document.querySelector('#title-best');
+const challengeEl = document.querySelector('#challenge');
+const shareEl = document.querySelector('#share');
 const angleEl = document.querySelector('#angle');
 const powerEl = document.querySelector('#power');
 const powerLabelEl = document.querySelector('#power-label');
@@ -133,6 +136,8 @@ shadow.rotation.x = -Math.PI / 2;
 shadow.position.y = 0.7;
 scene.add(shadow);
 
+const params = new URLSearchParams(location.search);
+
 const game = {
   phase: 'title',
   angle: DEFAULT_ANGLE,
@@ -143,6 +148,7 @@ const game = {
   furthestX: 0,
   highest: loadNumber(HIGH_KEY),
   fastest: loadNumber(FAST_KEY),
+  challenge: readChallenge(params),
   peakY: 0,
   peakSpeed: 0,
   was: { furthest: 0, highest: 0, fastest: 0 },
@@ -154,8 +160,6 @@ const game = {
 };
 const cam = { x: 500, y: 120, z: 980, shake: 0 };
 const hold = { ArrowUp: 0, ArrowDown: 0 };
-
-const params = new URLSearchParams(location.search);
 
 function loadNumber(key) {
   try {
@@ -227,6 +231,29 @@ function appendRecordRows(el, marks) {
   }
 }
 
+function readChallenge(search) {
+  const num = (key) => {
+    if (!search.has(key)) return null;
+    const n = Number(search.get(key));
+    if (!Number.isFinite(n) || n < 0) return null;
+    return Math.round(n);
+  };
+  const ft = num('ft');
+  if (ft == null) return null;
+  return { ft, up: num('up') ?? 0, mph: num('mph') ?? 0 };
+}
+
+function paintChallenge() {
+  const challenge = game.challenge;
+  if (!challenge) {
+    challengeEl.hidden = true;
+    return;
+  }
+  challengeEl.hidden = false;
+  challengeEl.querySelector('b').textContent = formatFt(challenge.ft);
+  challengeEl.querySelector('.challenge-more').textContent = `${formatFt(challenge.up)} up · ${formatMph(challenge.mph)}`;
+}
+
 function paintRecords() {
   recordsEl.replaceChildren();
   appendRecordRows(recordsEl, null);
@@ -234,6 +261,7 @@ function paintRecords() {
   if (game.furthest > 0 || game.highest > 0 || game.fastest > 0) {
     appendRecordRows(titleBestEl, null);
   }
+  paintChallenge();
 }
 
 function clampAngle() {
@@ -546,6 +574,58 @@ if (document.documentElement.requestFullscreen || document.documentElement.webki
 
 bindTap(document.querySelector('#start'), startAim);
 bindTap(document.querySelector('#again'), retry);
+
+let shareTimer = 0;
+function markCopied() {
+  shareEl.textContent = 'Copied';
+  clearTimeout(shareTimer);
+  shareTimer = setTimeout(() => {
+    shareEl.textContent = 'Share';
+  }, 1600);
+}
+
+function copyShare(line) {
+  const done = (ok) => {
+    if (ok) markCopied();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(line).then(() => done(true)).catch(() => done(copyShareFallback(line)));
+    return;
+  }
+  done(copyShareFallback(line));
+}
+
+function copyShareFallback(line) {
+  try {
+    const area = document.createElement('textarea');
+    area.value = line;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.left = '-999px';
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand('copy');
+    area.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+function onShare() {
+  const line = shareLine(game.feet, feetFromAltitude(game.peakY), mphFromSpeed(game.peakSpeed));
+  const phone = window.matchMedia('(pointer: coarse), (hover: none), (max-width: 720px)').matches;
+  if (phone && typeof navigator.share === 'function') {
+    navigator.share({ text: line }).catch((err) => {
+      if (err && err.name === 'AbortError') return;
+      copyShare(line);
+    });
+    return;
+  }
+  copyShare(line);
+}
+
+bindTap(shareEl, onShare);
 function paintMute(muted) {
   muteEl.classList.toggle('is-muted', muted);
   muteEl.setAttribute('aria-label', muted ? 'Sound off' : 'Sound on');
@@ -900,6 +980,10 @@ window.__kitten = {
   },
   get poles() {
     return poles.map((pole) => ({ x: pole.x, feet: pole.feet }));
+  },
+  get challenge() { return game.challenge; },
+  shareText() {
+    return shareLine(game.feet, feetFromAltitude(game.peakY), mphFromSpeed(game.peakSpeed));
   },
   get sky() { return flybys.stats(); },
   get cause() { return game.kitten ? game.kitten.cause : null; },

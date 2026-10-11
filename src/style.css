@@ -160,6 +160,32 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner {
   color: #d23b2e;
 }
 
+.challenge { margin: 0 0 14px; }
+.challenge .eyebrow { margin-bottom: 2px; }
+.challenge-ft {
+  margin: 0;
+  font-family: "Lilita One", "Trebuchet MS", sans-serif;
+  font-size: 32px;
+  line-height: 1;
+  color: #d23b2e;
+}
+.challenge-more {
+  margin: 4px 0 0;
+  font-family: Nunito, sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  color: #3f2918;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
 #fullscreen {
   position: absolute;
   z-index: 4;
@@ -390,7 +416,7 @@ button, #mute {
   touch-action: manipulation;
 }
 
-button#start, button#again, #pad button {
+button#start, button#again, button#share, #pad button {
   font-family: "Lilita One", "Trebuchet MS", sans-serif;
   border: 4px solid #2b2118;
   background: #e23b2e;
@@ -402,11 +428,12 @@ button#start, button#again, #pad button {
   box-shadow: 4px 4px 0 #2b2118;
 }
 
-button#again {
-  margin-top: 22px;
+button#share {
+  background: #fff6e4;
+  color: #2b2118;
 }
 
-button#start:active, button#again:active, #pad button:active {
+button#start:active, button#again:active, button#share:active, #pad button:active {
   transform: translate(3px, 3px);
   box-shadow: none;
 }
@@ -520,7 +547,11 @@ button#start:active, button#again:active, #pad button:active {
   #card-best .flight-speed { font-size: 16px; margin: 2px 0 8px; }
   .bestline, #card-best { margin-top: 8px; }
   #need-js { font-size: 14px; margin-top: 8px; }
-  button#start, button#again { font-size: 20px; padding: 8px 18px; }
+  .challenge { margin-bottom: 10px; }
+  .challenge-ft { font-size: 26px; }
+  .challenge-more { font-size: 14px; }
+  .actions { gap: 8px; margin-top: 16px; }
+  button#start, button#again, button#share { font-size: 20px; padding: 8px 16px; }
 }
 
 @media (max-height: 500px) {
@@ -561,7 +592,11 @@ button#start:active, button#again:active, #pad button:active {
   #card-best .flight-speed { font-size: 14px; margin: 1px 0 4px; }
   .bestline, #card-best { margin-top: 4px; }
   #records p, .bestline p, #card-best p { line-height: 1.25; gap: 10px; }
-  button#start, button#again { font-size: 18px; padding: 6px 14px; }
+  .challenge { margin-bottom: 6px; }
+  .challenge-ft { font-size: 22px; }
+  .challenge-more { margin-top: 2px; font-size: 13px; }
+  .actions { gap: 8px; margin-top: 12px; }
+  button#start, button#again, button#share { font-size: 18px; padding: 6px 12px; }
   #pad button { padding: 8px 12px; font-size: 18px; }
 }
 

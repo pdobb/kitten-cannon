@@ -9,6 +9,7 @@ import {
   feetFromTravel,
   formatMph,
   launchPoint,
+  shareLine,
   mphFromSpeed,
   POWER_MAX,
   POWER_MIN,
@@ -38,6 +39,10 @@ function shot(angle, power, props, frames = 30 * 60) {
 // px/frame, which is already ft/s, and shown as mph.
 {
   assert.equal(feetFromAltitude(GROUND_Y + PIXELS_PER_FOOT), 1);
+  assert.equal(
+    shareLine(5786, 274, 142),
+    'I flew 5,786 ft in Kitten Cannon (274 ft up, 142 mph). https://pdobb.github.io/kitten-cannon/?ft=5786&up=274&mph=142',
+  );
   assert.equal(feetFromAltitude(GROUND_Y - 20), 0);
   assert.equal(mphFromSpeed(30), 20);
   assert.equal(formatMph(20), '20 mph');

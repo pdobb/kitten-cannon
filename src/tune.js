@@ -86,3 +86,12 @@ export function formatFt(n) {
 export function formatMph(mph) {
   return `${Math.max(0, Math.round(mph)).toLocaleString('en-US')} mph`;
 }
+
+// The page preview is the same for every link, so the score rides in the line.
+export function shareLine(ft, up, mph) {
+  const far = Math.max(0, Math.round(Number(ft) || 0));
+  const high = Math.max(0, Math.round(Number(up) || 0));
+  const speed = Math.max(0, Math.round(Number(mph) || 0));
+  const url = `https://pdobb.github.io/kitten-cannon/?ft=${far}&up=${high}&mph=${speed}`;
+  return `I flew ${far.toLocaleString('en-US')} ft in Kitten Cannon (${high.toLocaleString('en-US')} ft up, ${speed.toLocaleString('en-US')} mph). ${url}`;
+}
