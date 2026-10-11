@@ -148,7 +148,7 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
 
 #card-best .flight-speed {
   display: block;
-  margin: 4px 0 12px;
+  margin: 4px 0 2px;
   text-align: center;
   font-family: Nunito, sans-serif;
   font-weight: 800;
@@ -156,12 +156,22 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
   color: #3f2918;
 }
 
-#card-best .fresh b {
+#card-best p.shot {
+  display: block;
+  margin: 0 0 12px;
+  text-align: center;
+  white-space: normal;
+  font-family: Nunito, sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  color: #3f2918;
+}
+
+#card-best p.shot.perfect {
   color: #d23b2e;
 }
 
-#card-best p.perfect span,
-#card-best p.perfect b {
+#card-best .fresh b {
   color: #d23b2e;
 }
 
@@ -643,7 +653,8 @@ button#start:active, button#again:active, #pad button:active {
   .lede { margin-bottom: 10px; }
   #card-note { margin-top: 4px; }
   #card-best .flight-up { font-size: 24px; }
-  #card-best .flight-speed { font-size: 16px; margin: 2px 0 8px; }
+  #card-best .flight-speed { font-size: 16px; margin: 2px 0 2px; }
+  #card-best p.shot { font-size: 16px; margin: 0 0 8px; }
   #power-cheer b { font-size: clamp(48px, 16vw, 76px); -webkit-text-stroke-width: 5px; }
   #power-cheer.perfect b { font-size: clamp(64px, 20vw, 104px); }
   #power-cheer .kicker { font-size: clamp(18px, 4.5vw, 28px); }
@@ -688,7 +699,8 @@ button#start:active, button#again:active, #pad button:active {
   .lede, #card-note { font-size: 13px; line-height: 1.25; }
   .lede { margin-bottom: 6px; }
   #card-best .flight-up { font-size: 18px; }
-  #card-best .flight-speed { font-size: 14px; margin: 1px 0 4px; }
+  #card-best .flight-speed { font-size: 14px; margin: 1px 0 1px; }
+  #card-best p.shot { font-size: 14px; margin: 0 0 4px; }
   #power-cheer { bottom: calc(8px + var(--safe-bottom)); }
   #power-cheer b { font-size: 44px; }
   #power-cheer.perfect b { font-size: 56px; -webkit-text-stroke-width: 5px; }
@@ -739,7 +751,12 @@ button#start:active, button#again:active, #pad button:active {
   #app[data-phase="result"] #card #card-best .flight-up { font-size: 15px; }
   #app[data-phase="result"] #card #card-best .flight-speed {
     font-size: 13px;
+    margin: 0;
+  }
+  #app[data-phase="result"] #card #card-best p.shot {
+    font-size: 13px;
     margin: 0 0 2px;
+    white-space: normal;
   }
   #app[data-phase="result"] #card .bestline,
   #app[data-phase="result"] #card #card-best { margin-top: 2px; }

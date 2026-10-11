@@ -262,14 +262,10 @@ function recordRows() {
 function appendShotPower(el) {
   const pct = powerPercent(game.power);
   const perfect = pct >= 100;
-  const row = document.createElement('p');
-  if (perfect) row.className = 'perfect';
-  const name = document.createElement('span');
-  name.textContent = perfect ? 'Full power' : 'Power';
-  const num = document.createElement('b');
-  num.textContent = `${pct}%`;
-  row.append(name, num);
-  el.append(row);
+  const line = document.createElement('p');
+  line.className = perfect ? 'shot perfect' : 'shot';
+  line.textContent = `${Math.round(game.angle)}° · ${pct}% power`;
+  el.append(line);
 }
 
 function appendRecordRows(el, marks) {
