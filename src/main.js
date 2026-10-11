@@ -114,16 +114,32 @@ scene.add(stake);
 const poles = [];
 const particles = createParticles(look, scene);
 
-for (let i = 0; i < course.length; i++) {
-  const prop = course[i];
-  const built = createProp(prop.type, look, prop.x);
-  prop.mesh = built.mesh;
-  prop.parts = built.parts;
-  prop.squash = 0;
-  prop.chomp = 0;
-  built.mesh.position.set(prop.x, prop.type === 'balloon' ? prop.y : 0, PROP_Z);
-  scene.add(built.mesh);
+// How far past the kitten the field is filled. Wide enough for the view and
+// for several fast frames, and the same on every screen so the lane does
+// not depend on the window.
+const FIELD_AHEAD = 16000;
+let mounted = 0;
+
+function mountAhead() {
+  for (; mounted < course.length; mounted++) {
+    const prop = course[mounted];
+    const built = createProp(prop.type, look, prop.x);
+    prop.mesh = built.mesh;
+    prop.parts = built.parts;
+    prop.squash = 0;
+    prop.chomp = 0;
+    built.mesh.position.set(prop.x, prop.type === 'balloon' ? prop.y : 0, PROP_Z);
+    scene.add(built.mesh);
+  }
 }
+
+function fieldProps(k) {
+  course.grow(k.x + FIELD_AHEAD);
+  mountAhead();
+  return course.near(k.x, k.x + k.vx);
+}
+
+mountAhead();
 
 const shadow = new THREE.Mesh(
   new THREE.CircleGeometry(16, 18),
@@ -721,6 +737,13 @@ function placeKitten(time) {
 function updateProps(time, dt) {
   for (let i = 0; i < course.length; i++) {
     const prop = course[i];
+    // Props past the old field are created as the flight goes. Leave the
+    // ones far from the camera alone so a long run does not bob every balloon.
+    if (Math.abs(prop.x - cam.x) > 9000) {
+      prop.mesh.visible = false;
+      continue;
+    }
+    if (prop.type !== 'balloon' && !(prop.type === 'tnt' && prop.spent)) prop.mesh.visible = true;
     if (prop.type === 'balloon') {
       if (!prop.spent) prop.y = prop.baseY + Math.sin(time * 1.5 + prop.bob) * 11;
       prop.mesh.position.y = prop.y;
@@ -878,13 +901,14 @@ function frame(now) {
     acc += dt;
     let steps = 0;
     while (acc >= STEP && steps < 5 && !game.kitten.dead) {
-      for (let i = 0; i < course.length; i++) {
-        const prop = course[i];
+      const props = fieldProps(game.kitten);
+      for (let i = 0; i < props.length; i++) {
+        const prop = props[i];
         if (prop.type === 'balloon' && !prop.spent) {
           prop.y = prop.baseY + Math.sin(time * 1.5 + prop.bob) * 11;
         }
       }
-      onEvent(step(game.kitten, course));
+      onEvent(step(game.kitten, props));
       afterStep();
       acc -= STEP;
       steps += 1;
@@ -980,7 +1004,7 @@ if (params.has('demo')) {
   beginShot(Number(params.get('power') || POWER_MAX));
   const frames = Number(params.get('frames') || 0);
   for (let i = 0; i < frames && game.kitten && !game.kitten.dead; i++) {
-    onEvent(step(game.kitten, course));
+    onEvent(step(game.kitten, fieldProps(game.kitten)));
     afterStep();
   }
   commitRecords();

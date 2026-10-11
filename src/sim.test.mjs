@@ -220,6 +220,55 @@ function shot(angle, power, props, frames = 30 * 60) {
 
   const launched = launchPoint(30);
   assert.ok(launched.y > 15, 'the muzzle clears the grass');
+
+  // The learned opening is unchanged. Past 10,000 ft the lane keeps going.
+  assert.equal(course.length, 1020);
+  let sum = 0;
+  for (let n = 0; n < course.length; n++) {
+    const prop = course[n];
+    sum = Math.imul(sum ^ Math.round(prop.x * 10 + prop.y), 0x9e3779b1);
+  }
+  assert.equal(sum >>> 0, 1409172261);
+
+  const farX = launchPoint(32).x + 20000 * PIXELS_PER_FOOT;
+  course.grow(farX);
+  const past = course.filter((prop) => prop.x > launchPoint(32).x + 10000 * PIXELS_PER_FOOT);
+  for (const type of ['balloon', 'tnt', 'trampoline', 'spikes', 'venus']) {
+    assert.ok(past.some((prop) => prop.type === type), `${type} should continue past 10,000 ft`);
+  }
+  assert.ok(
+    past.some((prop) => prop.type === 'balloon' && prop.y > 1000),
+    'high balloons should continue past 10,000 ft'
+  );
+
+  const stepped = buildCourse();
+  let cursor = launchPoint(32).x;
+  while (cursor < farX) {
+    cursor += 8000;
+    stepped.grow(cursor);
+  }
+  assert.equal(stepped.length, course.length);
+  assert.equal(stepped[stepped.length - 1].x, course[course.length - 1].x);
+  assert.equal(stepped[stepped.length - 1].y, course[course.length - 1].y);
+
+  function runNear(angle, power, props, frames) {
+    resetCourse(props);
+    const k = createKitten(angle, power);
+    const hits = [];
+    let guard = 0;
+    while (!k.dead && guard < frames) {
+      props.grow(k.x + 16000);
+      const event = step(k, props.near(k.x, k.x + k.vx));
+      if (event && event !== 'bounce' && event !== 'settle') hits.push(event);
+      guard += 1;
+    }
+    return { kitten: k, hits };
+  }
+
+  const nearNatural = runNear(32, POWER_MAX, course, 30 * 60);
+  const nearLob = runNear(70, POWER_MAX, course, 30 * 160);
+  assert.equal(feetFromTravel(nearNatural.kitten.startX, nearNatural.kitten.x), 1269);
+  assert.equal(feetFromTravel(nearLob.kitten.startX, nearLob.kitten.x), 5001);
 }
 
 console.log('physics ok');
