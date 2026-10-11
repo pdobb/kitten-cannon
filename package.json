@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp dist/index.html dist/manifest.webmanifest dist/sw.js dist/icon-180.png dist/icon-192.png dist/icon-512.png docs/",
+    "build": "vite build && cp dist/index.html dist/manifest.webmanifest dist/sw.js dist/icon-180.png dist/icon-192.png dist/icon-512.png dist/favicon-32.png dist/og.png docs/",
     "preview": "vite preview",
     "test": "node src/sim.test.mjs"
   },

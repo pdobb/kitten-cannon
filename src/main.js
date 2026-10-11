@@ -20,6 +20,7 @@ import {
   GROUND_Y,
   MAX_SPEED,
   PIVOT_X,
+  PIXELS_PER_FOOT,
   POWER_MAX,
   POWER_MIN,
   STEP,
@@ -109,6 +110,8 @@ const cannon = createCannon(look);
 scene.add(cannon.root);
 const stake = createStake(look);
 scene.add(stake);
+// Record poles stay for this visit. The end flag still marks the latest landing.
+const poles = [];
 const particles = createParticles(look, scene);
 
 for (let i = 0; i < course.length; i++) {
@@ -137,6 +140,7 @@ const game = {
   kitten: null,
   feet: 0,
   furthest: loadNumber(FAR_KEY),
+  furthestX: 0,
   highest: loadNumber(HIGH_KEY),
   fastest: loadNumber(FAST_KEY),
   peakY: 0,
@@ -169,6 +173,29 @@ function saveRecords() {
   } catch {
     // Private mode can refuse storage. The score still shows for this run.
   }
+}
+
+function xForFeet(feet) {
+  return launchPoint(DEFAULT_ANGLE).x + feet * PIXELS_PER_FOOT;
+}
+
+function plantPole(x, feet) {
+  if (!(feet > 0) || !Number.isFinite(x)) return;
+  for (const pole of poles) {
+    if (Math.abs(pole.x - x) < 48) {
+      if (x > pole.x) {
+        pole.x = x;
+        pole.feet = feet;
+        pole.mesh.position.x = x;
+      }
+      return;
+    }
+  }
+  const mesh = createStake(look);
+  mesh.visible = true;
+  mesh.position.set(x, 0, 10);
+  scene.add(mesh);
+  poles.push({ x, feet, mesh });
 }
 
 function setPhase(phase) {
@@ -293,6 +320,7 @@ function commitRecords() {
   let dirty = false;
   if (far > game.furthest) {
     game.furthest = far;
+    game.furthestX = k.x;
     dirty = true;
   }
   if (high > game.highest) {
@@ -339,8 +367,14 @@ function finish() {
   pace.textContent = formatMph(mphFromSpeed(game.peakSpeed));
   cardBestEl.append(pace);
   appendRecordRows(cardBestEl, marks);
-  stake.position.set(k.x, 0, 10);
-  stake.visible = true;
+  if (game.furthest > game.was.furthest) plantPole(game.furthestX, game.furthest);
+  const marked = poles.some((pole) => Math.abs(pole.x - k.x) < 48);
+  if (marked) {
+    stake.visible = false;
+  } else {
+    stake.position.set(k.x, 0, 10);
+    stake.visible = true;
+  }
   setPhase('result');
 }
 
@@ -847,6 +881,11 @@ function frame(now) {
   }
 }
 
+if (game.furthest > 0) {
+  game.furthestX = xForFeet(game.furthest);
+  plantPole(game.furthestX, game.furthest);
+}
+
 assertFrames();
 setPhase('title');
 paintRecords();
@@ -858,6 +897,9 @@ window.__kitten = {
   get feet() { return game.feet; },
   get records() {
     return { furthest: game.furthest, highest: game.highest, fastest: game.fastest };
+  },
+  get poles() {
+    return poles.map((pole) => ({ x: pole.x, feet: pole.feet }));
   },
   get sky() { return flybys.stats(); },
   get cause() { return game.kitten ? game.kitten.cause : null; },
