@@ -7,8 +7,8 @@ import { HIT } from './propspec.js';
 
 // Hand-placed lane for a full-power shot (power 64), in Flash pixels.
 // Empty-field landings: ~15° → 4600, ~22° → 6200, ~32° → 7900, ~40° → 8500.
-// The first stretch is boosters sitting on those arcs. Spikes start after
-// the cannon has already thrown the kitten.
+// The first stretch is boosters sitting on those arcs. Tar pits start after
+// the cannon has already thrown the kitten. The hazard type stays 'spikes'.
 const OPENING = [
   { type: 'balloon', x: 980, y: 210 },
   { type: 'tnt', x: 1200 },

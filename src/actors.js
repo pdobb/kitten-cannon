@@ -2,8 +2,18 @@ import * as THREE from 'three';
 import { shell } from './look.js';
 import { BARREL_LEN, CANNON_X, PIVOT_X, PIVOT_Y } from './tune.js';
 
-const FUR = 0x24222a;
-const FUR_DARK = 0x141318;
+// Main coat, then the darker ear. White chest, muzzle, and socks stay.
+// A restart picks a different pair so the kitten actually changes color.
+const COATS = [
+  [0x24222a, 0x141318],
+  [0xd9822b, 0xa85e16],
+  [0x8d939c, 0x5e646c],
+  [0xb08968, 0x7a5a3a],
+  [0x6b4632, 0x3f2918],
+  [0xd9c2a8, 0xb39678],
+  [0x4e5964, 0x2e363e],
+  [0xe7e2da, 0xc4beb4],
+];
 const BELLY = 0xfff8f2;
 const EAR = 0xf3a0b0;
 const NOSE = 0xe56b86;
@@ -26,9 +36,24 @@ function mesh(geo, material, x, y, z) {
 export function createKitten(look) {
   const root = new THREE.Group();
   const { mat, outline } = look;
+  // look.mat caches one material per hex. Clone these so a new coat
+  // does not repaint every mesh that happens to share the tuxedo black.
+  const furMat = mat(0x24222a).clone();
+  const darkMat = mat(0x141318).clone();
+  let coatIndex = -1;
+
+  function recolor() {
+    let next = Math.floor(Math.random() * COATS.length);
+    if (next === coatIndex) next = (next + 1) % COATS.length;
+    coatIndex = next;
+    furMat.color.setHex(COATS[next][0]);
+    darkMat.color.setHex(COATS[next][1]);
+  }
+
+  recolor();
 
   const bodyGeo = new THREE.SphereGeometry(13, 16, 12);
-  const body = mesh(bodyGeo, mat(FUR), 0, 0, 0);
+  const body = mesh(bodyGeo, furMat, 0, 0, 0);
   body.scale.set(1.28, 0.9, 0.86);
   root.add(body);
   shell(body, root, outline, 0.08);
@@ -37,7 +62,7 @@ export function createKitten(look) {
   belly.scale.set(1.12, 0.95, 0.72);
   root.add(belly);
 
-  const head = mesh(new THREE.SphereGeometry(10, 16, 12), mat(FUR), 16, 5, 1);
+  const head = mesh(new THREE.SphereGeometry(10, 16, 12), furMat, 16, 5, 1);
   root.add(head);
   shell(head, root, outline, 0.08);
 
@@ -96,8 +121,8 @@ export function createKitten(look) {
 
   const earGeo = new THREE.ConeGeometry(4.2, 9, 5);
   const earInGeo = new THREE.ConeGeometry(2.3, 5, 5);
-  const earL = mesh(earGeo, mat(FUR), 13.2, 17.8, 5.4);
-  const earR = mesh(earGeo, mat(FUR_DARK), 12.4, 16.6, -3.2);
+  const earL = mesh(earGeo, furMat, 13.2, 17.8, 5.4);
+  const earR = mesh(earGeo, darkMat, 12.4, 16.6, -3.2);
   earR.scale.setScalar(0.82);
   root.add(earL, earR);
   shell(earL, root, outline, 0.1);
@@ -143,7 +168,7 @@ export function createKitten(look) {
     [-19.5, 14.5, 1, 1.7],
   ];
   for (const [x, y, z, r] of blobs) {
-    const t = mesh(tailGeo, mat(FUR), x, y, z);
+    const t = mesh(tailGeo, furMat, x, y, z);
     t.scale.setScalar(r);
     root.add(t);
     shell(t, root, outline, 0.12);
@@ -152,7 +177,7 @@ export function createKitten(look) {
   const legGeo = new THREE.CapsuleGeometry(2.3, 6, 3, 6);
   const pawGeo = new THREE.SphereGeometry(2.5, 8, 6);
   for (const [x, z] of [[8, 5], [8, -4], [-7, 5], [-7, -4]]) {
-    const leg = mesh(legGeo, mat(FUR), x, -10, z);
+    const leg = mesh(legGeo, furMat, x, -10, z);
     root.add(leg);
     // Front socks run higher, the usual tuxedo mittens.
     const sockH = x > 0 ? 6.4 : 4.2;
@@ -164,7 +189,12 @@ export function createKitten(look) {
   }
 
   // Nose is local +X. rotation.z = aim angle points that nose along the barrel.
-  return { mesh: root, eye: eyeWhite };
+  return {
+    mesh: root,
+    eye: eyeWhite,
+    recolor,
+    coat() { return COATS[coatIndex][0]; },
+  };
 }
 
 export function createCannon(look) {
@@ -263,53 +293,132 @@ function trampoline(look) {
   return { mesh: root, parts: { bed, stripe } };
 }
 
-function spikes(look) {
+// The camera sits on +Z and looks almost along the ground, so a flat disc
+// would be a sliver. Berms and the tar body are tall enough to read in
+// profile. The hit volume is still the spike box in propspec.js.
+function tarPit(look) {
   const root = new THREE.Group();
   const { mat, outline } = look;
-  const base = mesh(new THREE.BoxGeometry(78, 5, 28), mat(0x8d949c), 0, 2.5, 0);
-  root.add(base);
-  const cone = new THREE.ConeGeometry(7, 30, 6);
-  for (let i = 0; i < 5; i++) {
-    const spike = mesh(cone, mat(i % 2 ? 0xd5dee8 : 0xb7c2cc), -28 + i * 14, 19, 0);
-    root.add(spike);
-    shell(spike, root, outline, 0.06);
+  // One low bank, not a pair of matching mounds. The black pool sits on
+  // it and is the shape you read from the side.
+  const bank = mesh(new THREE.SphereGeometry(18, 14, 10), mat(0x8a552c), -2, 5, 0);
+  bank.scale.set(2.15, 0.38, 0.62);
+  root.add(bank);
+  shell(bank, root, outline, 0.04);
+  const lip = mesh(new THREE.SphereGeometry(14, 12, 10), mat(0x5c3a22), 1, 6.2, 1.5);
+  lip.scale.set(1.85, 0.28, 0.5);
+  root.add(lip);
+  const tar = mesh(new THREE.SphereGeometry(13, 14, 12), mat(0x14110e), 0, 8.2, 3);
+  tar.scale.set(1.7, 0.4, 0.5);
+  root.add(tar);
+  shell(tar, root, outline, 0.035);
+  const sheen = mesh(new THREE.SphereGeometry(4.2, 10, 8), mat(0x4e473f), -5, 11.2, 5);
+  sheen.scale.set(2.2, 0.2, 0.35);
+  root.add(sheen);
+
+  const bubbles = [];
+  const skin = mat(0x3f3832);
+  const glint = mat(0x7a736a);
+  for (const [x, z, r, y] of [[8, 4, 2.3, 15.5], [-7, 3.2, 1.7, 14.6], [0.5, 4.5, 1.25, 16.2]]) {
+    const bubble = new THREE.Group();
+    bubble.position.set(x, y, z);
+    bubble.userData.baseY = y;
+    const ball = mesh(new THREE.SphereGeometry(r, 8, 6), skin, 0, 0, 0);
+    const spot = mesh(new THREE.SphereGeometry(r * 0.32, 6, 5), glint, -r * 0.28, r * 0.4, r * 0.15);
+    bubble.add(ball, spot);
+    root.add(bubble);
+    bubbles.push(bubble);
   }
-  return { mesh: root, parts: {} };
+  return { mesh: root, parts: { bubbles } };
 }
+
+// Open clam. The mouth faces -X, the side the kitten arrives from.
+// Positive rotation.z swings local +X toward +Y, so a lobe built along
+// local -X swings down. The upper lobe uses the opposite angle.
+// The red face sits at local +Z because the camera is on +Z.
+const TRAP_OPEN = 0.72;
 
 function venus(look) {
   const root = new THREE.Group();
   const { mat, outline } = look;
-  const leafGeo = new THREE.SphereGeometry(8, 10, 8);
-  for (const [x, z, ry] of [[-10, 4, 0.4], [10, 2, -0.3], [0, -6, 0.2]]) {
-    const leaf = mesh(leafGeo, mat(0x2f8a3a), x, 6, z);
-    leaf.scale.set(1.4, 0.45, 0.8);
-    leaf.rotation.z = ry;
-    root.add(leaf);
+  const leafGreen = mat(0x2f8a3a);
+  const leafDark = mat(0x1e6a2c);
+  const inside = mat(0x9a2430);
+  const throatColor = mat(0x5c1420);
+  const cilia = mat(0xf4f0e0);
+
+  const leafGeo = new THREE.SphereGeometry(6, 10, 8);
+  for (let i = 0; i < 5; i++) {
+    const ang = -1.05 + i * 0.52;
+    const holder = new THREE.Group();
+    holder.position.set(0, 4, (i - 2) * 2.5);
+    holder.rotation.z = ang;
+    const leaf = mesh(leafGeo, i % 2 ? leafGreen : leafDark, 11, 0, 0);
+    leaf.scale.set(1.9, 0.34, 0.55);
+    holder.add(leaf);
+    root.add(holder);
   }
-  const stem = mesh(new THREE.CylinderGeometry(3.4, 4.5, 28, 7), mat(0x2c7d34), 0, 20, 0);
-  root.add(stem);
-  const head = mesh(new THREE.SphereGeometry(16, 14, 12), mat(0x3caf4e), 0, 46, 0);
-  head.scale.set(1.05, 0.9, 0.95);
+
+  const petiole = mesh(new THREE.CylinderGeometry(2.1, 3.2, 34, 7), leafDark, 3, 20, 0);
+  petiole.rotation.z = -0.18;
+  root.add(petiole);
+
+  const head = new THREE.Group();
+  head.position.set(6, 44, 0);
   root.add(head);
-  shell(head, root, outline, 0.06);
-  const mouth = mesh(new THREE.SphereGeometry(8, 10, 8), mat(0x6a2040), 6, 42, 4);
-  mouth.scale.set(0.7, 0.45, 0.6);
-  root.add(mouth);
-  const toothGeo = new THREE.ConeGeometry(1.5, 5, 4);
-  for (const [x, y, flip] of [[2, 46, 1], [6, 47, 1], [10, 45, 1], [3, 38, -1], [8, 37, -1]]) {
-    const tooth = mesh(toothGeo, mat(CREAM), x, y, 8);
-    if (flip < 0) tooth.rotation.z = Math.PI;
-    root.add(tooth);
+
+  const rib = mesh(new THREE.CylinderGeometry(1.7, 1.7, 14, 6), leafDark, 0, 0, 1);
+  rib.rotation.x = Math.PI / 2;
+  head.add(rib);
+
+  function lobe(sign) {
+    const pivot = new THREE.Group();
+    pivot.rotation.z = sign > 0 ? -TRAP_OPEN : TRAP_OPEN;
+
+    const body = mesh(new THREE.SphereGeometry(12, 14, 12), leafGreen, -14, 0, -1.2);
+    body.scale.set(1.22, 0.4, 0.82);
+    pivot.add(body);
+    shell(body, pivot, outline, 0.06);
+
+    const inner = mesh(new THREE.SphereGeometry(9, 12, 10), inside, -15, sign * -1.7, 3.4);
+    inner.scale.set(1.08, 0.24, 0.55);
+    pivot.add(inner);
+
+    const throat = mesh(new THREE.SphereGeometry(3.4, 8, 6), throatColor, -16.5, sign * -2.2, 4.4);
+    throat.scale.set(1.15, 0.4, 0.5);
+    pivot.add(throat);
+
+    const toothGeo = new THREE.ConeGeometry(0.85, 6.4, 5);
+    for (let i = 0; i < 7; i++) {
+      const t = i / 6;
+      const x = -7 - t * 18;
+      const y = sign * (-3.1 - Math.sin(t * Math.PI) * 1.2);
+      const z = 3.2 + Math.sin(t * Math.PI) * 2.4;
+      const tooth = mesh(toothGeo, cilia, x, y, z);
+      // Cone tip is +Y. A half turn around Z points the upper comb into
+      // the gap. The X lean is opposite on that comb: a half turn flips
+      // it, and the camera sits on +Z.
+      tooth.rotation.x = sign > 0 ? -0.5 : 0.5;
+      if (sign > 0) tooth.rotation.z = Math.PI;
+      tooth.rotation.z += (t - 0.5) * 0.42 * sign;
+      pivot.add(tooth);
+    }
+
+    const hairGeo = new THREE.CylinderGeometry(0.22, 0.16, 5.2, 4);
+    for (const t of [0.32, 0.52, 0.7]) {
+      const hair = mesh(hairGeo, cilia, -8 - t * 12, sign * -3.3, 4.6);
+      hair.rotation.x = sign > 0 ? -0.85 : 0.85;
+      if (sign > 0) hair.rotation.z = Math.PI;
+      pivot.add(hair);
+    }
+
+    return pivot;
   }
-  const eyeGeo = new THREE.SphereGeometry(3.2, 10, 8);
-  const eye = mesh(eyeGeo, mat(0xfffaf4), 8, 54, 10);
-  const pupil = mesh(new THREE.SphereGeometry(1.5, 8, 6), mat(0x1c1720), 9.4, 53.4, 12);
-  root.add(eye, pupil);
-  const spot = mesh(new THREE.SphereGeometry(3, 8, 6), mat(0x2a7a34), -6, 52, 8);
-  spot.scale.set(1, 0.6, 0.5);
-  root.add(spot);
-  return { mesh: root, parts: { head } };
+
+  const upper = lobe(1);
+  const lower = lobe(-1);
+  head.add(upper, lower);
+  return { mesh: root, parts: { head, upper, lower, open: TRAP_OPEN } };
 }
 
 // One set of parts for every balloon. The field holds hundreds of them.
@@ -360,7 +469,7 @@ function balloon(look, salt) {
 export function createProp(type, look, salt) {
   if (type === 'tnt') return crate(look);
   if (type === 'trampoline') return trampoline(look);
-  if (type === 'spikes') return spikes(look);
+  if (type === 'spikes') return tarPit(look);
   if (type === 'venus') return venus(look);
   return balloon(look, salt);
 }

@@ -52,14 +52,14 @@ const KITTY_Z = 6;
 const PROP_Z = 2;
 const NOTES = {
   landed: 'Soft landing.',
-  spikes: 'The spikes got there first.',
+  spikes: 'Stuck in the tar.',
   venus: 'The flytrap was hungry.',
 };
 const SHOUT = {
   tnt: 'BOOM',
   balloon: 'POP',
   trampoline: 'BOING',
-  spikes: 'YOW',
+  spikes: 'GLUG',
   venus: 'GULP',
 };
 
@@ -415,10 +415,15 @@ function retry() {
     prop.mesh.visible = true;
     prop.mesh.scale.set(1, 1, 1);
     if (prop.parts.bed) prop.parts.bed.scale.y = 1;
-    if (prop.parts.head) prop.parts.head.scale.set(1.05, 0.9, 0.95);
+    if (prop.parts.upper) {
+      const open = prop.parts.open;
+      prop.parts.upper.rotation.z = -open;
+      prop.parts.lower.rotation.z = open;
+    }
     if (prop.parts.stripe) prop.parts.stripe.position.y = 25.2;
   }
   game.snap = true;
+  kitten.recolor();
   startAim();
 }
 
@@ -430,7 +435,6 @@ function onEvent(event) {
     cam.shake = Math.min(1.2, cam.shake + 0.22);
     audio.bounce(Math.abs(k.vx));
     burst(k.x, GROUND_Y + 4, [0xe7d3a4, 0xc4a574], 4, 50, 0.35, 10);
-    if (Math.abs(k.vx) > 18) burst(k.x, GROUND_Y + 6, [0xe23b2e], 2, 40, 0.25, 8);
     return;
   }
   if (event === 'settle') {
@@ -454,7 +458,7 @@ function onEvent(event) {
     game.hold = 0.7;
     cam.shake = Math.min(1.4, cam.shake + 0.7);
     audio.yow();
-    burst(k.x, k.y, [0xfff6e0, 0xe23b2e], 5, 70, 0.4, 12);
+    burst(k.x, k.y, [0x1a1612, 0x3a3228], 5, 70, 0.4, 12);
     shout(SHOUT.spikes);
   } else if (event === 'venus') {
     game.hold = 0.8;
@@ -783,12 +787,22 @@ function updateProps(time, dt) {
         if (prop.parts.stripe) prop.parts.stripe.position.y = 25.2 - prop.squash * 3;
       }
     }
-    if (prop.parts.head && prop.type === 'venus') {
+    if (prop.parts.upper && prop.type === 'venus') {
       const shut = prop.chomp || 0;
-      prop.parts.head.scale.set(1.05, 0.9 * (1 - shut * 0.5), 0.95);
+      const open = prop.parts.open * (1 - shut);
+      prop.parts.upper.rotation.z = -open;
+      prop.parts.lower.rotation.z = open;
+    }
+    if (prop.parts.bubbles) {
+      const bubbles = prop.parts.bubbles;
+      for (let b = 0; b < bubbles.length; b++) {
+        const bubble = bubbles[b];
+        bubble.position.y = bubble.userData.baseY + Math.sin(time * 2.4 + b * 1.7) * 1.1;
+        bubble.scale.setScalar(0.85 + Math.sin(time * 3.1 + b) * 0.15);
+      }
     }
     if ((prop.type === 'tnt' || prop.type === 'spikes') && prop.spent) {
-      // Spikes stay; the crate is gone after it blows.
+      // The tar pit stays. The crate is gone after it blows.
       if (prop.type === 'tnt') prop.mesh.visible = false;
     }
   }
@@ -982,6 +996,7 @@ window.__kitten = {
     return poles.map((pole) => ({ x: pole.x, feet: pole.feet }));
   },
   get challenge() { return game.challenge; },
+  get coat() { return kitten.coat(); },
   shareText() {
     return shareLine(game.feet, feetFromAltitude(game.peakY), mphFromSpeed(game.peakSpeed));
   },
