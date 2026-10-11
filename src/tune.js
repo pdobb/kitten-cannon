@@ -79,9 +79,15 @@ export function feetFromAltitude(y) {
   return Math.max(0, Math.round((y - GROUND_Y) / PIXELS_PER_FOOT));
 }
 
-// One frame is 1/30 s and 30 px is one foot, so px/frame is already ft/s.
+// Rightward px/frame only. A climb, a dive, and a bounce back toward the
+// cannon are not mph. One frame is 1/30 s and 30 px is one foot, so this
+// number is already ft/s.
+export function rightwardSpeed(vx) {
+  return Math.max(0, vx);
+}
+
 export function mphFromSpeed(pxPerFrame) {
-  return Math.max(0, Math.round((pxPerFrame * 3600) / 5280));
+  return Math.max(0, Math.round((rightwardSpeed(pxPerFrame) * 3600) / 5280));
 }
 
 export function formatFt(n) {

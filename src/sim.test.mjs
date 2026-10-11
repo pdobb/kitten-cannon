@@ -11,6 +11,7 @@ import {
   launchPoint,
   mphFromSpeed,
   powerPercent,
+  rightwardSpeed,
   POWER_MAX,
   POWER_MIN,
   GROUND_Y,
@@ -35,12 +36,15 @@ function shot(angle, power, props, frames = 30 * 60) {
   return runUntilDone(angle, power, props, frames);
 }
 
-// Distance is feet. Height is feet above the grass. Speed is stored as
-// px/frame, which is already ft/s, and shown as mph.
+// Distance is feet. Height is feet above the grass. Mph is rightward
+// px/frame, which is already ft/s. A dive and a bounce back are not speed.
 {
   assert.equal(feetFromAltitude(GROUND_Y + PIXELS_PER_FOOT), 1);
   assert.equal(feetFromAltitude(GROUND_Y - 20), 0);
+  assert.equal(rightwardSpeed(30), 30);
+  assert.equal(rightwardSpeed(-30), 0);
   assert.equal(mphFromSpeed(30), 20);
+  assert.equal(mphFromSpeed(-30), 0);
   assert.equal(formatMph(20), '20 mph');
   assert.equal(mphFromSpeed(0), 0);
   assert.equal(powerPercent(POWER_MIN), 0);
@@ -169,6 +173,23 @@ function shot(angle, power, props, frames = 30 * 60) {
   const plant = prop('venus', 100);
   assert.equal(step(k, [plant]), 'venus');
   assert.equal(k.cause, 'venus');
+}
+
+// Mph is the launch's rightward speed on a clean lob. The dive is a faster
+// cat, and that fall does not count.
+{
+  const k = createKitten(70, POWER_MAX);
+  const launch = rightwardSpeed(k.vx);
+  let cat = 0;
+  let guard = 0;
+  while (!k.dead && guard < 80) {
+    step(k, []);
+    guard += 1;
+    if (k.dead) break;
+    cat = Math.max(cat, Math.hypot(k.vx, k.vy));
+    assert.ok(Math.abs(rightwardSpeed(k.vx) - launch) < 1e-6);
+  }
+  assert.ok(cat > launch + 20, `dive ${cat.toFixed(1)} should outrun rightward ${launch.toFixed(1)}`);
 }
 
 // Tumble rate follows the flight. Horizontal speed stays flat on a clean arc,

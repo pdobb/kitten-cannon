@@ -33,6 +33,7 @@ import {
   launchPoint,
   mphFromSpeed,
   peekPoint,
+  rightwardSpeed,
   powerFromClock,
   powerPercent,
 } from './tune.js';
@@ -47,7 +48,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 
 const FAR_KEY = 'kitten-cannon-best-ft';
 const HIGH_KEY = 'kitten-cannon-highest-ft';
-const FAST_KEY = 'kitten-cannon-fastest';
+// The old key stored the kitten's full speed, dive included. It is not a
+// rightward record, so it does not carry over.
+const FAST_KEY = 'kitten-cannon-fastest-x';
 const KITTY_Z = 6;
 const PROP_Z = 2;
 const NOTES = {
@@ -181,6 +184,12 @@ function loadNumber(key) {
   } catch {
     return 0;
   }
+}
+
+try {
+  localStorage.removeItem('kitten-cannon-fastest');
+} catch {
+  // Private mode can refuse storage.
 }
 
 function saveRecords() {
@@ -370,7 +379,7 @@ function beginShot(forcedPower) {
   game.kitten = makeState(game.angle, power);
   game.feet = 0;
   game.peakY = game.kitten.y;
-  game.peakSpeed = Math.hypot(game.kitten.vx, game.kitten.vy);
+  game.peakSpeed = rightwardSpeed(game.kitten.vx);
   commitRecords();
   game.hold = 0;
   game.squash = 0;
@@ -391,7 +400,7 @@ function afterStep() {
   const k = game.kitten;
   if (!k) return;
   if (k.y > game.peakY) game.peakY = k.y;
-  const speed = Math.hypot(k.vx, k.vy);
+  const speed = rightwardSpeed(k.vx);
   if (speed > game.peakSpeed) game.peakSpeed = speed;
 }
 
@@ -881,7 +890,7 @@ function updateHud() {
     game.feet = feet;
     distanceEl.textContent = formatFt(feet);
     const alt = feetFromAltitude(game.kitten.y);
-    const mph = mphFromSpeed(Math.hypot(game.kitten.vx, game.kitten.vy));
+    const mph = mphFromSpeed(game.kitten.vx);
     if (alt > 100) {
       altitudeEl.textContent = `${alt.toLocaleString('en-US')} FT UP`;
       if (altitudeEl.hidden) {
