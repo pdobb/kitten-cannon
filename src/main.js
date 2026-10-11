@@ -46,6 +46,41 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {});
 }
 
+// iPhone grays the screen out on its idle timer. A home-screen app can hold
+// the screen on since iOS 18.4. The browser drops the lock when the app is
+// hidden, so coming back asks again. A low battery can refuse.
+function keepScreenAwake() {
+  if (!navigator.wakeLock) return;
+  let sentinel = null;
+  let pending = null;
+
+  async function request() {
+    if (sentinel || pending || document.visibilityState !== 'visible') return;
+    const job = navigator.wakeLock.request('screen');
+    pending = job;
+    try {
+      const lock = await job;
+      sentinel = lock;
+      lock.addEventListener('release', () => {
+        if (sentinel === lock) sentinel = null;
+      });
+    } catch {
+      // Hidden page, low battery, or a home-screen app older than iOS 18.4.
+    } finally {
+      if (pending === job) pending = null;
+    }
+  }
+
+  window.addEventListener('pointerdown', request);
+  window.addEventListener('keydown', request);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') request();
+  });
+  request();
+}
+
+keepScreenAwake();
+
 const FAR_KEY = 'kitten-cannon-best-ft';
 const HIGH_KEY = 'kitten-cannon-highest-ft';
 // The old key stored the kitten's full speed, dive included. It is not a
