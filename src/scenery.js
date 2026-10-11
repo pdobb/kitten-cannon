@@ -78,11 +78,14 @@ export function createScenery(scene, look) {
   const grass = look.mat(0x5eae3c);
   const dirt = look.mat(0xc4894e);
   // Top stays at y=0. A fullscreen phone looks lower than the browser tab,
-  // so the dirt continues well past the bottom of that view.
-  const ground = new THREE.Mesh(new THREE.BoxGeometry(300000, 1800, 640), [
+  // so the dirt continues well past the bottom of that view. A fixed strip
+  // ended near 10,000 ft; the slab rides the camera so a longer flight
+  // still has ground under the lens. Width keeps the ends offscreen on a
+  // very wide view (vertical fov 34°, far edge of this box, aspect ~4).
+  const ground = new THREE.Mesh(new THREE.BoxGeometry(48000, 1800, 640), [
     dirt, dirt, grass, dirt, dirt, dirt,
   ]);
-  ground.position.set(146000, -900, 80);
+  ground.position.set(0, -900, 80);
   scene.add(ground);
 
   scene.add(ridge(0x8ed468, 78, 42, -160, 0.55, 0.4));
@@ -133,18 +136,31 @@ export function createScenery(scene, look) {
   const clouds = [];
   const puff = new THREE.SphereGeometry(1, 10, 8);
   const puffMat = look.mat(0xfffaf2);
-  const cloudGap = 520;
+  const cloudRng = mulberry32(0xc10d);
+  const placed = [];
+  let cursor = 0;
   for (let i = 0; i < 16; i++) {
-    const cloud = new THREE.Group();
-    const n = 4;
-    for (let k = 0; k < n; k++) {
-      const s = meshSphere(puff, puffMat, (k - 1.5) * 22, (k % 2) * 10, (k % 3) * 4);
-      s.scale.setScalar(22 + (k % 3) * 10);
-      cloud.add(s);
-    }
-    cloud.position.set(-700 + i * cloudGap, 0, -100 - (i % 4) * 55);
-    scene.add(cloud);
-    clouds.push({ mesh: cloud, altitude: 250 + (i % 5) * 38, phase: i * 0.7 });
+    const made = makeCloud(cloudRng, puff, puffMat);
+    const gap = 160 + cloudRng() * 420;
+    placed.push({
+      mesh: made.mesh,
+      x: cursor,
+      width: made.width,
+      z: -80 - cloudRng() * 280,
+      altitude: 190 + cloudRng() * 280,
+      phase: cloudRng() * Math.PI * 2,
+      bob: 5 + cloudRng() * 10,
+      rate: 0.15 + cloudRng() * 0.2,
+    });
+    cursor += made.width + gap;
+  }
+  const cloudSpan = cursor;
+  const cloudOrigin = -cloudSpan * 0.45;
+  for (let i = 0; i < placed.length; i++) {
+    const cloud = placed[i];
+    cloud.mesh.position.set(cloudOrigin + cloud.x + cloud.width / 2, cloud.altitude, cloud.z);
+    scene.add(cloud.mesh);
+    clouds.push(cloud);
   }
 
   const sun = new THREE.Group();
@@ -170,14 +186,16 @@ export function createScenery(scene, look) {
     update(time, cam) {
       sky.position.set(cam.x, cam.y, cam.z);
       sun.position.set(cam.x - 520, cam.y + 268, -460);
+      ground.position.x = cam.x;
       for (let i = 0; i < ranges.length; i++) trackRange(ranges[i], cam.x);
-      const cloudSpan = clouds.length * cloudGap;
+      // Modulo, not a single step. Retry snaps the camera home from a long flight,
+      // and one span per frame would leave the sky empty on the way back.
+      const left = cam.x - cloudSpan * 0.45;
       for (let i = 0; i < clouds.length; i++) {
         const cloud = clouds[i];
-        const left = cam.x - cloudSpan * 0.45;
-        if (cloud.mesh.position.x < left) cloud.mesh.position.x += cloudSpan;
-        if (cloud.mesh.position.x > left + cloudSpan) cloud.mesh.position.x -= cloudSpan;
-        cloud.mesh.position.y = cloud.altitude + Math.sin(time * 0.25 + cloud.phase) * 8;
+        const x = cloud.mesh.position.x;
+        cloud.mesh.position.x = left + ((x - left) % cloudSpan + cloudSpan) % cloudSpan;
+        cloud.mesh.position.y = cloud.altitude + Math.sin(time * cloud.rate + cloud.phase) * cloud.bob;
       }
     },
   };
@@ -334,6 +352,47 @@ function trackRange(range, camX) {
   const span = range.span;
   const scroll = ((camX * range.parallax) % span + span) % span;
   range.group.position.x = camX - scroll - span;
+}
+
+// Unit silhouettes for the side camera. Scaled and mirrored per cloud so the
+// sky is not one repeated prop. Each puff is x, y, z, sx, sy, sz.
+const CLOUD_LAYOUTS = [
+  [[0, 0.05, 0, 0.5, 0.36, 0.4], [0.42, 0, 0.04, 0.34, 0.24, 0.28], [-0.36, 0.02, -0.03, 0.28, 0.2, 0.24]],
+  [[-1.35, 0, 0, 0.62, 0.42, 0.36], [-0.75, 0.08, 0.04, 0.58, 0.48, 0.4], [-0.15, 0.12, -0.02, 0.66, 0.44, 0.42],
+    [0.48, 0.06, 0.03, 0.6, 0.4, 0.38], [1.08, 0.02, -0.04, 0.52, 0.36, 0.34], [1.55, -0.02, 0.02, 0.4, 0.3, 0.28]],
+  [[0.05, 0, 0, 0.62, 0.48, 0.5], [-0.12, 0.55, 0.03, 0.5, 0.42, 0.42], [0.16, 1.05, -0.02, 0.4, 0.38, 0.36], [-0.02, 1.48, 0.02, 0.28, 0.26, 0.24]],
+  [[-0.72, 0, 0, 0.5, 0.36, 0.42], [-0.12, 0.06, 0.04, 0.58, 0.4, 0.48], [0.5, 0, -0.03, 0.48, 0.34, 0.4],
+    [-0.38, 0.48, 0.02, 0.4, 0.34, 0.36], [0.22, 0.46, -0.02, 0.36, 0.3, 0.32]],
+  [[0, 0.08, 0, 0.85, 0.58, 0.66], [-0.58, -0.04, 0.05, 0.48, 0.36, 0.4], [0.62, 0.02, -0.04, 0.44, 0.32, 0.38]],
+  [[-1.15, 0, 0, 0.8, 0.3, 0.34], [-0.15, 0.06, 0.03, 0.95, 0.34, 0.4], [0.95, 0, -0.02, 0.7, 0.28, 0.32], [0.15, 0.22, 0, 0.42, 0.24, 0.26]],
+];
+
+function makeCloud(rng, geo, material) {
+  const layout = CLOUD_LAYOUTS[Math.floor(rng() * CLOUD_LAYOUTS.length)];
+  const size = (26 + rng() * 48) * (layout.length > 4 ? 0.85 : 1.15);
+  const mirror = rng() < 0.5 ? -1 : 1;
+  const squash = 0.8 + rng() * 0.45;
+  const cloud = new THREE.Group();
+  let minX = Infinity;
+  let maxX = -Infinity;
+  for (let i = 0; i < layout.length; i++) {
+    const p = layout[i];
+    const x = (p[0] + (rng() - 0.5) * 0.1) * size * mirror;
+    const y = (p[1] + (rng() - 0.5) * 0.08) * size * squash;
+    const z = p[2] * size;
+    const sx = p[3] * size * (0.88 + rng() * 0.24);
+    const sy = p[4] * size * squash * (0.88 + rng() * 0.24);
+    const sz = p[5] * size * (0.88 + rng() * 0.24);
+    const puff = meshSphere(geo, material, x, y, z);
+    puff.scale.set(sx, sy, sz);
+    cloud.add(puff);
+    minX = Math.min(minX, x - sx);
+    maxX = Math.max(maxX, x + sx);
+  }
+  const mid = (minX + maxX) / 2;
+  for (let i = 0; i < cloud.children.length; i++) cloud.children[i].position.x -= mid;
+  cloud.rotation.z = (rng() - 0.5) * 0.18;
+  return { mesh: cloud, width: maxX - minX };
 }
 
 function meshSphere(geo, material, x, y, z) {
