@@ -23,29 +23,6 @@ html, body {
   background: #c4894e;
 }
 
-/* iOS rejects page fullscreen. A taller document lets that tap scroll
-   the browser chrome away. #app stays fixed over the page. */
-html.is-immersive,
-html.is-immersive body {
-  position: absolute;
-  inset: auto;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: auto;
-  overflow: auto;
-  scrollbar-width: none;
-}
-
-html.is-immersive::-webkit-scrollbar,
-html.is-immersive body::-webkit-scrollbar {
-  display: none;
-}
-
-html.is-immersive body {
-  min-height: calc(100lvh + 120px);
-}
-
 #app {
   position: fixed;
   inset: 0;
@@ -213,6 +190,7 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner {
 #fullscreen .exit { display: none; }
 #fullscreen.is-full .enter { display: none; }
 #fullscreen.is-full .exit { display: block; }
+#fullscreen[hidden] { display: none; }
 #fullscreen:active { transform: translate(2px, 2px); box-shadow: none; }
 
 #mute {
@@ -522,9 +500,11 @@ button#start:active, button#again:active, #pad button:active {
   #altitude { -webkit-text-stroke-width: 4px; }
 }
 
-/* A landscape phone is wider than 720px, so width alone still shows the keys. */
+/* A landscape phone is wider than 720px, so width alone still shows the keys.
+   iOS will not fullscreen a page, so the button stays off a phone in either orientation. */
 @media (pointer: coarse), (hover: none) {
   #hint { display: none; }
+  #fullscreen { display: none; }
 }
 
 @media (max-width: 720px), (pointer: coarse) {
@@ -604,4 +584,42 @@ button#start:active, button#again:active, #pad button:active {
 @media (max-height: 500px) and (max-width: 980px) {
   #app[data-phase="result"] #scoreblock,
   #app[data-phase="result"] #records { display: none; }
+}
+
+/* The result meter is already hidden. A short landscape phone was keeping
+   an 84px gap under the card and scrolling the rest. Use that height for the card. */
+@media (max-height: 500px) {
+  #app[data-phase="result"] #card {
+    top: calc(var(--safe-top) + 4px);
+    max-height: calc(100% - 8px - var(--safe-top) - var(--safe-bottom));
+    overflow: hidden;
+  }
+  #app[data-phase="result"] #card .panel {
+    padding: 6px 12px 6px;
+    border-width: 3px;
+    box-shadow: 2px 3px 0 #2b2118;
+  }
+  #app[data-phase="result"] #card .eyebrow { font-size: 10px; }
+  #app[data-phase="result"] #card h2 { font-size: 28px; margin: 0; }
+  #app[data-phase="result"] #card #card-note {
+    margin: 2px 0 0;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+  #app[data-phase="result"] #card #card-best .flight-up { font-size: 15px; }
+  #app[data-phase="result"] #card #card-best .flight-speed {
+    font-size: 13px;
+    margin: 0 0 2px;
+  }
+  #app[data-phase="result"] #card .bestline,
+  #app[data-phase="result"] #card #card-best { margin-top: 2px; }
+  #app[data-phase="result"] #card #card-best p {
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+  #app[data-phase="result"] #card .actions { margin-top: 6px; }
+  #app[data-phase="result"] #card button#again {
+    font-size: 16px;
+    padding: 4px 12px;
+  }
 }

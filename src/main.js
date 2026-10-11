@@ -527,14 +527,8 @@ function bindTap(el, fn) {
 
 const fullscreenEl = document.querySelector('#fullscreen');
 
-let immersed = false;
-
-function realFullscreen() {
-  return !!(document.fullscreenElement || document.webkitFullscreenElement);
-}
-
 function fullscreenOn() {
-  return realFullscreen() || immersed;
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
 }
 
 function paintFullscreen() {
@@ -543,92 +537,38 @@ function paintFullscreen() {
   fullscreenEl.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
 }
 
-function enterImmersive() {
-  if (immersed || realFullscreen()) return;
-  immersed = true;
-  document.documentElement.classList.add('is-immersive');
-  const tall = Math.max(
-    window.innerHeight,
-    window.screen && window.screen.height ? window.screen.height : 0,
-    window.visualViewport ? window.visualViewport.height : 0
-  ) + 80;
-  document.body.style.minHeight = `${tall}px`;
-  // Same tap that asked for fullscreen. Safari hides its bars when the
-  // document scrolls, and a fixed page cannot scroll.
-  window.scrollTo(0, 1);
-  paintFullscreen();
-  requestAnimationFrame(() => {
-    if (!immersed) return;
-    window.scrollTo(0, 1);
-    resize();
-  });
-}
-
-function exitImmersive() {
-  if (!immersed) return;
-  immersed = false;
-  document.documentElement.classList.remove('is-immersive');
-  document.body.style.minHeight = '';
-  window.scrollTo(0, 0);
-  paintFullscreen();
-  resize();
-}
-
-function browserChrome() {
-  return !(
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.matchMedia('(display-mode: fullscreen)').matches ||
-    window.navigator.standalone === true
-  );
-}
-
 function toggleFullscreen() {
-  if (realFullscreen()) {
-    const exit = document.exitFullscreen || document.webkitExitFullscreen;
-    if (exit) {
+  try {
+    if (fullscreenOn()) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (!exit) return;
       const pending = exit.call(document);
       if (pending && typeof pending.catch === 'function') pending.catch(() => {});
+      return;
     }
-    exitImmersive();
-    return;
-  }
-  if (immersed) {
-    exitImmersive();
-    return;
-  }
-  const root = document.documentElement;
-  const req = root.requestFullscreen || root.webkitRequestFullscreen;
-  let pending = null;
-  if (req) {
+    const root = document.documentElement;
+    const req = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (!req) return;
+    let pending;
     try {
       pending = req.call(root, { navigationUI: 'hide' });
     } catch {
-      try {
-        pending = req.call(root);
-      } catch {
-        pending = null;
-      }
+      pending = req.call(root);
     }
-  }
-  // iPhone Safari has requestFullscreen and then rejects it for a page.
-  // Start the fallback in this tap. A browser that really goes fullscreen
-  // drops the fallback when that promise resolves. A home-screen icon
-  // already covers the screen, so it does not need the scroll.
-  const phone = window.matchMedia('(pointer: coarse), (hover: none), (max-width: 720px)').matches;
-  if ((phone || !req) && !realFullscreen() && browserChrome()) enterImmersive();
-  if (pending && typeof pending.then === 'function') {
-    pending.then(() => {
-      exitImmersive();
-      paintFullscreen();
-    }).catch(() => {
-      if (!immersed && browserChrome()) enterImmersive();
-      paintFullscreen();
-    });
-  } else if (!realFullscreen() && !immersed && browserChrome()) {
-    enterImmersive();
+    if (pending && typeof pending.catch === 'function') pending.catch(() => {});
+  } catch {
+    // The button is desktop-only. A refusal leaves it in place.
   }
 }
 
+const fullscreenQuery = window.matchMedia('(pointer: coarse), (hover: none)');
+function syncFullscreenButton() {
+  const root = document.documentElement;
+  const supported = !!(root.requestFullscreen || root.webkitRequestFullscreen);
+  fullscreenEl.hidden = !(supported && !fullscreenQuery.matches);
+}
+syncFullscreenButton();
+fullscreenQuery.addEventListener('change', syncFullscreenButton);
 bindTap(fullscreenEl, toggleFullscreen);
 document.addEventListener('fullscreenchange', paintFullscreen);
 document.addEventListener('webkitfullscreenchange', paintFullscreen);
@@ -646,20 +586,22 @@ bindTap(muteEl, () => {
   paintMute(audio.toggleMute());
 });
 
-// A tap on the field is Enter. A vertical drag aims. Buttons keep their own taps.
+// A tap or a mouse click on the field is Enter. A vertical touch drag aims.
+// A mouse drag does not aim. Buttons keep their own taps.
 let touchAim = null;
 function fieldTarget(target) {
   return !(target && target.closest && target.closest('button, a'));
 }
 app.addEventListener('pointerdown', (e) => {
-  if (e.pointerType === 'mouse' || !fieldTarget(e.target)) return;
-  safeAudio(() => audio.unlock());
+  if (!fieldTarget(e.target)) return;
+  if (e.pointerType !== 'mouse') safeAudio(() => audio.unlock());
   touchAim = {
     id: e.pointerId,
     x: e.clientX,
     y: e.clientY,
     lastY: e.clientY,
     moved: false,
+    mouse: e.pointerType === 'mouse',
   };
 });
 app.addEventListener('pointermove', (e) => {
@@ -671,6 +613,7 @@ app.addEventListener('pointermove', (e) => {
     if (Math.hypot(adx, ady) < 16) return;
     touchAim.moved = true;
   }
+  if (touchAim.mouse) return;
   touchAim.lastY = e.clientY;
   if ((game.phase === 'aim' || game.phase === 'title') && ady >= adx) {
     game.angle -= dy * 0.32;
