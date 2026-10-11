@@ -3,7 +3,9 @@
 // balloons pass their own height instead.
 
 export const HIT = {
-  tnt: { hw: 26, hh: 24, cy: 26 },
+  // The painted crate is 25 by 23 around the same center. The extra
+  // space is so a graze still connects. The kitten is tested as a point.
+  tnt: { hw: 32, hh: 30, cy: 26 },
   trampoline: { hw: 36, hh: 18, cy: 20 },
   spikes: { hw: 36, hh: 18, cy: 18 },
   venus: { hw: 24, hh: 30, cy: 42 },

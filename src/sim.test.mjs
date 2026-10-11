@@ -215,7 +215,7 @@ function shot(angle, power, props, frames = 30 * 60) {
   const natural = shot(32, POWER_MAX, course);
   const lob = shot(70, POWER_MAX, course, 30 * 160);
   const weak = shot(32, POWER_MIN, course);
-  assert.equal(feetFromTravel(natural.kitten.startX, natural.kitten.x), 1268);
+  assert.equal(feetFromTravel(natural.kitten.startX, natural.kitten.x), 1269);
   assert.equal(natural.kitten.cause, 'landed');
   assert.ok(natural.hits.includes('balloon') && natural.hits.includes('tnt'));
   assert.equal(feetFromTravel(lob.kitten.startX, lob.kitten.x), 5001);
