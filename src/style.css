@@ -208,9 +208,8 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
 #fullscreen[hidden] { display: none; }
 #fullscreen:active { transform: translate(2px, 2px); box-shadow: none; }
 
-#mute {
+#mute, #pause-btn {
   position: absolute;
-  left: calc(16px + var(--safe-left));
   bottom: calc(16px + var(--safe-bottom));
   top: auto;
   right: auto;
@@ -224,14 +223,50 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
   border-radius: 14px;
   cursor: pointer;
   box-shadow: 3px 3px 0 #2b2118;
+  z-index: 4;
 }
 
-#mute svg { width: 28px; height: 28px; display: block; }
+#mute { left: calc(16px + var(--safe-left)); }
+#pause-btn { left: calc(72px + var(--safe-left)); }
+
+#mute svg, #pause-btn svg { width: 28px; height: 28px; display: block; }
 #mute .slash { display: none; }
 #mute.is-muted .wave { display: none; }
 #mute.is-muted .slash { display: block; }
 
-#mute:active { transform: translate(2px, 2px); box-shadow: none; }
+#mute:active, #pause-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+
+#pause {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding:
+    calc(16px + var(--safe-top))
+    calc(16px + var(--safe-right))
+    calc(16px + var(--safe-bottom))
+    calc(16px + var(--safe-left));
+  background: rgba(43, 33, 24, 0.35);
+}
+
+#pause .panel { width: min(420px, 100%); }
+
+#app.is-paused, #app.is-paused * { animation-play-state: paused; }
+#app.is-paused #title,
+#app.is-paused #card { visibility: hidden; }
+
+#card-best p.endings-kicker {
+  display: block;
+  margin: 10px 0 2px;
+  text-align: center;
+  font-family: Nunito, sans-serif;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5a3018;
+}
 
 #banner {
   position: absolute;
@@ -524,11 +559,11 @@ h2 {
   color: #8d1d1d;
 }
 
-button, #mute {
+button, #mute, #pause-btn {
   touch-action: manipulation;
 }
 
-button#start, button#again, #pad button {
+button#start, button#again, button#resume, #pad button {
   font-family: "Lilita One", "Trebuchet MS", sans-serif;
   border: 4px solid #2b2118;
   background: #e23b2e;
@@ -540,7 +575,7 @@ button#start, button#again, #pad button {
   box-shadow: 4px 4px 0 #2b2118;
 }
 
-button#start:active, button#again:active, #pad button:active {
+button#start:active, button#again:active, button#resume:active, #pad button:active {
   transform: translate(3px, 3px);
   box-shadow: none;
 }
@@ -597,7 +632,7 @@ button#start:active, button#again:active, #pad button:active {
   #hint { display: none; }
   #meter {
     bottom: calc(14px + var(--safe-bottom));
-    left: calc(72px + var(--safe-left));
+    left: calc(128px + var(--safe-left));
     right: calc(12px + var(--safe-right));
     width: auto;
     transform: none;
@@ -619,12 +654,13 @@ button#start:active, button#again:active, #pad button:active {
   }
   #records span, #card-best span, .bestline span { font-size: 12px; }
   #records b, #card-best b, .bestline b { font-size: 16px; }
-  #mute {
+  #mute, #pause-btn {
     top: auto;
     right: auto;
-    left: calc(12px + var(--safe-left));
     bottom: calc(12px + var(--safe-bottom));
   }
+  #mute { left: calc(12px + var(--safe-left)); }
+  #pause-btn { left: calc(68px + var(--safe-left)); }
   #altitude { -webkit-text-stroke-width: 4px; }
 }
 
@@ -661,7 +697,7 @@ button#start:active, button#again:active, #pad button:active {
   .bestline, #card-best { margin-top: 8px; }
   #need-js { font-size: 14px; margin-top: 8px; }
   .actions { gap: 8px; margin-top: 16px; }
-  button#start, button#again { font-size: 20px; padding: 8px 16px; }
+  button#start, button#again, button#resume { font-size: 20px; padding: 8px 16px; }
 }
 
 @media (max-height: 500px) {
@@ -669,7 +705,7 @@ button#start:active, button#again:active, #pad button:active {
   #meter {
     top: auto;
     bottom: calc(8px + var(--safe-bottom));
-    left: calc(72px + var(--safe-left));
+    left: calc(128px + var(--safe-left));
     right: calc(210px + var(--safe-right));
     transform: none;
     width: auto;
@@ -713,7 +749,7 @@ button#start:active, button#again:active, #pad button:active {
   .bestline, #card-best { margin-top: 4px; }
   #records p, .bestline p, #card-best p { line-height: 1.25; gap: 10px; }
   .actions { gap: 8px; margin-top: 12px; }
-  button#start, button#again { font-size: 18px; padding: 6px 12px; }
+  button#start, button#again, button#resume { font-size: 18px; padding: 6px 12px; }
   #pad button { padding: 8px 12px; font-size: 18px; }
 }
 
@@ -758,6 +794,13 @@ button#start:active, button#again:active, #pad button:active {
     margin: 0 0 2px;
     white-space: normal;
   }
+  #app[data-phase="result"] #card #card-best p.endings-kicker {
+    margin: 4px 0 0;
+    font-size: 10px;
+  }
+  #pause .panel { padding: 8px 12px; }
+  #pause h2 { font-size: 28px; margin: 0; }
+  #pause .actions { margin-top: 8px; }
   #app[data-phase="result"] #card .bestline,
   #app[data-phase="result"] #card #card-best { margin-top: 2px; }
   #app[data-phase="result"] #card #card-best p {

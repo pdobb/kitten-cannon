@@ -86,6 +86,12 @@ const HIGH_KEY = 'kitten-cannon-highest-ft';
 // The old key stored the kitten's full speed, dive included. It is not a
 // rightward record, so it does not carry over.
 const FAST_KEY = 'kitten-cannon-fastest-x';
+const END_KEY = 'kitten-cannon-endings';
+const ENDINGS = [
+  ['landed', 'Soft landing'],
+  ['spikes', 'Tar pit'],
+  ['venus', 'Flytrap'],
+];
 const KITTY_Z = 6;
 const PROP_Z = 2;
 const NOTES = {
@@ -114,6 +120,10 @@ const powerLabelEl = document.querySelector('#power-label');
 const bannerEl = document.querySelector('#banner');
 const powerCheerEl = document.querySelector('#power-cheer');
 const muteEl = document.querySelector('#mute');
+const pauseBtn = document.querySelector('#pause-btn');
+const pauseEl = document.querySelector('#pause');
+const pauseEndingsEl = document.querySelector('#pause-endings');
+const resumeEl = document.querySelector('#resume');
 const cardEl = document.querySelector('#card');
 const cardKickerEl = document.querySelector('#card-kicker');
 const cardFeetEl = document.querySelector('#card-feet');
@@ -209,6 +219,8 @@ const game = {
   sink: 0,
   recoil: 0,
   checked: false,
+  paused: false,
+  endings: loadEndings(),
 };
 const cam = { x: 500, y: 120, z: 980, shake: 0 };
 const hold = { ArrowUp: 0, ArrowDown: 0 };
@@ -218,6 +230,63 @@ function loadNumber(key) {
     return Number(localStorage.getItem(key)) || 0;
   } catch {
     return 0;
+  }
+}
+
+function emptyEndings() {
+  return { landed: 0, spikes: 0, venus: 0 };
+}
+
+function loadEndings() {
+  const counts = emptyEndings();
+  try {
+    const raw = JSON.parse(localStorage.getItem(END_KEY) || '{}');
+    if (!raw || typeof raw !== 'object') return counts;
+    for (const key of Object.keys(counts)) {
+      counts[key] = Math.max(0, Math.round(Number(raw[key]) || 0));
+    }
+  } catch {
+    // Private mode, or a bad value. Start from zero.
+  }
+  return counts;
+}
+
+function saveEndings() {
+  try {
+    localStorage.setItem(END_KEY, JSON.stringify(game.endings));
+  } catch {
+    // The count still shows for this visit.
+  }
+}
+
+function tallyEnding(cause) {
+  if (!Object.prototype.hasOwnProperty.call(game.endings, cause)) return;
+  game.endings[cause] += 1;
+  saveEndings();
+}
+
+function endingTotal() {
+  return game.endings.landed + game.endings.spikes + game.endings.venus;
+}
+
+function appendEndingRows(el, cause, kicker = true) {
+  const total = endingTotal();
+  if (kicker) {
+    const label = document.createElement('p');
+    label.className = 'endings-kicker';
+    label.textContent = 'Landings';
+    el.append(label);
+  }
+  for (const [key, label] of ENDINGS) {
+    const n = game.endings[key];
+    const row = document.createElement('p');
+    if (cause === key) row.className = 'fresh';
+    const name = document.createElement('span');
+    name.textContent = label;
+    const num = document.createElement('b');
+    num.textContent = total > 0 ? `${n.toLocaleString('en-US')} · ${Math.round((n / total) * 100)}%` : '0';
+    row.append(name, num);
+    el.append(row);
   }
 }
 
@@ -492,6 +561,8 @@ function finish() {
   cardBestEl.append(pace);
   appendShotPower(cardBestEl);
   appendRecordRows(cardBestEl, marks);
+  tallyEnding(k.cause);
+  appendEndingRows(cardBestEl, k.cause);
   if (game.furthest > game.was.furthest) plantPole(game.furthestX, game.furthest);
   // The striped stake hides on the next shot. This pole stays for the visit,
   // including a landing that did not set a new furthest.
@@ -600,7 +671,11 @@ function onAction() {
 
 window.addEventListener('keydown', (e) => {
   const accept = e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter';
-  if (accept || e.code === 'ArrowUp' || e.code === 'ArrowDown') e.preventDefault();
+  if (accept || e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'KeyP') e.preventDefault();
+  if (game.paused) {
+    if (!e.repeat && (accept || e.code === 'Escape' || e.code === 'KeyP')) setPaused(false);
+    return;
+  }
   if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
     if (!e.repeat) press(e.code);
     return;
@@ -608,6 +683,7 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (accept) onAction();
   else if (e.code === 'KeyR') retry();
+  else if (e.code === 'KeyP') setPaused(true);
   else if (e.code === 'KeyM') {
     safeAudio(() => audio.unlock());
     paintMute(audio.toggleMute());
@@ -620,7 +696,8 @@ window.addEventListener('keyup', (e) => {
 // iOS drops click on a local file, and it also drops the first tap when a
 // full-screen parent has pointer-events: none. touchend is the gesture that fires.
 function bindTap(el, fn) {
-  let last = 0;
+  // 0 would ignore a tap in the first 400ms, because performance.now() starts at 0.
+  let last = -Infinity;
   const run = (event) => {
     const now = performance.now();
     if (now - last < 400) return;
@@ -691,6 +768,35 @@ function paintMute(muted) {
 bindTap(muteEl, () => {
   safeAudio(() => audio.unlock());
   paintMute(audio.toggleMute());
+});
+
+let clockOffset = 0;
+let pausedAt = 0;
+
+function setPaused(on) {
+  if (on === game.paused) return;
+  game.paused = on;
+  app.classList.toggle('is-paused', on);
+  pauseEl.classList.toggle('hidden', !on);
+  pauseBtn.setAttribute('aria-label', on ? 'Resume' : 'Pause');
+  if (on) {
+    pausedAt = performance.now();
+    touchAim = null;
+    audio.wind(0);
+    pauseEndingsEl.replaceChildren();
+    appendEndingRows(pauseEndingsEl, null, false);
+    resumeEl.focus();
+    return;
+  }
+  clockOffset += performance.now() - pausedAt;
+  last = performance.now();
+}
+
+bindTap(pauseBtn, () => setPaused(!game.paused));
+bindTap(resumeEl, () => setPaused(false));
+pauseEl.addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  if (e.target === pauseEl) setPaused(false);
 });
 
 // A tap or a mouse click on the field is Enter. A vertical touch drag aims.
@@ -783,6 +889,12 @@ function resize() {
   camera.aspect = w / Math.max(1, h);
   camera.updateProjectionMatrix();
   renderer.setSize(w, h, false);
+  // setSize clears the canvas. The paused loop does not draw, so a turn of
+  // the phone would leave the dirt color until Resume.
+  if (game.paused && game.checked) {
+    updateCamera(0);
+    renderer.render(scene, camera);
+  }
 }
 let viewportFrame = 0;
 function queueResize() {
@@ -911,7 +1023,7 @@ function updateCamera(dt) {
 }
 
 function updateHud() {
-  const power = powerFromClock(performance.now() / 1000);
+  const power = powerFromClock((performance.now() - clockOffset) / 1000);
   const pct = powerPercent(power);
   angleEl.textContent = `${Math.round(game.angle)}°`;
   powerEl.style.width = `${pct}%`;
@@ -980,9 +1092,10 @@ let acc = 0;
 let last = performance.now();
 
 function frame(now) {
+  if (game.paused && game.checked) return;
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  const time = now / 1000;
+  const time = (now - clockOffset) / 1000;
   applyHold(dt);
   game.recoil *= Math.exp(-dt * 6);
   game.squash *= Math.exp(-dt * 9);

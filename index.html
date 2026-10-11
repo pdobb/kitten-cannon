@@ -59,6 +59,11 @@
           <path class="slash" fill="none" stroke="#d23b2e" stroke-width="2.4" stroke-linecap="round" d="M6 18.5L18.5 6" />
         </svg>
       </button>
+      <button id="pause-btn" type="button" aria-label="Pause">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#2b2118" d="M7 4.5h3.4v15H7zM13.6 4.5H17v15h-3.4z" />
+        </svg>
+      </button>
       <div id="banner"></div>
       <div id="power-cheer" aria-live="polite"></div>
       <div id="meter">
@@ -74,7 +79,7 @@
           <b id="power-label">0%</b>
         </div>
       </div>
-      <p id="hint"><kbd>↑</kbd><kbd>↓</kbd> aim <kbd>Enter</kbd> or <kbd>Space</kbd> fires or restarts <kbd>R</kbd> retry <kbd>M</kbd> mute</p>
+      <p id="hint"><kbd>↑</kbd><kbd>↓</kbd> aim <kbd>Enter</kbd> or <kbd>Space</kbd> fires or restarts <kbd>R</kbd> retry <kbd>P</kbd> pause <kbd>M</kbd> mute</p>
     </header>
 
     <div id="title">
@@ -96,6 +101,17 @@
         <div id="card-best"></div>
         <div class="actions">
           <button id="again" type="button">Fire again</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pause" class="hidden">
+      <div class="panel">
+        <p class="eyebrow">Paused</p>
+        <h2>Landings</h2>
+        <div class="bestline" id="pause-endings"></div>
+        <div class="actions">
+          <button id="resume" type="button">Resume</button>
         </div>
       </div>
     </div>
