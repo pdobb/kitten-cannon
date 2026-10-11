@@ -483,8 +483,40 @@ export function createStake(look) {
     const band = mesh(new THREE.BoxGeometry(5.5, 7, 4), mat(i % 2 ? RED : 0xf7f3ea), 0, 18 + i * 12, 0);
     root.add(band);
   }
-  const flag = mesh(new THREE.BoxGeometry(30, 16, 2), mat(RED), 18, 70, 0);
+  // Cloth hangs toward +X. Two digits need a slightly wider flag.
+  const flag = mesh(new THREE.BoxGeometry(36, 18, 2), mat(RED), 18, 70, 0);
   root.add(flag);
+  // The camera sits on +Z. PlaneGeometry faces +Z, so the digit reads
+  // from the camera. It sits just in front of the cloth (the box face is at local z = 1).
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const digit = new THREE.Mesh(
+    new THREE.PlaneGeometry(32, 16),
+    new THREE.MeshBasicMaterial({ map: texture })
+  );
+  digit.position.set(0, 0, 2);
+  flag.add(digit);
+  ctx.fillStyle = '#d23b2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  texture.needsUpdate = true;
+
+  root.userData.paintRank = (rank) => {
+    const text = String(rank);
+    const size = text.length >= 3 ? 64 : text.length === 2 ? 88 : 112;
+    ctx.fillStyle = '#d23b2e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fff6e8';
+    ctx.font = `400 ${size}px "Lilita One", "Trebuchet MS", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + size * 0.06);
+    texture.needsUpdate = true;
+    root.userData.rank = rank;
+  };
   root.visible = false;
   return root;
 }

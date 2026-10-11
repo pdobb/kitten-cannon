@@ -30,7 +30,6 @@ import {
   feetFromTravel,
   formatFt,
   formatMph,
-  shareLine,
   launchPoint,
   mphFromSpeed,
   peekPoint,
@@ -70,8 +69,6 @@ const altitudeEl = document.querySelector('#altitude');
 const speedEl = document.querySelector('#speed');
 const recordsEl = document.querySelector('#records');
 const titleBestEl = document.querySelector('#title-best');
-const challengeEl = document.querySelector('#challenge');
-const shareEl = document.querySelector('#share');
 const angleEl = document.querySelector('#angle');
 const powerEl = document.querySelector('#power');
 const powerLabelEl = document.querySelector('#power-label');
@@ -148,7 +145,6 @@ const game = {
   furthestX: 0,
   highest: loadNumber(HIGH_KEY),
   fastest: loadNumber(FAST_KEY),
-  challenge: readChallenge(params),
   peakY: 0,
   peakSpeed: 0,
   was: { furthest: 0, highest: 0, fastest: 0 },
@@ -183,6 +179,22 @@ function xForFeet(feet) {
   return launchPoint(DEFAULT_ANGLE).x + feet * PIXELS_PER_FOOT;
 }
 
+function rankPoles() {
+  const ordered = poles.slice().sort((a, b) => (b.feet - a.feet) || (b.x - a.x));
+  for (let i = 0; i < ordered.length; i++) {
+    const rank = i + 1;
+    if (ordered[i].rank === rank) continue;
+    ordered[i].rank = rank;
+    ordered[i].mesh.userData.paintRank(rank);
+  }
+}
+
+function repaintRanks() {
+  for (const pole of poles) {
+    if (pole.rank) pole.mesh.userData.paintRank(pole.rank);
+  }
+}
+
 function plantPole(x, feet) {
   if (!(feet > 0) || !Number.isFinite(x)) return;
   for (const pole of poles) {
@@ -191,6 +203,7 @@ function plantPole(x, feet) {
         pole.x = x;
         pole.feet = feet;
         pole.mesh.position.x = x;
+        rankPoles();
       }
       return;
     }
@@ -199,7 +212,8 @@ function plantPole(x, feet) {
   mesh.visible = true;
   mesh.position.set(x, 0, 10);
   scene.add(mesh);
-  poles.push({ x, feet, mesh });
+  poles.push({ x, feet, mesh, rank: 0 });
+  rankPoles();
 }
 
 function setPhase(phase) {
@@ -231,29 +245,6 @@ function appendRecordRows(el, marks) {
   }
 }
 
-function readChallenge(search) {
-  const num = (key) => {
-    if (!search.has(key)) return null;
-    const n = Number(search.get(key));
-    if (!Number.isFinite(n) || n < 0) return null;
-    return Math.round(n);
-  };
-  const ft = num('ft');
-  if (ft == null) return null;
-  return { ft, up: num('up') ?? 0, mph: num('mph') ?? 0 };
-}
-
-function paintChallenge() {
-  const challenge = game.challenge;
-  if (!challenge) {
-    challengeEl.hidden = true;
-    return;
-  }
-  challengeEl.hidden = false;
-  challengeEl.querySelector('b').textContent = formatFt(challenge.ft);
-  challengeEl.querySelector('.challenge-more').textContent = `${formatFt(challenge.up)} up · ${formatMph(challenge.mph)}`;
-}
-
 function paintRecords() {
   recordsEl.replaceChildren();
   appendRecordRows(recordsEl, null);
@@ -261,7 +252,6 @@ function paintRecords() {
   if (game.furthest > 0 || game.highest > 0 || game.fastest > 0) {
     appendRecordRows(titleBestEl, null);
   }
-  paintChallenge();
 }
 
 function clampAngle() {
@@ -537,8 +527,14 @@ function bindTap(el, fn) {
 
 const fullscreenEl = document.querySelector('#fullscreen');
 
-function fullscreenOn() {
+let immersed = false;
+
+function realFullscreen() {
   return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function fullscreenOn() {
+  return realFullscreen() || immersed;
 }
 
 function paintFullscreen() {
@@ -547,92 +543,99 @@ function paintFullscreen() {
   fullscreenEl.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
 }
 
+function enterImmersive() {
+  if (immersed || realFullscreen()) return;
+  immersed = true;
+  document.documentElement.classList.add('is-immersive');
+  const tall = Math.max(
+    window.innerHeight,
+    window.screen && window.screen.height ? window.screen.height : 0,
+    window.visualViewport ? window.visualViewport.height : 0
+  ) + 80;
+  document.body.style.minHeight = `${tall}px`;
+  // Same tap that asked for fullscreen. Safari hides its bars when the
+  // document scrolls, and a fixed page cannot scroll.
+  window.scrollTo(0, 1);
+  paintFullscreen();
+  requestAnimationFrame(() => {
+    if (!immersed) return;
+    window.scrollTo(0, 1);
+    resize();
+  });
+}
+
+function exitImmersive() {
+  if (!immersed) return;
+  immersed = false;
+  document.documentElement.classList.remove('is-immersive');
+  document.body.style.minHeight = '';
+  window.scrollTo(0, 0);
+  paintFullscreen();
+  resize();
+}
+
+function browserChrome() {
+  return !(
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.navigator.standalone === true
+  );
+}
+
 function toggleFullscreen() {
-  try {
-    if (fullscreenOn()) {
-      const exit = document.exitFullscreen || document.webkitExitFullscreen;
-      if (!exit) return;
+  if (realFullscreen()) {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) {
       const pending = exit.call(document);
       if (pending && typeof pending.catch === 'function') pending.catch(() => {});
-      return;
     }
-    const root = document.documentElement;
-    const req = root.requestFullscreen || root.webkitRequestFullscreen;
-    if (!req) return;
-    let pending;
+    exitImmersive();
+    return;
+  }
+  if (immersed) {
+    exitImmersive();
+    return;
+  }
+  const root = document.documentElement;
+  const req = root.requestFullscreen || root.webkitRequestFullscreen;
+  let pending = null;
+  if (req) {
     try {
       pending = req.call(root, { navigationUI: 'hide' });
     } catch {
-      pending = req.call(root);
+      try {
+        pending = req.call(root);
+      } catch {
+        pending = null;
+      }
     }
-    if (pending && typeof pending.catch === 'function') pending.catch(() => {});
-  } catch {
-    // iOS Safari refuses page fullscreen. The button stays put.
+  }
+  // iPhone Safari has requestFullscreen and then rejects it for a page.
+  // Start the fallback in this tap. A browser that really goes fullscreen
+  // drops the fallback when that promise resolves. A home-screen icon
+  // already covers the screen, so it does not need the scroll.
+  const phone = window.matchMedia('(pointer: coarse), (hover: none), (max-width: 720px)').matches;
+  if ((phone || !req) && !realFullscreen() && browserChrome()) enterImmersive();
+  if (pending && typeof pending.then === 'function') {
+    pending.then(() => {
+      exitImmersive();
+      paintFullscreen();
+    }).catch(() => {
+      if (!immersed && browserChrome()) enterImmersive();
+      paintFullscreen();
+    });
+  } else if (!realFullscreen() && !immersed && browserChrome()) {
+    enterImmersive();
   }
 }
 
-if (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) {
-  bindTap(fullscreenEl, toggleFullscreen);
-  document.addEventListener('fullscreenchange', paintFullscreen);
-  document.addEventListener('webkitfullscreenchange', paintFullscreen);
-} else {
-  fullscreenEl.hidden = true;
-}
+bindTap(fullscreenEl, toggleFullscreen);
+document.addEventListener('fullscreenchange', paintFullscreen);
+document.addEventListener('webkitfullscreenchange', paintFullscreen);
 
 bindTap(document.querySelector('#start'), startAim);
 bindTap(document.querySelector('#again'), retry);
 
-let shareTimer = 0;
-function markCopied() {
-  shareEl.textContent = 'Copied';
-  clearTimeout(shareTimer);
-  shareTimer = setTimeout(() => {
-    shareEl.textContent = 'Share';
-  }, 1600);
-}
-
-function copyShare(line) {
-  const done = (ok) => {
-    if (ok) markCopied();
-  };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(line).then(() => done(true)).catch(() => done(copyShareFallback(line)));
-    return;
-  }
-  done(copyShareFallback(line));
-}
-
-function copyShareFallback(line) {
-  try {
-    const area = document.createElement('textarea');
-    area.value = line;
-    area.setAttribute('readonly', '');
-    area.style.position = 'fixed';
-    area.style.left = '-999px';
-    document.body.appendChild(area);
-    area.select();
-    const ok = document.execCommand('copy');
-    area.remove();
-    return ok;
-  } catch {
-    return false;
-  }
-}
-
-function onShare() {
-  const line = shareLine(game.feet, feetFromAltitude(game.peakY), mphFromSpeed(game.peakSpeed));
-  const phone = window.matchMedia('(pointer: coarse), (hover: none), (max-width: 720px)').matches;
-  if (phone && typeof navigator.share === 'function') {
-    navigator.share({ text: line }).catch((err) => {
-      if (err && err.name === 'AbortError') return;
-      copyShare(line);
-    });
-    return;
-  }
-  copyShare(line);
-}
-
-bindTap(shareEl, onShare);
 function paintMute(muted) {
   muteEl.classList.toggle('is-muted', muted);
   muteEl.setAttribute('aria-label', muted ? 'Sound off' : 'Sound on');
@@ -819,9 +822,19 @@ function updateCamera(dt) {
   const z = 980;
   const halfW = Math.tan((camera.fov * Math.PI) / 360) * z * Math.max(0.3, camera.aspect);
   const lead = Math.min(220, halfW * 0.42);
+  // The score card sits on the center of the screen. On the result, look
+  // further ahead so the landing flag clears that card. Flight keeps the
+  // shorter lead. The clamp keeps the kitten on screen.
+  let focusLead = lead;
+  if (game.phase === 'result') {
+    const viewW = canvas.clientWidth || window.innerWidth;
+    const cardPx = Math.min(560, Math.max(0, viewW - 32));
+    const cardHalfWorld = (cardPx * 0.5) / Math.max(1, viewW) * (halfW * 2);
+    focusLead = Math.min(halfW * 0.78, Math.max(lead, cardHalfWorld + 48));
+  }
   // x=490 looks down the field. A narrow view then starts past the wheels.
   const aimX = Math.min(490, CANNON_X + PIVOT_X - 84 + halfW);
-  const focusX = flying ? k.x + lead : aimX;
+  const focusX = flying ? k.x + focusLead : aimX;
   const focusY = flying ? Math.max(120, k.y - 36) : 120;
   if (flying) {
     cam.x = focusX;
@@ -982,6 +995,9 @@ if (game.furthest > 0) {
   game.furthestX = xForFeet(game.furthest);
   plantPole(game.furthestX, game.furthest);
 }
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(repaintRanks).catch(() => {});
+}
 
 assertFrames();
 setPhase('title');
@@ -996,13 +1012,9 @@ window.__kitten = {
     return { furthest: game.furthest, highest: game.highest, fastest: game.fastest };
   },
   get poles() {
-    return poles.map((pole) => ({ x: pole.x, feet: pole.feet }));
+    return poles.map((pole) => ({ x: pole.x, feet: pole.feet, rank: pole.rank }));
   },
-  get challenge() { return game.challenge; },
   get coat() { return kitten.coat(); },
-  shareText() {
-    return shareLine(game.feet, feetFromAltitude(game.peakY), mphFromSpeed(game.peakSpeed));
-  },
   get sky() { return flybys.stats(); },
   get cause() { return game.kitten ? game.kitten.cause : null; },
   get x() { return game.kitten ? game.kitten.x : launchPoint(game.angle).x; },
