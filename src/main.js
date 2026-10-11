@@ -440,7 +440,6 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (e.repeat) return;
-  if (accept || e.code === 'KeyR' || e.code === 'KeyM') askFullscreen();
   if (accept) onAction();
   else if (e.code === 'KeyR') retry();
   else if (e.code === 'KeyM') {
@@ -452,31 +451,6 @@ window.addEventListener('keyup', (e) => {
   if (e.code === 'ArrowUp' || e.code === 'ArrowDown') release(e.code);
 });
 
-// iOS Safari rejects page fullscreen. Android and a home-screen launch can drop the bar.
-// Once per session, so leaving fullscreen stays a choice.
-let askedFullscreen = false;
-function askFullscreen() {
-  if (askedFullscreen) return;
-  try {
-    if (navigator.standalone) return;
-    const installed = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)');
-    if (installed.matches) return;
-    const root = document.documentElement;
-    const req = root.requestFullscreen || root.webkitRequestFullscreen;
-    if (!req) return;
-    askedFullscreen = true;
-    let pending;
-    try {
-      pending = req.call(root, { navigationUI: 'hide' });
-    } catch {
-      pending = req.call(root);
-    }
-    if (pending && typeof pending.catch === 'function') pending.catch(() => {});
-  } catch {
-    askedFullscreen = true;
-  }
-}
-
 // iOS drops click on a local file, and it also drops the first tap when a
 // full-screen parent has pointer-events: none. touchend is the gesture that fires.
 function bindTap(el, fn) {
@@ -485,12 +459,55 @@ function bindTap(el, fn) {
     const now = performance.now();
     if (now - last < 400) return;
     last = now;
-    askFullscreen();
     if (event.cancelable) event.preventDefault();
     fn();
   };
   el.addEventListener('click', run);
   el.addEventListener('touchend', run, { passive: false });
+}
+
+const fullscreenEl = document.querySelector('#fullscreen');
+
+function fullscreenOn() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function paintFullscreen() {
+  const on = fullscreenOn();
+  fullscreenEl.classList.toggle('is-full', on);
+  fullscreenEl.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
+}
+
+function toggleFullscreen() {
+  try {
+    if (fullscreenOn()) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (!exit) return;
+      const pending = exit.call(document);
+      if (pending && typeof pending.catch === 'function') pending.catch(() => {});
+      return;
+    }
+    const root = document.documentElement;
+    const req = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (!req) return;
+    let pending;
+    try {
+      pending = req.call(root, { navigationUI: 'hide' });
+    } catch {
+      pending = req.call(root);
+    }
+    if (pending && typeof pending.catch === 'function') pending.catch(() => {});
+  } catch {
+    // iOS Safari refuses page fullscreen. The button stays put.
+  }
+}
+
+if (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) {
+  bindTap(fullscreenEl, toggleFullscreen);
+  document.addEventListener('fullscreenchange', paintFullscreen);
+  document.addEventListener('webkitfullscreenchange', paintFullscreen);
+} else {
+  fullscreenEl.hidden = true;
 }
 
 bindTap(document.querySelector('#start'), startAim);
@@ -512,7 +529,6 @@ function fieldTarget(target) {
 }
 app.addEventListener('pointerdown', (e) => {
   if (e.pointerType === 'mouse' || !fieldTarget(e.target)) return;
-  askFullscreen();
   safeAudio(() => audio.unlock());
   touchAim = {
     id: e.pointerId,
@@ -550,7 +566,6 @@ for (const button of document.querySelectorAll('#pad button')) {
   const act = button.dataset.act;
   button.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    askFullscreen();
     safeAudio(() => audio.unlock());
     if (act === 'fire') onAction();
     else press(act === 'up' ? 'ArrowUp' : 'ArrowDown');

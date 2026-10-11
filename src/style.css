@@ -98,8 +98,8 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner {
 #records {
   position: absolute;
   top: calc(16px + var(--safe-top));
-  right: calc(16px + var(--safe-right));
-  left: auto;
+  left: calc(16px + var(--safe-left));
+  right: auto;
   min-width: 188px;
   padding: 10px 14px 11px;
   background: #fff6e4;
@@ -159,6 +159,29 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner {
 #card-best .fresh b {
   color: #d23b2e;
 }
+
+#fullscreen {
+  position: absolute;
+  z-index: 4;
+  top: calc(16px + var(--safe-top));
+  right: calc(16px + var(--safe-right));
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 3px solid #2b2118;
+  background: #fff6e4;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 #2b2118;
+}
+
+#fullscreen svg { width: 26px; height: 26px; display: block; }
+#fullscreen .exit { display: none; }
+#fullscreen.is-full .enter { display: none; }
+#fullscreen.is-full .exit { display: block; }
+#fullscreen:active { transform: translate(2px, 2px); box-shadow: none; }
 
 #mute {
   position: absolute;
@@ -263,10 +286,9 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner {
   text-shadow: 0 2px 0 #2b2118, 0 0 6px rgba(43, 33, 24, 0.45);
 }
 
-#app[data-phase="aim"] #hint {
-  left: calc(16px + var(--safe-left));
-  right: calc(16px + var(--safe-right));
-  bottom: calc(150px + var(--safe-bottom));
+#app[data-phase="aim"] #hint,
+#app[data-phase="flight"] #hint {
+  display: none;
 }
 
 #app[data-phase="result"] #hint {
@@ -405,7 +427,6 @@ button#start:active, button#again:active, #pad button:active {
 #app[data-phase="flight"] #title,
 #app[data-phase="result"] #title,
 #app[data-phase="title"] #meter,
-#app[data-phase="title"] #hint,
 #app[data-phase="title"] #pad,
 #app[data-phase="title"] #scoreblock,
 #app[data-phase="title"] #records,
@@ -448,10 +469,15 @@ button#start:active, button#again:active, #pad button:active {
   #scoreblock { top: calc(118px + var(--safe-top)); }
   #records {
     top: calc(10px + var(--safe-top));
-    right: calc(10px + var(--safe-right));
-    left: auto;
+    left: calc(10px + var(--safe-left));
+    right: auto;
     min-width: 164px;
+    max-width: calc(100% - 78px - var(--safe-left) - var(--safe-right));
     padding: 8px 10px 9px;
+  }
+  #fullscreen {
+    top: calc(10px + var(--safe-top));
+    right: calc(10px + var(--safe-right));
   }
   #records span, #card-best span, .bestline span { font-size: 12px; }
   #records b, #card-best b, .bestline b { font-size: 16px; }
