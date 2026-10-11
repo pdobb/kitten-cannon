@@ -42,7 +42,7 @@ html, body {
   box-shadow: inset 0 0 140px rgba(40, 36, 20, 0.22);
 }
 
-button, .panel, h1, h2, #distance, #altitude, #records b, #banner {
+button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer {
   font-family: "Lilita One", "Trebuchet MS", sans-serif;
   font-weight: 400;
 }
@@ -160,6 +160,11 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner {
   color: #d23b2e;
 }
 
+#card-best p.perfect span,
+#card-best p.perfect b {
+  color: #d23b2e;
+}
+
 .actions {
   display: flex;
   justify-content: center;
@@ -239,6 +244,119 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner {
   0% { opacity: 0; transform: translateX(-50%) scale(0.4) rotate(-6deg); }
   30% { opacity: 1; transform: translateX(-50%) scale(1.08) rotate(2deg); }
   100% { opacity: 0; transform: translateX(-50%) scale(1.2) rotate(-2deg); }
+}
+
+/* About a second of the fired percent, then it fades. A full bar gets
+   the gold number, the red-stroked kicker, and the stars. */
+#power-cheer {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: calc(12vh + var(--safe-bottom));
+  transform: translateX(-50%) scale(0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  color: #fffaf0;
+  -webkit-text-stroke: 6px #2b2118;
+  paint-order: stroke fill;
+  line-height: 0.9;
+  text-align: center;
+  white-space: nowrap;
+}
+
+#power-cheer b {
+  font-size: clamp(54px, 9vw, 88px);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
+
+#power-cheer .caption,
+#power-cheer .kicker {
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  -webkit-text-stroke: 4px #2b2118;
+  paint-order: stroke fill;
+}
+
+#power-cheer .caption {
+  margin-top: 2px;
+  font-size: clamp(16px, 2.6vw, 26px);
+}
+
+#power-cheer .kicker {
+  margin-bottom: 2px;
+  font-size: clamp(22px, 3.4vw, 36px);
+  color: #fffaf0;
+  -webkit-text-stroke: 5px #d23b2e;
+}
+
+#power-cheer.show {
+  animation: power-cheer 1.35s cubic-bezier(0.2, 0.85, 0.2, 1) forwards;
+}
+
+#power-cheer.perfect b {
+  font-size: clamp(72px, 13vw, 124px);
+  color: #ffe14a;
+  -webkit-text-stroke: 8px #2b2118;
+  text-shadow: 0 0 18px rgba(255, 170, 30, 0.85);
+}
+
+#power-cheer.perfect.show {
+  animation: power-perfect 1.35s cubic-bezier(0.16, 0.9, 0.24, 1) forwards;
+}
+
+#power-cheer .spark {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  font-size: clamp(22px, 4vw, 36px);
+  line-height: 1;
+  color: #fff6c2;
+  -webkit-text-stroke: 3px #2b2118;
+  paint-order: stroke fill;
+  opacity: 0;
+}
+
+#power-cheer .spark.a { --dx: -96px; --dy: -52px; }
+#power-cheer .spark.b { --dx: 100px; --dy: -44px; }
+#power-cheer .spark.c { --dx: -82px; --dy: 38px; }
+#power-cheer .spark.d { --dx: 88px; --dy: 46px; }
+
+#power-cheer.perfect.show .spark {
+  animation: spark-out 1.35s ease-out forwards;
+}
+
+@keyframes power-cheer {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.55) rotate(-7deg); }
+  12% { opacity: 1; transform: translateX(-50%) scale(1.07) rotate(1.5deg); }
+  20% { opacity: 1; transform: translateX(-50%) scale(1) rotate(0deg); }
+  86% { opacity: 1; transform: translateX(-50%) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-22px) scale(1.05); }
+}
+
+@keyframes power-perfect {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.25) rotate(-12deg); }
+  12% { opacity: 1; transform: translateX(-50%) scale(1.14) rotate(3deg); }
+  22% { opacity: 1; transform: translateX(-50%) scale(1) rotate(-2deg); }
+  40% { opacity: 1; transform: translateX(-50%) scale(1.06) rotate(2deg); }
+  58% { opacity: 1; transform: translateX(-50%) scale(1) rotate(-1deg); }
+  86% { opacity: 1; transform: translateX(-50%) scale(1.04) rotate(0deg); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-28px) scale(1.18); }
+}
+
+@keyframes spark-out {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2) rotate(-20deg); }
+  18% { opacity: 1; transform: translate(calc(-50% + var(--dx) * 0.45), calc(-50% + var(--dy) * 0.45)) scale(1.15) rotate(14deg); }
+  75% { opacity: 1; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(28deg); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx) * 1.25), calc(-50% + var(--dy) * 1.35)) scale(0.7) rotate(48deg); }
+}
+
+#app:not([data-phase="flight"]) #power-cheer {
+  display: none;
 }
 
 #meter {
@@ -526,6 +644,9 @@ button#start:active, button#again:active, #pad button:active {
   #card-note { margin-top: 4px; }
   #card-best .flight-up { font-size: 24px; }
   #card-best .flight-speed { font-size: 16px; margin: 2px 0 8px; }
+  #power-cheer b { font-size: clamp(48px, 16vw, 76px); -webkit-text-stroke-width: 5px; }
+  #power-cheer.perfect b { font-size: clamp(64px, 20vw, 104px); }
+  #power-cheer .kicker { font-size: clamp(18px, 4.5vw, 28px); }
   .bestline, #card-best { margin-top: 8px; }
   #need-js { font-size: 14px; margin-top: 8px; }
   .actions { gap: 8px; margin-top: 16px; }
@@ -568,6 +689,15 @@ button#start:active, button#again:active, #pad button:active {
   .lede { margin-bottom: 6px; }
   #card-best .flight-up { font-size: 18px; }
   #card-best .flight-speed { font-size: 14px; margin: 1px 0 4px; }
+  #power-cheer { bottom: calc(8px + var(--safe-bottom)); }
+  #power-cheer b { font-size: 44px; }
+  #power-cheer.perfect b { font-size: 56px; -webkit-text-stroke-width: 5px; }
+  #power-cheer .kicker, #power-cheer .caption { font-size: 14px; }
+  #power-cheer .spark { font-size: 18px; }
+  #power-cheer .spark.a { --dx: -64px; --dy: -28px; }
+  #power-cheer .spark.b { --dx: 68px; --dy: -24px; }
+  #power-cheer .spark.c { --dx: -56px; --dy: 20px; }
+  #power-cheer .spark.d { --dx: 60px; --dy: 22px; }
   .bestline, #card-best { margin-top: 4px; }
   #records p, .bestline p, #card-best p { line-height: 1.25; gap: 10px; }
   .actions { gap: 8px; margin-top: 12px; }

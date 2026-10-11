@@ -34,6 +34,7 @@ import {
   mphFromSpeed,
   peekPoint,
   powerFromClock,
+  powerPercent,
 } from './tune.js';
 
 document.getElementById('need-js')?.remove();
@@ -73,6 +74,7 @@ const angleEl = document.querySelector('#angle');
 const powerEl = document.querySelector('#power');
 const powerLabelEl = document.querySelector('#power-label');
 const bannerEl = document.querySelector('#banner');
+const powerCheerEl = document.querySelector('#power-cheer');
 const muteEl = document.querySelector('#mute');
 const cardEl = document.querySelector('#card');
 const cardKickerEl = document.querySelector('#card-kicker');
@@ -248,6 +250,19 @@ function recordRows() {
   ];
 }
 
+function appendShotPower(el) {
+  const pct = powerPercent(game.power);
+  const perfect = pct >= 100;
+  const row = document.createElement('p');
+  if (perfect) row.className = 'perfect';
+  const name = document.createElement('span');
+  name.textContent = perfect ? 'Full power' : 'Power';
+  const num = document.createElement('b');
+  num.textContent = `${pct}%`;
+  row.append(name, num);
+  el.append(row);
+}
+
 function appendRecordRows(el, marks) {
   for (const [label, value, key] of recordRows()) {
     const row = document.createElement('p');
@@ -286,6 +301,40 @@ function shout(text) {
   // Restart the CSS animation.
   void bannerEl.offsetWidth;
   bannerEl.classList.add('show');
+}
+
+// Hit shouts reuse #banner, and the first balloon is close enough to pop
+// inside this same second. The percent gets its own line so that shout
+// cannot wipe it.
+function celebratePower(power) {
+  const pct = powerPercent(power);
+  const perfect = pct >= 100;
+  powerCheerEl.className = perfect ? 'perfect' : '';
+  powerCheerEl.replaceChildren();
+  if (perfect) {
+    for (const spot of ['a', 'b', 'c', 'd']) {
+      const star = document.createElement('span');
+      star.className = `spark ${spot}`;
+      star.setAttribute('aria-hidden', 'true');
+      star.textContent = '★';
+      powerCheerEl.append(star);
+    }
+    const kicker = document.createElement('span');
+    kicker.className = 'kicker';
+    kicker.textContent = 'Full power!';
+    powerCheerEl.append(kicker);
+  }
+  const num = document.createElement('b');
+  num.textContent = `${pct}%`;
+  powerCheerEl.append(num);
+  if (!perfect) {
+    const caption = document.createElement('span');
+    caption.className = 'caption';
+    caption.textContent = 'Power';
+    powerCheerEl.append(caption);
+  }
+  void powerCheerEl.offsetWidth;
+  powerCheerEl.classList.add('show');
 }
 
 function burst(x, y, colors, count, speed, life, size) {
@@ -335,6 +384,7 @@ function beginShot(forcedPower) {
   audio.launch();
   audio.meow();
   setPhase('flight');
+  celebratePower(power);
 }
 
 function afterStep() {
@@ -400,6 +450,7 @@ function finish() {
   pace.className = 'flight-speed';
   pace.textContent = formatMph(mphFromSpeed(game.peakSpeed));
   cardBestEl.append(pace);
+  appendShotPower(cardBestEl);
   appendRecordRows(cardBestEl, marks);
   if (game.furthest > game.was.furthest) plantPole(game.furthestX, game.furthest);
   // The striped stake hides on the next shot. This pole stays for the visit,
@@ -821,10 +872,10 @@ function updateCamera(dt) {
 
 function updateHud() {
   const power = powerFromClock(performance.now() / 1000);
-  const pct = (power - POWER_MIN) / (POWER_MAX - POWER_MIN);
+  const pct = powerPercent(power);
   angleEl.textContent = `${Math.round(game.angle)}°`;
-  powerEl.style.width = `${Math.round(pct * 100)}%`;
-  powerLabelEl.textContent = `${Math.round(pct * 100)}%`;
+  powerEl.style.width = `${pct}%`;
+  powerLabelEl.textContent = `${pct}%`;
   if (game.kitten && (game.phase === 'flight' || game.phase === 'result')) {
     const feet = feetFromTravel(game.kitten.startX, game.kitten.x);
     game.feet = feet;

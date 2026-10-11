@@ -10,6 +10,7 @@ import {
   formatMph,
   launchPoint,
   mphFromSpeed,
+  powerPercent,
   POWER_MAX,
   POWER_MIN,
   GROUND_Y,
@@ -42,6 +43,9 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(mphFromSpeed(30), 20);
   assert.equal(formatMph(20), '20 mph');
   assert.equal(mphFromSpeed(0), 0);
+  assert.equal(powerPercent(POWER_MIN), 0);
+  assert.equal(powerPercent(POWER_MAX), 100);
+  assert.equal(powerPercent((POWER_MIN + POWER_MAX) / 2), 50);
 }
 
 // The aim vector is the only barrel direction. 0° is +X, 90° is +Y.

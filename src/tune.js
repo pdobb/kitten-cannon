@@ -66,6 +66,11 @@ export function powerFromClock(seconds) {
   return POWER_MIN + (POWER_MAX - POWER_MIN) * tri;
 }
 
+// Same rounding the aim bar uses, so a full bar and a fired shot both read 100%.
+export function powerPercent(power) {
+  return Math.round(((power - POWER_MIN) / (POWER_MAX - POWER_MIN)) * 100);
+}
+
 export function feetFromTravel(startX, x) {
   return Math.max(0, Math.round((x - startX) / PIXELS_PER_FOOT));
 }
