@@ -285,31 +285,48 @@ export function createScenery(world) {
     entry.parallax = [0.12, 0.28, 0.46][i];
   });
 
-  const clouds = [];
+  // Each band wraps on its own. A single low band left the high sky empty,
+  // and a shot that climbed flew out of the clouds within a few hundred feet.
+  function scatterClouds(rng, count, y0, y1, gap0, gap1) {
+    const group = [];
+    let cursor = rng() * 280;
+    for (let i = 0; i < count; i++) {
+      const made = drawCloud(rng);
+      const gap = gap0 + rng() * (gap1 - gap0);
+      const cloud = {
+        root: new Container(),
+        width: made.width,
+        home: cursor,
+        altitude: y0 + rng() * (y1 - y0),
+        phase: rng() * Math.PI * 2,
+        bob: 7 + rng() * 16,
+        rate: 0.12 + rng() * 0.22,
+      };
+      cloud.root.addChild(made.graphic);
+      world.addChild(cloud.root);
+      group.push(cloud);
+      cursor += made.width + gap;
+    }
+    const span = Math.max(cursor, 1);
+    const origin = -span * 0.45;
+    for (const cloud of group) {
+      cloud.span = span;
+      cloud.root.position.set(origin + cloud.home + cloud.width / 2, cloud.altitude);
+    }
+    return group;
+  }
+
   const cloudRng = mulberry32(0xc10d);
-  let cursor = 0;
-  for (let i = 0; i < 14; i++) {
-    const made = drawCloud(cloudRng);
-    const gap = 180 + cloudRng() * 460;
-    const cloud = {
-      root: new Container(),
-      width: made.width,
-      home: cursor,
-      altitude: 200 + cloudRng() * 260,
-      phase: cloudRng() * Math.PI * 2,
-      bob: 6 + cloudRng() * 10,
-      rate: 0.15 + cloudRng() * 0.2,
-    };
-    cloud.root.addChild(made.graphic);
-    world.addChild(cloud.root);
-    clouds.push(cloud);
-    cursor += made.width + gap;
-  }
-  const cloudSpan = cursor;
-  const cloudOrigin = -cloudSpan * 0.45;
-  for (const cloud of clouds) {
-    cloud.root.position.set(cloudOrigin + cloud.home + cloud.width / 2, cloud.altitude);
-  }
+  const clouds = [
+    ...scatterClouds(cloudRng, 12, 150, 470, 70, 200),
+    ...scatterClouds(cloudRng, 10, 400, 1150, 80, 220),
+    ...scatterClouds(cloudRng, 10, 1000, 1950, 80, 230),
+    ...scatterClouds(cloudRng, 9, 1750, 2950, 90, 240),
+    ...scatterClouds(cloudRng, 9, 2700, 4200, 90, 250),
+    ...scatterClouds(cloudRng, 9, 3900, 5700, 100, 260),
+    ...scatterClouds(cloudRng, 8, 5300, 7500, 100, 280),
+    ...scatterClouds(cloudRng, 8, 7000, 9500, 110, 300),
+  ];
 
   const flyLayer = new Container();
   world.addChild(flyLayer);
@@ -358,11 +375,11 @@ export function createScenery(world) {
       for (let i = 0; i < foothills.length; i++) track(foothills[i], cam.x, foothills[i].parallax);
       track(tufts, cam.x, 1);
       ground.position.x = cam.x;
-      const left = cam.x - cloudSpan * 0.45;
       for (let i = 0; i < clouds.length; i++) {
         const cloud = clouds[i];
+        const left = cam.x - cloud.span * 0.45;
         const x = cloud.root.position.x;
-        cloud.root.position.x = left + ((x - left) % cloudSpan + cloudSpan) % cloudSpan;
+        cloud.root.position.x = left + ((x - left) % cloud.span + cloud.span) % cloud.span;
         cloud.root.position.y = cloud.altitude + Math.sin(time * cloud.rate + cloud.phase) * cloud.bob;
       }
     },

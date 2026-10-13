@@ -556,7 +556,7 @@ function finish() {
   cardBestEl.replaceChildren();
   appendPersonalStats(cardBestEl, marks, k.cause);
   if (game.furthest > game.was.furthest) plantPole(game.furthestX, game.furthest);
-  // The striped stake hides on the next shot. This pole stays for the visit,
+  // The landing stake hides on the next shot. This pole stays for the visit,
   // including a landing that did not set a new furthest.
   plantPole(k.x, game.feet);
   const marked = poles.some((pole) => Math.abs(pole.x - k.x) < 48);

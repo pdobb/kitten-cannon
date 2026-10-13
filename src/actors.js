@@ -314,26 +314,33 @@ function trampoline() {
 function tarPit() {
   const root = new Container();
   const g = new Graphics();
-  paint(g, g, (p) => p.ellipse(-2, 5, 42, 13), 0x8a552c, 2.4);
-  g.ellipse(2, 7, 34, 9);
-  g.fill(0x5c3a22);
-  paint(g, g, (p) => p.ellipse(0, 10, 30, 8), PAL.tar, 2.3);
-  g.ellipse(-8, 12.4, 12, 2.1);
-  g.fill({ color: 0x6a625a, alpha: 0.9 });
-  g.ellipse(6, 11, 5, 1.2);
-  g.fill({ color: 0xc8c0b4, alpha: 0.35 });
+  // A glossy pool in the grass. A dirt ring around the black read as a border.
+  for (const [x, y, rx, ry] of [[-4, 8, 36, 11], [-22, 7.2, 16, 7], [20, 7.6, 15, 6.6]]) {
+    g.ellipse(x, y, rx, ry);
+    g.fill(0x0c0b09);
+  }
+  g.ellipse(0, 10.2, 24, 6.2);
+  g.fill(0x1c1915);
+  g.ellipse(-9, 12.8, 13, 2.3);
+  g.fill({ color: 0x24343c, alpha: 0.55 });
+  g.ellipse(8, 11.6, 6.2, 1.45);
+  g.fill({ color: 0xd7d2c6, alpha: 0.22 });
+  for (const [x, y, h, lean] of [[-34, 5, 9, -1.6], [-24, 4, 6, 1.2], [26, 4.5, 7, -0.8], [34, 5, 8, 1.8], [4, 3.5, 5, 0.4]]) {
+    g.poly([x, y, x + 2, y, x + 1 + lean, y + h]);
+    g.fill(PAL.grassDark);
+  }
   root.addChild(g);
 
   const bubbles = [];
-  for (const [x, y, r] of [[11, 14.2, 2.5], [-9, 13.2, 1.8], [0.5, 15.4, 1.35]]) {
+  for (const [x, y, r] of [[10, 12.4, 2.6], [-8, 11.6, 1.9], [1, 13.6, 1.4]]) {
     const bubble = new Container();
     bubble.position.set(x, y);
     bubble.userData = { baseY: y };
     const ball = new Graphics();
     ball.circle(0, 0, r);
-    ball.fill(0x3f3832);
-    ball.circle(-r * 0.28, r * 0.32, r * 0.34);
-    ball.fill(0x8a837a);
+    ball.fill(0x2a261f);
+    ball.circle(-r * 0.28, r * 0.3, r * 0.32);
+    ball.fill({ color: 0xe7e2d6, alpha: 0.55 });
     bubble.addChild(ball);
     root.addChild(bubble);
     bubbles.push(bubble);
@@ -433,12 +440,14 @@ export function createStake() {
   const root = new Container();
   const g = new Graphics();
   g.roundRect(-2.2, 0, 4.4, 76, 1.2);
-  g.fill(0xf4f0e4);
+  g.fill(0xb4bec6);
   g.stroke(strokeOf(2));
-  for (let i = 0; i < 5; i++) {
-    g.rect(-2.8, 14 + i * 11, 5.6, 6.5);
-    g.fill(i % 2 ? PAL.red : 0xf7f3ea);
-  }
+  g.roundRect(-0.55, 3, 1.15, 66, 0.5);
+  g.fill(0xe8eef2);
+  g.circle(0, 76, 2.5);
+  g.fill(0xd5dde4);
+  g.circle(0, 76, 2.5);
+  g.stroke(strokeOf(1.6));
   g.roundRect(2, 62, 38, 18, 3);
   g.fill(PAL.red);
   g.roundRect(2, 62, 38, 18, 3);
