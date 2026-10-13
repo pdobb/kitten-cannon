@@ -902,8 +902,10 @@ pauseEl.addEventListener('pointerdown', (e) => {
   if (e.target === pauseEl) setPaused(false);
 });
 
-// A tap or a mouse click on the field is Enter. A vertical touch drag aims.
-// A mouse drag does not aim. Buttons keep their own taps.
+// A tap or a mouse click on the field is Enter. A touch drag aims.
+// Up and left raise the barrel. Down and right lower it. The barrel pivots,
+// so a diagonal or an arc has to count on both axes. A mouse drag does not aim.
+// Buttons keep their own taps.
 let touchAim = null;
 function fieldTarget(target) {
   return !(target && target.closest && target.closest('button, a'));
@@ -923,6 +925,7 @@ app.addEventListener('pointerdown', (e) => {
     id: e.pointerId,
     x: e.clientX,
     y: e.clientY,
+    lastX: e.clientX,
     lastY: e.clientY,
     moved: false,
     mouse: e.pointerType === 'mouse',
@@ -930,6 +933,7 @@ app.addEventListener('pointerdown', (e) => {
 });
 app.addEventListener('pointermove', (e) => {
   if (!touchAim || e.pointerId !== touchAim.id) return;
+  const dx = e.clientX - touchAim.lastX;
   const dy = e.clientY - touchAim.lastY;
   const adx = Math.abs(e.clientX - touchAim.x);
   const ady = Math.abs(e.clientY - touchAim.y);
@@ -938,9 +942,11 @@ app.addEventListener('pointermove', (e) => {
     touchAim.moved = true;
   }
   if (touchAim.mouse) return;
+  touchAim.lastX = e.clientX;
   touchAim.lastY = e.clientY;
-  if ((game.phase === 'aim' || game.phase === 'title') && ady >= adx) {
-    game.angle -= dy * 0.32;
+  if (game.phase === 'aim' || game.phase === 'title') {
+    // Screen y grows downward, so a negative dy is up.
+    game.angle -= (dx + dy) * 0.32;
     clampAngle();
   }
 });
