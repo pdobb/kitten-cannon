@@ -8,7 +8,7 @@ Aim the barrel, fire when the power bar is full, and see how far the kitty flies
 
 ## Where it comes from
 
-This is a [Three.js](https://threejs.org/) tribute to *Kitten Cannon!*, the Flash game [Dan Fleming](https://www.newgrounds.com/portal/view/228520) posted on Newgrounds as BurstStudio on March 30, 2005. Up and down aimed the cannon, space fired, and a red meter set the power. Balloons, bombs, and trampolines threw the kitten farther. Spikes and the flytrap ended the ride. The score was distance in feet. It became the game people point to when they talk about the toss games that followed on Newgrounds.
+This is a [PixiJS](https://pixijs.com/) side view of *Kitten Cannon!*, the Flash game [Dan Fleming](https://www.newgrounds.com/portal/view/228520) posted on Newgrounds as BurstStudio on March 30, 2005. Up and down aimed the cannon, space fired, and a red meter set the power. Balloons, bombs, and trampolines threw the kitten farther. Tar pits and the flytrap ended the ride. The score was distance in feet. It became the game people point to when they talk about the toss games that followed on Newgrounds. The picture is flat on purpose: the grass, the foothills, and the mountains share one horizon, and the flight numbers are the same.
 
 The flight here follows that game's 2007 v1.3 frame: gravity of 1 pixel per frame at 30 frames a second, a bounce of 0.72, and feet equal to horizontal pixels divided by 30. The kitten, the field, the mountains, and the sound are drawn and synthesized for this version.
 

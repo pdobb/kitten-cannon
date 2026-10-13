@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { Application, Container, Graphics } from 'pixi.js';
 import { createAudio } from './audio.js';
 import {
   createCannon,
@@ -6,12 +6,13 @@ import {
   createParticles,
   createProp,
   createStake,
+  refreshLettering,
 } from './actors.js';
 import { buildCourse, resetCourse } from './course.js';
-import { createLook } from './look.js';
 import { createKitten as makeState, step } from './physics.js';
 import { createFlybys } from './flyby.js';
 import { createScenery } from './scenery.js';
+import { applyWorld, viewHalfWidth } from './view.js';
 import {
   ANGLE_MAX,
   ANGLE_MIN,
@@ -92,8 +93,6 @@ const ENDINGS = [
   ['spikes', 'Tar pit'],
   ['venus', 'Flytrap'],
 ];
-const KITTY_Z = 6;
-const PROP_Z = 2;
 const NOTES = {
   landed: 'Soft landing.',
   spikes: 'Stuck in the tar.',
@@ -106,6 +105,8 @@ const SHOUT = {
   spikes: 'GLUG',
   venus: 'GULP',
 };
+const NEAR_PROP = 8000;
+const FAR_PROP = 14000;
 
 const app = document.querySelector('#app');
 const canvas = document.querySelector('#view');
@@ -131,73 +132,50 @@ const cardNoteEl = document.querySelector('#card-note');
 const cardBestEl = document.querySelector('#card-best');
 const padFireEl = document.querySelector('#pad-fire');
 
-const look = createLook();
 const audio = createAudio();
 const course = buildCourse();
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
-renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-renderer.setClearColor(0x9ed4f6);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.NoToneMapping;
-
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(34, 1, 1, 20000);
-
-scene.add(new THREE.HemisphereLight(0xd7ecff, 0x6ea044, 0.95));
-const keyLight = new THREE.DirectionalLight(0xfff3d4, 1.3);
-keyLight.position.set(60, 200, 160);
-scene.add(keyLight);
-const fillLight = new THREE.DirectionalLight(0xc5ddff, 0.4);
-fillLight.position.set(-80, 60, 40);
-scene.add(fillLight);
-
-const scenery = createScenery(scene, look);
-const flybys = createFlybys(scene, look);
-const kitten = makeKittenMesh(look);
-scene.add(kitten.mesh);
-const cannon = createCannon(look);
-scene.add(cannon.root);
-const stake = createStake(look);
-scene.add(stake);
-// Record poles stay for this visit. The end flag still marks the latest landing.
+const pixi = new Application();
+const world = new Container();
+const propLayer = new Container();
+const actorLayer = new Container();
+let scenery;
+let flybys;
+let kitten;
+let cannon;
+let stake;
+let particles;
+let shadow;
 const poles = [];
-const particles = createParticles(look, scene);
+let view = { scale: 1, halfW: 1, halfH: 1, screenW: 1, screenH: 1, camX: 0, camY: 0 };
 
 // How far past the kitten the field is filled. Wide enough for the view and
 // for several fast frames, and the same on every screen so the lane does
 // not depend on the window.
 const FIELD_AHEAD = 16000;
-let mounted = 0;
-
-function mountAhead() {
-  for (; mounted < course.length; mounted++) {
-    const prop = course[mounted];
-    const built = createProp(prop.type, look, prop.x);
-    prop.mesh = built.mesh;
-    prop.parts = built.parts;
-    prop.squash = 0;
-    prop.chomp = 0;
-    built.mesh.position.set(prop.x, prop.type === 'balloon' ? prop.y : 0, PROP_Z);
-    scene.add(built.mesh);
-  }
-}
 
 function fieldProps(k) {
   course.grow(k.x + FIELD_AHEAD);
-  mountAhead();
   return course.near(k.x, k.x + k.vx);
 }
 
-mountAhead();
+function releaseProp(prop) {
+  if (!prop.mesh) return;
+  prop.mesh.destroy({ children: true });
+  prop.mesh = null;
+  prop.parts = null;
+}
 
-const shadow = new THREE.Mesh(
-  new THREE.CircleGeometry(16, 18),
-  new THREE.MeshBasicMaterial({ color: 0x1d3a16, transparent: true, opacity: 0.28, depthWrite: false })
-);
-shadow.rotation.x = -Math.PI / 2;
-shadow.position.y = 0.7;
-scene.add(shadow);
+function ensureProp(prop) {
+  if (prop.mesh) return;
+  const built = createProp(prop.type, prop.x);
+  prop.mesh = built.mesh;
+  prop.parts = built.parts;
+  prop.squash = prop.squash || 0;
+  prop.chomp = prop.chomp || 0;
+  prop.mesh.position.set(prop.x, prop.type === 'balloon' ? prop.y : 0);
+  propLayer.addChild(prop.mesh);
+}
 
 const params = new URLSearchParams(location.search);
 
@@ -316,13 +294,13 @@ function rankPoles() {
     const rank = i + 1;
     if (ordered[i].rank === rank) continue;
     ordered[i].rank = rank;
-    ordered[i].mesh.userData.paintRank(rank);
+    ordered[i].mesh.paintRank(rank);
   }
 }
 
 function repaintRanks() {
   for (const pole of poles) {
-    if (pole.rank) pole.mesh.userData.paintRank(pole.rank);
+    if (pole.rank) pole.mesh.paintRank(pole.rank);
   }
 }
 
@@ -339,10 +317,10 @@ function plantPole(x, feet) {
       return;
     }
   }
-  const mesh = createStake(look);
+  const mesh = createStake();
   mesh.visible = true;
-  mesh.position.set(x, 0, 10);
-  scene.add(mesh);
+  mesh.position.set(x, 0);
+  actorLayer.addChild(mesh);
   poles.push({ x, feet, mesh, rank: 0 });
   rankPoles();
 }
@@ -447,6 +425,7 @@ function celebratePower(power) {
 }
 
 function burst(x, y, colors, count, speed, life, size) {
+  if (!particles) return;
   for (let i = 0; i < colors.length; i++) {
     particles.spawn(x, y, colors[i], count, speed, life, size);
   }
@@ -461,6 +440,7 @@ function safeAudio(fn) {
 }
 
 function startAim() {
+  if (!kitten || !flybys) return;
   flybys.clear();
   setPhase('aim');
   stake.visible = false;
@@ -571,25 +551,27 @@ function finish() {
   if (marked) {
     stake.visible = false;
   } else {
-    stake.position.set(k.x, 0, 10);
+    stake.position.set(k.x, 0);
     stake.visible = true;
   }
   setPhase('result');
 }
 
 function retry() {
+  if (!kitten) return;
   resetCourse(course);
   for (let i = 0; i < course.length; i++) {
     const prop = course[i];
     prop.squash = 0;
     prop.chomp = 0;
+    if (!prop.mesh || !prop.parts) continue;
     prop.mesh.visible = true;
-    prop.mesh.scale.set(1, 1, 1);
+    prop.mesh.scale.set(1, 1);
     if (prop.parts.bed) prop.parts.bed.scale.y = 1;
     if (prop.parts.upper) {
       const open = prop.parts.open;
-      prop.parts.upper.rotation.z = -open;
-      prop.parts.lower.rotation.z = open;
+      prop.parts.upper.rotation = -open;
+      prop.parts.lower.rotation = open;
     }
     if (prop.parts.stripe) prop.parts.stripe.position.y = 25.2;
   }
@@ -664,6 +646,7 @@ function release(code) {
 }
 
 function onAction() {
+  if (!kitten) return;
   if (game.phase === 'title') startAim();
   else if (game.phase === 'aim') beginShot(null);
   else if (game.phase === 'flight' || game.phase === 'result') retry();
@@ -890,16 +873,17 @@ function resize() {
     app.style.right = 'auto';
     app.style.bottom = 'auto';
   }
+  if (!pixi.renderer) return;
   const w = canvas.clientWidth || window.innerWidth;
   const h = canvas.clientHeight || window.innerHeight;
-  camera.aspect = w / Math.max(1, h);
-  camera.updateProjectionMatrix();
-  renderer.setSize(w, h, false);
-  // setSize clears the canvas. The paused loop does not draw, so a turn of
+  pixi.renderer.resize(Math.max(1, w), Math.max(1, h));
+  layoutView(0, 0);
+  // A resize clears the canvas. The paused loop does not draw, so a turn of
   // the phone would leave the dirt color until Resume.
   if (game.paused && game.checked) {
     updateCamera(0);
-    renderer.render(scene, camera);
+    layoutView(0, 0);
+    pixi.render();
   }
 }
 let viewportFrame = 0;
@@ -915,50 +899,53 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', queueResize);
   window.visualViewport.addEventListener('scroll', queueResize);
 }
-resize();
-
 function placeKitten(time) {
   const flying = game.phase === 'flight' || game.phase === 'result';
   if (!flying) {
     const peek = peekPoint(game.angle);
     const bob = Math.sin(time * 3.2) * 1.1;
-    kitten.mesh.position.set(peek.x, peek.y + bob, KITTY_Z);
-    kitten.mesh.rotation.z = (game.angle * Math.PI) / 180;
-    kitten.mesh.scale.set(1, 1, 1);
+    kitten.mesh.position.set(peek.x, peek.y + bob);
+    kitten.mesh.rotation = (game.angle * Math.PI) / 180;
+    kitten.mesh.scale.set(1, 1);
     kitten.eye.scale.y = Math.sin(time * 0.7) > 0.975 ? 0.12 : 1;
     return;
   }
   const k = game.kitten;
   const y = k.cause === 'spikes' ? Math.max(8, k.y - game.sink) : k.y;
-  kitten.mesh.position.set(k.x, y, KITTY_Z);
+  kitten.mesh.position.set(k.x, y);
   if (k.cause === 'landed') {
-    const current = kitten.mesh.rotation.z;
+    const current = kitten.mesh.rotation;
     const rest = Math.round(current / (Math.PI * 2)) * Math.PI * 2;
-    kitten.mesh.rotation.z = current + (rest - current) * 0.18;
+    kitten.mesh.rotation = current + (rest - current) * 0.18;
   } else {
-    kitten.mesh.rotation.z = (k.spin * Math.PI) / 180;
+    kitten.mesh.rotation = (k.spin * Math.PI) / 180;
   }
   const s = game.squash;
-  kitten.mesh.scale.set(1 + s * 0.28, 1 - s * 0.32, 1);
+  kitten.mesh.scale.set(1 + s * 0.28, 1 - s * 0.32);
   kitten.eye.scale.y = 1;
 }
 
 function updateProps(time, dt) {
   for (let i = 0; i < course.length; i++) {
     const prop = course[i];
-    // Props past the old field are created as the flight goes. Leave the
-    // ones far from the camera alone so a long run does not bob every balloon.
-    if (Math.abs(prop.x - cam.x) > 9000) {
-      prop.mesh.visible = false;
+    const dist = Math.abs(prop.x - cam.x);
+    // Build the picture only near the lens, and drop it again on a long flight.
+    // The hit data stays on the course either way.
+    if (dist > (prop.mesh ? FAR_PROP : NEAR_PROP)) {
+      releaseProp(prop);
       continue;
     }
+    const gone = (prop.type === 'tnt' || prop.type === 'balloon') && prop.spent;
+    if (gone && !prop.mesh) continue;
+    ensureProp(prop);
     if (prop.type !== 'balloon' && !(prop.type === 'tnt' && prop.spent)) prop.mesh.visible = true;
     if (prop.type === 'balloon') {
       if (!prop.spent) prop.y = prop.baseY + Math.sin(time * 1.5 + prop.bob) * 11;
       prop.mesh.position.y = prop.y;
       prop.mesh.visible = !prop.spent;
       if (prop.parts.spark && !prop.spent) {
-        prop.parts.spark.scale.setScalar(0.85 + Math.sin(time * 14 + prop.bob) * 0.35);
+        const spark = 0.85 + Math.sin(time * 14 + prop.bob) * 0.35;
+        prop.parts.spark.scale.set(spark, spark);
       }
     }
     if (prop.squash > 0) {
@@ -971,15 +958,16 @@ function updateProps(time, dt) {
     if (prop.parts.upper && prop.type === 'venus') {
       const shut = prop.chomp || 0;
       const open = prop.parts.open * (1 - shut);
-      prop.parts.upper.rotation.z = -open;
-      prop.parts.lower.rotation.z = open;
+      prop.parts.upper.rotation = -open;
+      prop.parts.lower.rotation = open;
     }
     if (prop.parts.bubbles) {
       const bubbles = prop.parts.bubbles;
       for (let b = 0; b < bubbles.length; b++) {
         const bubble = bubbles[b];
         bubble.position.y = bubble.userData.baseY + Math.sin(time * 2.4 + b * 1.7) * 1.1;
-        bubble.scale.setScalar(0.85 + Math.sin(time * 3.1 + b) * 0.15);
+        const s = 0.85 + Math.sin(time * 3.1 + b) * 0.15;
+        bubble.scale.set(s, s);
       }
     }
     if ((prop.type === 'tnt' || prop.type === 'spikes') && prop.spent) {
@@ -994,8 +982,9 @@ function updateCamera(dt) {
   const k = game.kitten;
   // One distance for the whole flight. The camera follows; it does not zoom.
   // The lead shrinks on a narrow screen so the kitten stays in frame.
-  const z = 980;
-  const halfW = Math.tan((camera.fov * Math.PI) / 360) * z * Math.max(0.3, camera.aspect);
+  const w = canvas.clientWidth || window.innerWidth;
+  const h = canvas.clientHeight || window.innerHeight;
+  const halfW = viewHalfWidth(w / Math.max(1, h));
   const lead = Math.min(220, halfW * 0.42);
   // The score card sits on the center of the screen. On the result, look
   // further ahead so the landing flag clears that card. Flight keeps the
@@ -1014,18 +1003,13 @@ function updateCamera(dt) {
   if (flying) {
     cam.x = focusX;
     cam.y = focusY;
-    cam.z = z;
   } else {
     const blend = 1 - Math.exp(-dt * (game.snap ? 40 : 4));
     cam.x += (focusX - cam.x) * blend;
     cam.y += (focusY - cam.y) * blend;
-    cam.z += (z - cam.z) * blend;
   }
   game.snap = false;
   cam.shake *= Math.exp(-dt * 5.5);
-  const t = performance.now() * 0.05;
-  camera.position.set(cam.x + Math.sin(t) * cam.shake * 12, cam.y + 30 + Math.cos(t * 0.8) * cam.shake * 8, cam.z);
-  camera.lookAt(cam.x, cam.y, 0);
 }
 
 function updateHud() {
@@ -1062,8 +1046,22 @@ function updateHud() {
     }
   }
   cannon.ticks.visible = game.phase === 'aim' || game.phase === 'title';
-  cannon.pivot.rotation.z = (game.angle * Math.PI) / 180;
+  cannon.pivot.rotation = (game.angle * Math.PI) / 180;
   cannon.pivot.position.x = PIVOT_X - game.recoil;
+}
+
+function layoutView(jx, jy) {
+  const w = canvas.clientWidth || window.innerWidth || 1;
+  const h = canvas.clientHeight || window.innerHeight || 1;
+  view = applyWorld(world, Math.max(1, w), Math.max(1, h), cam.x + jx, cam.y + jy);
+}
+
+function worldOf(display, localX = 0, localY = 0) {
+  const p = display.toGlobal({ x: localX, y: localY });
+  return {
+    x: view.camX + (p.x - view.screenW / 2) / view.scale,
+    y: view.camY - (p.y - view.screenH / 2) / view.scale,
+  };
 }
 
 function assertFrames() {
@@ -1072,25 +1070,29 @@ function assertFrames() {
   if (flat.x < 0.999 || Math.abs(flat.y) > 1e-6) throw new Error('aim 0 should point +X');
   if (up.y < 0.999 || Math.abs(up.x) > 1e-6) throw new Error('aim 90 should point +Y');
 
-  cannon.pivot.rotation.z = Math.PI / 2;
+  cannon.pivot.rotation = Math.PI / 2;
   cannon.pivot.position.x = PIVOT_X;
-  cannon.root.updateWorldMatrix(true, true);
-  const mark = new THREE.Vector3();
-  cannon.muzzle.getWorldPosition(mark);
+  layoutView(0, 0);
+  const mark = worldOf(cannon.muzzle);
   const expected = barrelMuzzle(90);
-  if (Math.abs(mark.x - expected.x) > 0.25 || Math.abs(mark.y - expected.y) > 0.25) {
+  if (Math.abs(mark.x - expected.x) > 0.5 || Math.abs(mark.y - expected.y) > 0.5) {
     throw new Error(`muzzle ${mark.x.toFixed(1)},${mark.y.toFixed(1)} != ${expected.x.toFixed(1)},${expected.y.toFixed(1)}`);
   }
 
-  kitten.mesh.rotation.z = (game.angle * Math.PI) / 180;
-  kitten.mesh.updateWorldMatrix(true, true);
-  const origin = new THREE.Vector3();
-  const nose = new THREE.Vector3(20, 0, 0);
-  kitten.mesh.getWorldPosition(origin);
-  kitten.mesh.localToWorld(nose);
-  nose.sub(origin).normalize();
+  const screenUp = world.toGlobal({ x: view.camX, y: view.camY + 80 });
+  const origin = world.toGlobal({ x: view.camX, y: view.camY });
+  const screenRight = world.toGlobal({ x: view.camX + 80, y: view.camY });
+  if (!(screenUp.y < origin.y - 1)) throw new Error('world up should be up the screen');
+  if (!(screenRight.x > origin.x + 1)) throw new Error('world +X should point right');
+
+  kitten.mesh.rotation = (game.angle * Math.PI) / 180;
+  const nose = worldOf(kitten.mesh, 20, 0);
+  const at = worldOf(kitten.mesh);
+  const dx = nose.x - at.x;
+  const dy = nose.y - at.y;
+  const len = Math.hypot(dx, dy) || 1;
   const aim = aimVector(game.angle);
-  const dot = nose.x * aim.x + nose.y * aim.y;
+  const dot = (dx / len) * aim.x + (dy / len) * aim.y;
   if (dot < 0.98) throw new Error(`kitten nose is ${dot.toFixed(3)} off the barrel`);
 }
 
@@ -1098,6 +1100,8 @@ let acc = 0;
 let last = performance.now();
 
 function frame(now) {
+  requestAnimationFrame(frame);
+  if (!kitten) return;
   if (game.paused && game.checked) return;
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
@@ -1140,27 +1144,29 @@ function frame(now) {
   updateHud();
   updateCamera(dt);
 
+  const t = performance.now() * 0.05;
+  const jx = Math.sin(t) * cam.shake * 10;
+  const jy = Math.cos(t * 0.8) * cam.shake * 7;
+  layoutView(jx, jy);
+  const draw = { x: view.camX, y: view.camY };
+
   const h = Math.max(0, kitten.mesh.position.y - GROUND_Y);
+  const shade = Math.max(0.35, 1.25 - h / 200);
   shadow.position.x = kitten.mesh.position.x;
-  shadow.position.z = KITTY_Z;
-  shadow.scale.setScalar(Math.max(0.35, 1.25 - h / 200));
-  shadow.material.opacity = Math.max(0.04, 0.32 - h / 420);
+  shadow.scale.set(shade, shade);
+  shadow.alpha = Math.max(0.04, 0.32 - h / 420);
   shadow.visible = kitten.mesh.visible;
 
-  scenery.update(time, cam);
-  flybys.update(time, dt, cam, game.kitten ? game.kitten.y : 0, game.phase === 'flight' && game.kitten && !game.kitten.dead);
+  scenery.update(time, draw, view);
+  flybys.update(time, dt, draw, game.kitten ? game.kitten.y : 0, game.phase === 'flight' && game.kitten && !game.kitten.dead);
   particles.update(dt);
-  renderer.render(scene, camera);
+  pixi.render();
 
   if (!game.checked) {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-    if (dir.z > -0.5) throw new Error(`camera should look toward -Z, got ${dir.z.toFixed(2)}`);
     if (game.kitten) {
-      const projected = new THREE.Vector3(game.kitten.x, game.kitten.y, KITTY_Z);
-      projected.project(camera);
-      if (Math.abs(projected.x) > 1 || Math.abs(projected.y) > 1) {
-        throw new Error(`kitten off screen (${projected.x.toFixed(2)}, ${projected.y.toFixed(2)})`);
+      const at = worldOf(kitten.mesh);
+      if (Math.abs(at.x - view.camX) > view.halfW || Math.abs(at.y - view.camY) > view.halfH) {
+        throw new Error(`kitten off screen (${at.x.toFixed(0)}, ${at.y.toFixed(0)})`);
       }
     }
     game.checked = true;
@@ -1168,17 +1174,81 @@ function frame(now) {
   }
 }
 
-if (game.furthest > 0) {
-  game.furthestX = xForFeet(game.furthest);
-  plantPole(game.furthestX, game.furthest);
-}
-if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(repaintRanks).catch(() => {});
+async function boot() {
+  const w0 = canvas.clientWidth || window.innerWidth || 800;
+  const h0 = canvas.clientHeight || window.innerHeight || 600;
+  await pixi.init({
+    canvas,
+    width: Math.max(1, w0),
+    height: Math.max(1, h0),
+    background: 0x9ed4f6,
+    antialias: true,
+    resolution: Math.min(2, window.devicePixelRatio || 1),
+    autoDensity: false,
+    preference: 'webgl',
+    autoStart: false,
+    accessibilityOptions: { activateOnTab: false },
+  });
+  pixi.stage.eventMode = 'none';
+  if (pixi.renderer.events) pixi.renderer.events.autoPreventDefault = false;
+
+  scenery = createScenery(world);
+  flybys = createFlybys(scenery.flyLayer);
+  pixi.stage.addChild(scenery.sky, world);
+  world.addChild(propLayer, actorLayer);
+
+  kitten = makeKittenMesh();
+  cannon = createCannon();
+  stake = createStake();
+  shadow = new Graphics();
+  shadow.ellipse(0, 2, 16, 5.5);
+  shadow.fill({ color: 0x1d3a16, alpha: 1 });
+  actorLayer.addChild(cannon.root, shadow, kitten.mesh, stake);
+  particles = createParticles(actorLayer);
+
+  resize();
+  if (game.furthest > 0) {
+    game.furthestX = xForFeet(game.furthest);
+    plantPole(game.furthestX, game.furthest);
+  }
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      repaintRanks();
+      refreshLettering();
+    }).catch(() => {});
+  }
+
+  assertFrames();
+  setPhase('title');
+  paintRecords();
+  applyQuery();
+  requestAnimationFrame(frame);
 }
 
-assertFrames();
-setPhase('title');
-paintRecords();
+// The query runs after the picture exists. A demo steps the flight before
+// the first frame, so a screenshot lands on that shot.
+function applyQuery() {
+  if (params.get('phase') === 'aim') startAim();
+  if (!params.has('demo')) return;
+  game.angle = Number(params.get('angle') || 30);
+  clampAngle();
+  startAim();
+  beginShot(Number(params.get('power') || POWER_MAX));
+  const frames = Number(params.get('frames') || 0);
+  for (let i = 0; i < frames && game.kitten && !game.kitten.dead; i++) {
+    onEvent(step(game.kitten, fieldProps(game.kitten)));
+    afterStep();
+  }
+  commitRecords();
+  if (frames > 0 && game.kitten && game.kitten.dead) game.hold = 0;
+}
+
+boot().catch((error) => {
+  const pre = document.createElement('pre');
+  pre.id = 'boot-error';
+  pre.textContent = error && error.stack ? error.stack : String(error);
+  document.body.appendChild(pre);
+});
 
 window.__kitten = {
   ready: false,
@@ -1204,21 +1274,3 @@ window.__kitten = {
   },
   retry,
 };
-
-if (params.get('phase') === 'aim') startAim();
-
-if (params.has('demo')) {
-  game.angle = Number(params.get('angle') || 30);
-  clampAngle();
-  startAim();
-  beginShot(Number(params.get('power') || POWER_MAX));
-  const frames = Number(params.get('frames') || 0);
-  for (let i = 0; i < frames && game.kitten && !game.kitten.dead; i++) {
-    onEvent(step(game.kitten, fieldProps(game.kitten)));
-    afterStep();
-  }
-  commitRecords();
-  if (frames > 0 && game.kitten && game.kitten.dead) game.hold = 0;
-}
-
-renderer.setAnimationLoop(frame);

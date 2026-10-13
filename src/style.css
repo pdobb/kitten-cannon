@@ -27,6 +27,30 @@ html, body {
   position: fixed;
   inset: 0;
   touch-action: none;
+  --overlay-top: 28px;
+  --overlay-bottom: 84px;
+  --overlay-side: 20px;
+}
+
+#app[data-phase="aim"] {
+  --overlay-top: 20px;
+  --overlay-bottom: 132px;
+}
+
+#app[data-phase="flight"] {
+  --overlay-top: 132px;
+  --overlay-bottom: 76px;
+}
+
+#app[data-phase="result"] {
+  --overlay-top: 28px;
+  --overlay-bottom: 84px;
+}
+
+#app.is-paused {
+  --overlay-top: 16px;
+  --overlay-bottom: 72px;
+  --overlay-side: 16px;
 }
 
 #view {
@@ -127,17 +151,25 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
 
 #records b, .bestline b, #card-best b {
   font-size: 18px;
+  font-variant-numeric: tabular-nums;
 }
 
 .bestline, #card-best {
-  margin: 14px auto 0;
-  width: min(280px, 100%);
+  margin: 0;
+  width: min(300px, 100%);
   text-align: left;
+}
+
+#card-best {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
 }
 
 #card-best .flight-up {
   display: block;
-  margin: 0 0 2px;
+  margin: 0;
   text-align: center;
   font-family: "Lilita One", "Trebuchet MS", sans-serif;
   font-size: 30px;
@@ -148,7 +180,7 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
 
 #card-best .flight-speed {
   display: block;
-  margin: 4px 0 2px;
+  margin: 0;
   text-align: center;
   font-family: Nunito, sans-serif;
   font-weight: 800;
@@ -158,7 +190,7 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
 
 #card-best p.shot {
   display: block;
-  margin: 0 0 12px;
+  margin: 0;
   text-align: center;
   white-space: normal;
   font-family: Nunito, sans-serif;
@@ -181,7 +213,7 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
   align-items: center;
   flex-wrap: nowrap;
   gap: 10px;
-  margin-top: 22px;
+  margin: clamp(4px, 0.8vh, 12px) 0 0;
 }
 
 #fullscreen {
@@ -236,25 +268,16 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
 
 #mute:active, #pause-btn:active { transform: translate(2px, 2px); box-shadow: none; }
 
-#pause {
-  position: absolute;
-  z-index: 6;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding:
-    calc(16px + var(--safe-top))
-    calc(16px + var(--safe-right))
-    calc(16px + var(--safe-bottom))
-    calc(16px + var(--safe-left));
-  background: rgba(43, 33, 24, 0.35);
-}
-
-#pause .panel { width: min(420px, 100%); }
-
 #app.is-paused, #app.is-paused * { animation-play-state: paused; }
 #app.is-paused #title,
 #app.is-paused #card { visibility: hidden; }
+#app.is-paused #scoreblock,
+#app.is-paused #records,
+#app.is-paused #meter,
+#app.is-paused #hint,
+#app.is-paused #pad { visibility: hidden; }
+#app.is-paused #mute,
+#app.is-paused #pause-btn { z-index: 7; }
 
 #card-best p.endings-kicker {
   display: block;
@@ -488,15 +511,26 @@ kbd {
   vertical-align: 1px;
 }
 
-#title, #card {
+#title, #card, #pause {
   position: absolute;
+  inset: 0;
   z-index: 3;
-  left: calc(50% + (var(--safe-left) - var(--safe-right)) / 2);
-  top: calc(50% + (var(--safe-top) - var(--safe-bottom)) / 2);
-  transform: translate(-50%, -50%);
-  width: min(560px, calc(100% - 32px - var(--safe-left) - var(--safe-right)));
-  max-height: calc(100% - 24px - var(--safe-top) - var(--safe-bottom));
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding:
+    calc(var(--overlay-top) + var(--safe-top))
+    calc(var(--overlay-side) + var(--safe-right))
+    calc(var(--overlay-bottom) + var(--safe-bottom))
+    calc(var(--overlay-side) + var(--safe-left));
   overflow: auto;
+  pointer-events: none;
+}
+
+#pause {
+  z-index: 6;
+  pointer-events: auto;
+  background: rgba(43, 33, 24, 0.35);
 }
 
 .panel { pointer-events: auto; }
@@ -504,36 +538,49 @@ kbd {
 .hidden { display: none !important; }
 
 .panel {
-  width: min(560px, 100%);
+  width: min(440px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(6px, 1.2vh, 12px);
+  padding: clamp(12px, 2.2vh, 28px) clamp(16px, 4vw, 32px);
+  border: clamp(4px, 0.6vmin, 6px) solid #2b2118;
+  border-radius: clamp(16px, 2vmin, 22px);
+  box-shadow: 6px 8px 0 #2b2118;
   background: #fff7e8;
-  border: 6px solid #2b2118;
-  border-radius: 22px;
-  box-shadow: 8px 10px 0 #2b2118;
-  padding: 26px 28px 22px;
+  color: #2b2118;
   text-align: center;
 }
 
+.panel > * { margin: 0; }
+.panel > .actions { margin-top: clamp(4px, 0.8vh, 12px); }
+
 .eyebrow {
-  margin: 0;
+  margin: 0 0 -4px;
   font-family: Nunito, sans-serif;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-size: 14px;
+  font-size: clamp(11px, min(3vw, 2.4vh), 14px);
   color: #5a3018;
 }
 
+h1, h2 {
+  margin: 0;
+  line-height: 0.92;
+  text-wrap: balance;
+}
+
 h1 {
-  margin: 6px 0 8px;
-  font-size: clamp(46px, 8vw, 72px);
-  line-height: 0.9;
+  font-size: clamp(34px, min(11vw, 12vh), 68px);
   color: #d23b2e;
 }
 
 h2 {
-  margin: 4px 0 8px;
-  font-size: clamp(48px, 8vw, 76px);
-  line-height: 0.9;
+  font-size: clamp(32px, min(12vw, 14vh), 76px);
 }
 
 .lede, #card-note, #card-best, .bestline {
@@ -542,19 +589,17 @@ h2 {
 }
 
 .lede, #card-note {
-  font-size: 18px;
-  line-height: 1.45;
+  margin: 0;
+  font-size: clamp(15px, min(4.2vw, 3.6vh), 18px);
+  line-height: 1.4;
+  text-wrap: balance;
 }
 
-.lede { margin: 0 0 16px; }
-
-#card-note { margin: 8px 0 0; }
-
 #need-js {
-  margin: 12px 0 0;
+  margin: 0;
   font-family: Nunito, sans-serif;
   font-weight: 800;
-  font-size: 16px;
+  font-size: clamp(14px, min(3.6vw, 3vh), 16px);
   line-height: 1.4;
   color: #8d1d1d;
 }
@@ -569,8 +614,9 @@ button#start, button#again, button#resume, #pad button {
   background: #e23b2e;
   color: #fffaf0;
   border-radius: 14px;
-  padding: 10px 22px;
-  font-size: 22px;
+  padding: 8px 22px;
+  min-height: 44px;
+  font-size: clamp(18px, min(4.5vw, 4vh), 22px);
   cursor: pointer;
   box-shadow: 4px 4px 0 #2b2118;
 }
@@ -578,12 +624,6 @@ button#start, button#again, button#resume, #pad button {
 button#start:active, button#again:active, button#resume:active, #pad button:active {
   transform: translate(3px, 3px);
   box-shadow: none;
-}
-
-@media (max-height: 720px) {
-  .panel { padding: 14px 16px 12px; }
-  h1 { font-size: 40px; }
-  .lede, #card-note { margin-bottom: 10px; font-size: 16px; }
 }
 
 #pad {
@@ -609,7 +649,9 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
 #app[data-phase="aim"] #scoreblock,
 #app[data-phase="flight"] #meter,
 #app[data-phase="flight"] #pad,
-#app[data-phase="result"] #meter {
+#app[data-phase="result"] #meter,
+#app[data-phase="result"] #scoreblock,
+#app[data-phase="result"] #records {
   display: none;
 }
 
@@ -675,32 +717,12 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
 }
 
 @media (max-width: 720px), (pointer: coarse) {
-  #title, #card {
-    width: min(520px, calc(100% - 20px - var(--safe-left) - var(--safe-right)));
-    max-height: calc(100% - 16px - var(--safe-top) - var(--safe-bottom));
-  }
-  .panel {
-    border-width: 4px;
-    border-radius: 16px;
-    box-shadow: 4px 5px 0 #2b2118;
-    padding: 14px 16px 12px;
-  }
-  .eyebrow { font-size: 12px; letter-spacing: 0.04em; }
-  h1 { margin: 2px 0 6px; font-size: clamp(36px, 11vw, 56px); }
-  h2 { margin: 2px 0 4px; font-size: clamp(40px, 12vw, 64px); }
-  .lede, #card-note { font-size: 16px; line-height: 1.35; }
-  .lede { margin-bottom: 10px; }
-  #card-note { margin-top: 4px; }
   #card-best .flight-up { font-size: 24px; }
-  #card-best .flight-speed { font-size: 16px; margin: 2px 0 2px; }
-  #card-best p.shot { font-size: 16px; margin: 0 0 8px; }
+  #card-best .flight-speed,
+  #card-best p.shot { font-size: 16px; }
   #power-cheer b { font-size: clamp(48px, 16vw, 76px); -webkit-text-stroke-width: 5px; }
   #power-cheer.perfect b { font-size: clamp(64px, 20vw, 104px); }
   #power-cheer .kicker { font-size: clamp(18px, 4.5vw, 28px); }
-  .bestline, #card-best { margin-top: 8px; }
-  #need-js { font-size: 14px; margin-top: 8px; }
-  .actions { gap: 8px; margin-top: 16px; }
-  button#start, button#again, button#resume { font-size: 20px; padding: 8px 16px; }
 }
 
 @media (max-height: 500px) {
@@ -721,25 +743,6 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   #meter .col span { font-size: 11px; }
   #meter .col b { font-size: 18px; }
   #meter .barwrap { height: 12px; width: auto; flex: 1; max-width: 280px; }
-  #title, #card {
-    top: calc(var(--safe-top) + 8px);
-    transform: translate(-50%, 0);
-    width: min(520px, calc(100% - 16px - var(--safe-left) - var(--safe-right)));
-    max-height: calc(100% - 84px - var(--safe-top) - var(--safe-bottom));
-  }
-  .panel {
-    padding: 8px 12px 8px;
-    border-radius: 14px;
-    box-shadow: 3px 3px 0 #2b2118;
-  }
-  .eyebrow { font-size: 11px; }
-  h1 { font-size: 32px; margin: 0 0 4px; }
-  h2 { font-size: 36px; margin: 0 0 2px; }
-  .lede, #card-note { font-size: 13px; line-height: 1.25; }
-  .lede { margin-bottom: 6px; }
-  #card-best .flight-up { font-size: 18px; }
-  #card-best .flight-speed { font-size: 14px; margin: 1px 0 1px; }
-  #card-best p.shot { font-size: 14px; margin: 0 0 4px; }
   #power-cheer { bottom: calc(8px + var(--safe-bottom)); }
   #power-cheer b { font-size: 44px; }
   #power-cheer.perfect b { font-size: 56px; -webkit-text-stroke-width: 5px; }
@@ -749,11 +752,8 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   #power-cheer .spark.b { --dx: 68px; --dy: -24px; }
   #power-cheer .spark.c { --dx: -56px; --dy: 20px; }
   #power-cheer .spark.d { --dx: 60px; --dy: 22px; }
-  .bestline, #card-best { margin-top: 4px; }
   #records p, .bestline p, #card-best p { line-height: 1.25; gap: 10px; }
-  .actions { gap: 8px; margin-top: 12px; }
-  button#start, button#again, button#resume { font-size: 18px; padding: 6px 12px; }
-  #pad button { padding: 8px 12px; font-size: 18px; }
+  #pad button { padding: 8px 12px; font-size: 18px; min-height: 36px; }
 }
 
 @media (max-height: 500px) and (pointer: coarse),
@@ -762,57 +762,50 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   #meter { right: calc(12px + var(--safe-right)); }
 }
 
-@media (max-height: 500px) and (max-width: 980px) {
-  #app[data-phase="result"] #scoreblock,
-  #app[data-phase="result"] #records { display: none; }
+@media (max-height: 520px) {
+  #app,
+  #app[data-phase="title"],
+  #app[data-phase="flight"],
+  #app[data-phase="result"] {
+    --overlay-top: 10px;
+    --overlay-bottom: 12px;
+    --overlay-side: 12px;
+  }
+  #app[data-phase="aim"] { --overlay-bottom: 64px; }
+  #app.is-paused {
+    --overlay-top: 10px;
+    --overlay-bottom: 12px;
+    --overlay-side: 12px;
+  }
+  .panel { gap: 4px; padding: 10px 14px; }
+  .lede, #card-note { line-height: 1.25; }
+  #card-best .flight-up { font-size: 20px; }
+  #card-best .flight-speed,
+  #card-best p.shot { font-size: 14px; }
+  button#start, button#again, button#resume {
+    min-height: 36px;
+    padding: 4px 14px;
+  }
+  #card .panel { padding: 6px 12px; }
+  #card h2 { font-size: 26px; }
+  #card #card-note { font-size: 13px; line-height: 1.15; }
+  #card-best { gap: 0; }
+  #card-best .flight-up { font-size: 16px; }
+  #card-best .flight-speed,
+  #card-best p.shot { font-size: 13px; }
+  #card-best p { line-height: 1.1; font-size: 13px; }
+  #card-best p.endings-kicker { margin: 2px 0 0; font-size: 10px; }
+  #card .actions { margin-top: 2px; }
+  #card button#again { min-height: 32px; font-size: 16px; }
 }
 
-/* The result meter is already hidden. A short landscape phone was keeping
-   an 84px gap under the card and scrolling the rest. Use that height for the card. */
-@media (max-height: 500px) {
-  #app[data-phase="result"] #card {
-    top: calc(var(--safe-top) + 4px);
-    max-height: calc(100% - 8px - var(--safe-top) - var(--safe-bottom));
-    overflow: hidden;
-  }
-  #app[data-phase="result"] #card .panel {
-    padding: 6px 12px 6px;
-    border-width: 3px;
-    box-shadow: 2px 3px 0 #2b2118;
-  }
-  #app[data-phase="result"] #card .eyebrow { font-size: 10px; }
-  #app[data-phase="result"] #card h2 { font-size: 28px; margin: 0; }
-  #app[data-phase="result"] #card #card-note {
-    margin: 2px 0 0;
-    font-size: 12px;
-    line-height: 1.2;
-  }
-  #app[data-phase="result"] #card #card-best .flight-up { font-size: 15px; }
-  #app[data-phase="result"] #card #card-best .flight-speed {
-    font-size: 13px;
-    margin: 0;
-  }
-  #app[data-phase="result"] #card #card-best p.shot {
-    font-size: 13px;
-    margin: 0 0 2px;
-    white-space: normal;
-  }
-  #app[data-phase="result"] #card #card-best p.endings-kicker {
-    margin: 4px 0 0;
-    font-size: 10px;
-  }
-  #pause .panel { padding: 8px 12px; }
-  #pause h2 { font-size: 28px; margin: 0; }
-  #pause .actions { margin-top: 8px; }
-  #app[data-phase="result"] #card .bestline,
-  #app[data-phase="result"] #card #card-best { margin-top: 2px; }
-  #app[data-phase="result"] #card #card-best p {
-    line-height: 1.15;
-    white-space: nowrap;
-  }
-  #app[data-phase="result"] #card .actions { margin-top: 6px; }
-  #app[data-phase="result"] #card button#again {
-    font-size: 16px;
-    padding: 4px 12px;
+/* A short wide window still shows the aim pad, so the result card stays above it. */
+@media (max-height: 520px) and (min-width: 721px) {
+  #app[data-phase="result"] { --overlay-bottom: 14px; }
+  #card .panel { width: min(400px, 100%); }
+  #app.is-paused {
+    --overlay-top: 10px;
+    --overlay-bottom: 12px;
+    --overlay-side: 12px;
   }
 }
