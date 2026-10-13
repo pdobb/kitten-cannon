@@ -215,23 +215,6 @@ export function createCannon() {
 
   root.addChild(g, ink);
 
-  // Near wheel is its own layer so it covers the cheek, outline included.
-  // The grass tops out near y = 10, so a bottom at y = 6 sits in it.
-  // The barrel and the trunnion pin are added after this and stay in front.
-  const near = new Graphics();
-  const nearInk = new Graphics();
-  paint(near, nearInk, (p) => p.circle(16, 29, 23), PAL.wood, 2.6);
-  near.circle(16, 29, 16);
-  near.fill(0x9a6236);
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI;
-    near.moveTo(16 + Math.cos(a) * 5, 29 + Math.sin(a) * 5);
-    near.lineTo(16 + Math.cos(a) * 15.5, 29 + Math.sin(a) * 15.5);
-    near.stroke(strokeOf(2.4, PAL.woodDark));
-  }
-  paint(near, nearInk, (p) => p.circle(16, 29, 5), PAL.brass, 2);
-  root.addChild(near, nearInk);
-
   const pivot = new Container();
   pivot.position.set(PIVOT_X, PIVOT_Y);
 
@@ -282,6 +265,23 @@ export function createCannon() {
 
   pivot.addChild(bore, barrel, barrelInk, ticks, muzzle);
   root.addChild(pivot, pin, pinInk);
+
+  // Near wheel last, so it covers the barrel as well as the cheek. The far
+  // wheel stays in the carriage layer behind. The grass tops out near y = 10,
+  // so a bottom at y = 6 sits in it. The kitten is up at the muzzle.
+  const near = new Graphics();
+  const nearInk = new Graphics();
+  paint(near, nearInk, (p) => p.circle(16, 29, 23), PAL.wood, 2.6);
+  near.circle(16, 29, 16);
+  near.fill(0x9a6236);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI;
+    near.moveTo(16 + Math.cos(a) * 5, 29 + Math.sin(a) * 5);
+    near.lineTo(16 + Math.cos(a) * 15.5, 29 + Math.sin(a) * 15.5);
+    near.stroke(strokeOf(2.4, PAL.woodDark));
+  }
+  paint(near, nearInk, (p) => p.circle(16, 29, 5), PAL.brass, 2);
+  root.addChild(near, nearInk);
   return { root, pivot, ticks, muzzle };
 }
 
