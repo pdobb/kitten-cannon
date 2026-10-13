@@ -17,9 +17,17 @@ function classicInlineScript() {
         if (!item.fileName.endsWith('.html')) continue;
         // defer does nothing on an inline script, so wait for the document.
         // The bundle sits in <head>, ahead of the Start button.
+        // Pixi keeps import.meta.url on its renderer loads. A classic script
+        // cannot parse that, so the whole page never runs. location.href is
+        // the page itself, which is the base those loads would have used.
         item.source = item.source.replace(
           /<script type="module"(?: crossorigin)?>([\s\S]*?)<\/script>/,
-          (_, code) => `<script>document.addEventListener('DOMContentLoaded',function(){${code}});</script>`,
+          (_, code) => {
+            const classic = code
+              .replace(/import\.meta\.url/g, 'location.href')
+              .replace(/<\/script/gi, '<\\/script');
+            return `<script>document.addEventListener('DOMContentLoaded',function(){${classic}});</script>`;
+          },
         );
       }
     },
