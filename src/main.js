@@ -21,6 +21,7 @@ import {
   GROUND_Y,
   MAX_SPEED,
   PIVOT_X,
+  PIVOT_Y,
   PIXELS_PER_FOOT,
   POWER_MAX,
   POWER_MIN,
@@ -33,7 +34,6 @@ import {
   formatMph,
   launchPoint,
   mphFromSpeed,
-  peekPoint,
   rightwardSpeed,
   powerFromClock,
   powerPercent,
@@ -94,9 +94,9 @@ const ENDINGS = [
   ['venus', 'Flytrap'],
 ];
 const NOTES = {
-  landed: 'Soft landing.',
-  spikes: 'Stuck in the tar.',
-  venus: 'The flytrap was hungry.',
+  landed: 'Soft landing',
+  spikes: 'Stuck in the tar',
+  venus: 'The flytrap was hungry',
 };
 const SHOUT = {
   tnt: 'BOOM',
@@ -123,7 +123,9 @@ const powerCheerEl = document.querySelector('#power-cheer');
 const muteEl = document.querySelector('#mute');
 const pauseBtn = document.querySelector('#pause-btn');
 const pauseEl = document.querySelector('#pause');
-const pauseEndingsEl = document.querySelector('#pause-endings');
+const pauseFeetEl = document.querySelector('#pause-feet');
+const pauseNoteEl = document.querySelector('#pause-note');
+const pauseSheetEl = document.querySelector('#pause-sheet');
 const resumeEl = document.querySelector('#resume');
 const cardEl = document.querySelector('#card');
 const cardKickerEl = document.querySelector('#card-kicker');
@@ -341,13 +343,35 @@ function recordRows() {
   ];
 }
 
-function appendShotPower(el) {
+function fillShotLine(el, cause) {
   const pct = powerPercent(game.power);
-  const perfect = pct >= 100;
-  const line = document.createElement('p');
-  line.className = perfect ? 'shot perfect' : 'shot';
-  line.textContent = `${Math.round(game.angle)}° · ${pct}% power`;
-  el.append(line);
+  const parts = [NOTES[cause] || 'That is the end of the line'];
+  const peakFt = feetFromAltitude(game.peakY);
+  if (peakFt > 100) parts.push(`${peakFt.toLocaleString('en-US')} ft up`);
+  parts.push(formatMph(mphFromSpeed(game.peakSpeed)));
+  parts.push(`${Math.round(game.angle)}°`);
+  el.replaceChildren(document.createTextNode(`${parts.join(' · ')} · `));
+  const mark = document.createElement('b');
+  if (pct >= 100) mark.className = 'perfect';
+  mark.textContent = `${pct}% power`;
+  el.append(mark);
+}
+
+function appendBestsKicker(el) {
+  const best = document.createElement('p');
+  best.className = 'kicker';
+  const name = document.createElement('span');
+  name.textContent = 'Your bests';
+  const where = document.createElement('i');
+  where.textContent = 'on this device';
+  best.append(name, where);
+  el.append(best);
+}
+
+function appendPersonalStats(el, marks, cause) {
+  appendBestsKicker(el);
+  appendRecordRows(el, marks);
+  appendEndingRows(el, cause, true);
 }
 
 function appendRecordRows(el, marks) {
@@ -368,6 +392,7 @@ function paintRecords() {
   appendRecordRows(recordsEl, null);
   titleBestEl.replaceChildren();
   if (game.furthest > 0 || game.highest > 0 || game.fastest > 0) {
+    appendBestsKicker(titleBestEl);
     appendRecordRows(titleBestEl, null);
   }
 }
@@ -524,25 +549,12 @@ function finish() {
   if (marks.far) fresh.push('furthest');
   if (marks.high) fresh.push('highest');
   if (marks.fast) fresh.push('fastest');
-  cardKickerEl.textContent = fresh.length === 0 ? 'Distance' : fresh.length === 1 ? `New ${fresh[0]}` : 'New records';
+  cardKickerEl.textContent = fresh.length === 0 ? 'Your shot' : fresh.length === 1 ? `New ${fresh[0]}` : 'New records';
   cardFeetEl.textContent = formatFt(game.feet);
-  cardNoteEl.textContent = NOTES[k.cause] || 'That is the end of the line.';
-  cardBestEl.replaceChildren();
-  const peakFt = feetFromAltitude(game.peakY);
-  if (peakFt > 100) {
-    const up = document.createElement('p');
-    up.className = 'flight-up';
-    up.textContent = `${peakFt.toLocaleString('en-US')} FT UP`;
-    cardBestEl.append(up);
-  }
-  const pace = document.createElement('p');
-  pace.className = 'flight-speed';
-  pace.textContent = formatMph(mphFromSpeed(game.peakSpeed));
-  cardBestEl.append(pace);
-  appendShotPower(cardBestEl);
-  appendRecordRows(cardBestEl, marks);
+  fillShotLine(cardNoteEl, k.cause);
   tallyEnding(k.cause);
-  appendEndingRows(cardBestEl, k.cause);
+  cardBestEl.replaceChildren();
+  appendPersonalStats(cardBestEl, marks, k.cause);
   if (game.furthest > game.was.furthest) plantPole(game.furthestX, game.furthest);
   // The striped stake hides on the next shot. This pole stays for the visit,
   // including a landing that did not set a new furthest.
@@ -772,13 +784,25 @@ function setPaused(on) {
     pausedAt = performance.now();
     touchAim = null;
     audio.wind(0);
-    pauseEndingsEl.replaceChildren();
-    appendEndingRows(pauseEndingsEl, null, false);
+    fillPauseCard();
     resumeEl.focus();
     return;
   }
   clockOffset += performance.now() - pausedAt;
   last = performance.now();
+}
+
+function fillPauseCard() {
+  const k = game.kitten;
+  const inShot = !!(k && (game.phase === 'flight' || game.phase === 'result'));
+  const stillFlying = inShot && game.phase === 'flight' && !k.dead;
+  pauseFeetEl.hidden = !inShot;
+  pauseFeetEl.textContent = inShot ? formatFt(feetFromTravel(k.startX, k.x)) : '';
+  if (!inShot) pauseNoteEl.replaceChildren();
+  else if (stillFlying) pauseNoteEl.textContent = 'So far';
+  else fillShotLine(pauseNoteEl, k.cause);
+  pauseSheetEl.replaceChildren();
+  appendPersonalStats(pauseSheetEl, null, stillFlying || !inShot ? null : k.cause);
 }
 
 bindTap(pauseBtn, () => setPaused(!game.paused));
@@ -794,6 +818,14 @@ let touchAim = null;
 function fieldTarget(target) {
   return !(target && target.closest && target.closest('button, a'));
 }
+// A long press on the field must not start a selection. The stats cards
+// and the pause card are the only text a player can select.
+app.addEventListener('selectstart', (event) => {
+  const panel = event.target.closest && event.target.closest('#card .panel, #pause .panel');
+  if (panel && !(event.target.closest && event.target.closest('button'))) return;
+  event.preventDefault();
+});
+
 app.addEventListener('pointerdown', (e) => {
   if (!fieldTarget(e.target)) return;
   if (e.pointerType !== 'mouse') safeAudio(() => audio.unlock());
@@ -899,17 +931,49 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', queueResize);
   window.visualViewport.addEventListener('scroll', queueResize);
 }
+function seatKitten() {
+  if (kitten.mesh.parent === cannon.pivot) return;
+  // Bore is child 0. The tube is drawn after the cat, so the body stays inside.
+  cannon.pivot.addChildAt(kitten.mesh, 1);
+}
+
+function releaseKitten() {
+  if (kitten.mesh.parent === actorLayer) return;
+  const at = actorLayer.getChildIndex(shadow);
+  actorLayer.addChildAt(kitten.mesh, at + 1);
+}
+
+function kittenAnchor() {
+  if (kitten.mesh.parent !== cannon.pivot) {
+    return { x: kitten.mesh.position.x, y: kitten.mesh.position.y };
+  }
+  const a = cannon.pivot.rotation;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  const lx = kitten.mesh.position.x;
+  const ly = kitten.mesh.position.y;
+  const pivot = cannon.pivot.position;
+  const root = cannon.root.position;
+  return {
+    x: root.x + pivot.x + lx * cos - ly * sin,
+    y: root.y + pivot.y + lx * sin + ly * cos,
+  };
+}
+
 function placeKitten(time) {
   const flying = game.phase === 'flight' || game.phase === 'result';
   if (!flying) {
-    const peek = peekPoint(game.angle);
-    const bob = Math.sin(time * 3.2) * 1.1;
-    kitten.mesh.position.set(peek.x, peek.y + bob);
-    kitten.mesh.rotation = (game.angle * Math.PI) / 180;
-    kitten.mesh.scale.set(1, 1);
+    seatKitten();
+    const bob = Math.sin(time * 2.5) * 0.45;
+    kitten.mesh.position.set(kitten.seat.x, kitten.seat.y + bob);
+    kitten.mesh.rotation = Math.sin(time * 1.7) * 0.025;
+    const breathe = 1 + Math.sin(time * 3.1) * 0.028;
+    kitten.mesh.scale.set(1, breathe);
+    kitten.tail.rotation = Math.sin(time * 2.2) * 0.22;
     kitten.eye.scale.y = Math.sin(time * 0.7) > 0.975 ? 0.12 : 1;
     return;
   }
+  releaseKitten();
   const k = game.kitten;
   const y = k.cause === 'spikes' ? Math.max(8, k.y - game.sink) : k.y;
   kitten.mesh.position.set(k.x, y);
@@ -917,8 +981,10 @@ function placeKitten(time) {
     const current = kitten.mesh.rotation;
     const rest = Math.round(current / (Math.PI * 2)) * Math.PI * 2;
     kitten.mesh.rotation = current + (rest - current) * 0.18;
+    kitten.tail.rotation = Math.sin(time * 2.4) * 0.2;
   } else {
     kitten.mesh.rotation = (k.spin * Math.PI) / 180;
+    kitten.tail.rotation = k.dead ? 0.35 : Math.sin(time * 6.5) * 0.12 - 0.22;
   }
   const s = game.squash;
   kitten.mesh.scale.set(1 + s * 0.28, 1 - s * 0.32);
@@ -1047,7 +1113,12 @@ function updateHud() {
   }
   cannon.ticks.visible = game.phase === 'aim' || game.phase === 'title';
   cannon.pivot.rotation = (game.angle * Math.PI) / 180;
-  cannon.pivot.position.x = PIVOT_X - game.recoil;
+  // Kick straight back along the barrel. The carriage stays on the ground.
+  const aim = aimVector(game.angle);
+  cannon.pivot.position.set(
+    PIVOT_X - aim.x * game.recoil,
+    PIVOT_Y - aim.y * game.recoil,
+  );
 }
 
 function layoutView(jx, jy) {
@@ -1150,9 +1221,10 @@ function frame(now) {
   layoutView(jx, jy);
   const draw = { x: view.camX, y: view.camY };
 
-  const h = Math.max(0, kitten.mesh.position.y - GROUND_Y);
+  const anchor = kittenAnchor();
+  const h = Math.max(0, anchor.y - GROUND_Y);
   const shade = Math.max(0.35, 1.25 - h / 200);
-  shadow.position.x = kitten.mesh.position.x;
+  shadow.position.x = anchor.x;
   shadow.scale.set(shade, shade);
   shadow.alpha = Math.max(0.04, 0.32 - h / 420);
   shadow.visible = kitten.mesh.visible;

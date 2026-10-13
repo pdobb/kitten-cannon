@@ -2,6 +2,9 @@ import { Container, Graphics, Text } from 'pixi.js';
 import { PAL, paint, strokeOf, INK } from './look.js';
 import { BARREL_LEN, CANNON_X, PIVOT_X, PIVOT_Y } from './tune.js';
 
+// Metal stops short of the muzzle marker so the face can clear the lip.
+const MUZZLE_LIP = BARREL_LEN - 16;
+
 const COATS = [
   [0x24222a, 0x141318],
   [0xd9822b, 0xa85e16],
@@ -59,64 +62,80 @@ export function createKitten() {
   const furShape = (trace) => coat(furPaths, fur, trace);
   const darkShape = (trace) => coat(darkPaths, dark, trace);
 
-  furShape((p) => p.circle(-16, 2, 4.8));
-  furShape((p) => p.circle(-20.5, 7, 3.7));
-  furShape((p) => p.circle(-21.5, 12.2, 2.9));
-  furShape((p) => p.circle(-18.4, 16.4, 2.3));
-  furShape((p) => p.ellipse(-8, -7, 5.2, 7.2));
-  furShape((p) => p.ellipse(0, 1, 16.5, 11.5));
-  furShape((p) => p.ellipse(8.5, -7.5, 4.4, 6.6));
-  furShape((p) => p.circle(16, 6, 10.2));
-  furShape((p) => p.poly([11.5, 13, 15, 25, 20.5, 13]));
-  darkShape((p) => p.poly([9.5, 15, 12.2, 26, 15.5, 14.5]));
+  // One bean and one head. The old pile of circles read as lumps, and the
+  // tail was four beads. Nose stays toward +X. Local (20, 0) is that way.
+  const headX = 16.5;
+  const headR = 7.2;
+  furShape((p) => {
+    p.moveTo(10, 0.4);
+    p.bezierCurveTo(8, 6.2, 1, 7.6, -6, 5.6);
+    p.bezierCurveTo(-13, 3.6, -14.5, -1.2, -11, -4.6);
+    p.bezierCurveTo(-7.5, -7.4, 0, -7.6, 7, -4.2);
+    p.bezierCurveTo(11.5, -2, 12.4, -0.6, 10, 0.4);
+    p.closePath();
+  });
+  furShape((p) => p.circle(headX, 2.2, headR));
+  darkShape((p) => p.poly([12.6, 6.8, 15.6, 14.6, 19.6, 6.2]));
 
-  paint(detail, ink, (p) => p.ellipse(-8.4, -14.2, 3.8, 2.5), PAL.belly, 2.2);
-  paint(detail, ink, (p) => p.ellipse(3.2, -1.2, 8.2, 6.8), PAL.belly, 2.2);
-  paint(detail, ink, (p) => p.ellipse(8.8, -14.6, 3.6, 2.6), PAL.belly, 2.2);
-  paint(detail, ink, (p) => p.poly([13.2, 15.5, 15.2, 22.5, 18.2, 15.2]), PAL.ear, 1.8);
-  paint(detail, ink, (p) => p.ellipse(12.5, 15.2, 8.6, 5.6), PAL.leather, 2.4);
-  paint(detail, ink, (p) => p.roundRect(7.5, 17.2, 13, 3, 1.4), PAL.leatherDark, 2);
-  paint(detail, ink, (p) => p.roundRect(9, 0.2, 8, 3.6, 1.6), PAL.red, 2);
-  paint(detail, ink, (p) => p.circle(15.2, -1.6, 2), PAL.brass, 1.8);
-  paint(detail, ink, (p) => p.ellipse(22.4, 3.2, 5.2, 3.8), PAL.belly, 2.2);
-  paint(detail, ink, (p) => p.ellipse(26.4, 4.2, 1.8, 1.35), PAL.nose, 1.6);
-  paint(detail, ink, (p) => p.circle(20.2, 8.6, 5.4), PAL.leatherDark, 2.4);
+  const tail = new Container();
+  tail.position.set(-11.5, 2.2);
+  const tailFur = new Graphics();
+  const tailInk = new Graphics();
+  const tailShape = (p) => {
+    p.moveTo(2.6, -2.6);
+    p.bezierCurveTo(-1.5, 0.2, -7, 3.2, -10.5, 9);
+    p.quadraticCurveTo(-13.2, 13.2, -8.6, 11.4);
+    p.bezierCurveTo(-6.4, 7.2, -3.2, 2.4, 0.4, 1.6);
+    p.closePath();
+  };
+  tailShape(tailFur);
+  tailFur.fill(0xffffff);
+  tailShape(tailInk);
+  tailInk.stroke(strokeOf(2.4));
+  tail.addChild(tailFur, tailInk);
 
-  detail.moveTo(23.4, 2.2);
-  detail.quadraticCurveTo(24.8, 0.4, 26.6, 2);
-  detail.stroke(strokeOf(1.5, INK));
-  for (const [y, tilt] of [[4.8, 1.4], [3.5, 0.1], [2.3, -1.2]]) {
-    detail.moveTo(24.2, y);
-    detail.lineTo(32.5, y + tilt);
-    detail.stroke(strokeOf(1.15, 0x5c5148));
+  paint(detail, ink, (p) => p.ellipse(-1, -3.2, 5.6, 2.8), PAL.belly, 2);
+  paint(detail, ink, (p) => p.poly([13.8, 7.4, 15.6, 12.8, 17.8, 7]), PAL.ear, 1.6);
+  paint(detail, ink, (p) => p.ellipse(15.4, 6.6, 6.4, 3.2), PAL.leather, 2);
+  paint(detail, ink, (p) => p.roundRect(11.6, 8, 8.4, 2, 1), PAL.leatherDark, 1.8);
+  paint(detail, ink, (p) => p.roundRect(12.8, -0.8, 6.8, 4.2, 2), PAL.leatherDark, 1.8);
+  paint(detail, ink, (p) => p.ellipse(21.8, 1.2, 3.3, 2.4), PAL.belly, 1.8);
+  paint(detail, ink, (p) => p.ellipse(24.2, 1.4, 1.25, 0.95), PAL.nose, 1.4);
+
+  detail.moveTo(22.6, 0.2);
+  detail.quadraticCurveTo(23.6, -0.6, 24.6, 0.15);
+  detail.stroke(strokeOf(1.3, INK));
+  for (const [y, tilt] of [[2.4, 0.7], [1.5, 0], [0.6, -0.6]]) {
+    detail.moveTo(22.4, y);
+    detail.lineTo(28.5, y + tilt);
+    detail.stroke(strokeOf(1.05, 0x5c5148));
   }
-  detail.circle(18.2, 3.4, 2.1);
-  detail.fill({ color: PAL.ear, alpha: 0.85 });
 
   const eye = new Container();
-  eye.position.set(20.2, 8.6);
+  eye.position.set(16.2, 1.2);
   const gaze = new Graphics();
-  gaze.circle(0, 0, 3.15);
+  gaze.circle(0, 0, 2.15);
   gaze.fill(0xfffaf4);
-  gaze.circle(0.85, -0.15, 1.55);
+  gaze.circle(0.55, -0.1, 1.05);
   gaze.fill(0x1c1720);
-  gaze.circle(1.4, 0.75, 0.55);
+  gaze.circle(0.95, 0.45, 0.38);
   gaze.fill(PAL.cream);
   eye.addChild(gaze);
 
   for (const trace of furPaths) {
     trace(ink);
-    ink.stroke(strokeOf(2.7));
+    ink.stroke(strokeOf(2.5));
   }
   for (const trace of darkPaths) {
     trace(ink);
-    ink.stroke(strokeOf(2.4));
+    ink.stroke(strokeOf(2.3));
   }
 
-  root.addChild(fur, dark, detail, eye, ink);
+  root.addChild(tail, fur, dark, detail, eye, ink);
 
   let coatIndex = 0;
   fur.tint = COATS[0][0];
+  tailFur.tint = COATS[0][0];
   dark.tint = COATS[0][1];
 
   function recolor() {
@@ -124,14 +143,19 @@ export function createKitten() {
     if (next === coatIndex) next = (next + 1) % COATS.length;
     coatIndex = next;
     fur.tint = COATS[next][0];
+    tailFur.tint = COATS[next][0];
     dark.tint = COATS[next][1];
   }
 
   return {
     mesh: root,
     eye,
+    tail,
     recolor,
     coat() { return COATS[coatIndex][0]; },
+    // Eyes clear the lip. The helmet sits high, so the body rides a little low
+    // in the bore and the face stays in the opening.
+    seat: { x: MUZZLE_LIP - (headX - headR) - 3, y: -4.5 },
   };
 }
 
@@ -141,41 +165,84 @@ export function createCannon() {
   const g = new Graphics();
   const ink = new Graphics();
 
-  paint(g, ink, (p) => p.circle(6, 16, 13), 0x4a3018, 2.2);
-  paint(g, ink, (p) => p.circle(-4, 18, 18), PAL.woodDark, 2.6);
-  g.circle(-4, 18, 12.5);
-  g.fill(PAL.wood);
+  // Far wheel shares the ground line and only peeks out behind the near one.
+  paint(g, ink, (p) => p.circle(-2, 27, 21), PAL.woodDark, 2.4);
+  g.circle(-2, 27, 14);
+  g.fill(0x4a2c16);
+
+  // The trail runs back from the axle and sits on the grass. That foot is
+  // what keeps the barrel from reading as a tube in the air.
+  paint(g, ink, (p) => p.poly([
+    -6, 40,
+    4, 30,
+    -62, 12,
+    -70, 18,
+  ]), PAL.wood, 2.4);
+  paint(g, ink, (p) => p.roundRect(-88, 4, 32, 10, 3), PAL.woodDark, 2.2);
+
+  // Near wheel. The grass tops out near y = 10, so a bottom at y = 6 sits in it.
+  paint(g, ink, (p) => p.circle(16, 29, 23), PAL.wood, 2.6);
+  g.circle(16, 29, 16);
+  g.fill(0x9a6236);
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI;
-    g.moveTo(-4 + Math.cos(a) * 4.5, 18 + Math.sin(a) * 4.5);
-    g.lineTo(-4 + Math.cos(a) * 12.5, 18 + Math.sin(a) * 12.5);
-    g.stroke(strokeOf(2.3, PAL.woodDark));
+    g.moveTo(16 + Math.cos(a) * 5, 29 + Math.sin(a) * 5);
+    g.lineTo(16 + Math.cos(a) * 15.5, 29 + Math.sin(a) * 15.5);
+    g.stroke(strokeOf(2.4, PAL.woodDark));
   }
-  paint(g, ink, (p) => p.circle(-4, 18, 4.4), PAL.brass, 2);
-  paint(g, ink, (p) => p.roundRect(-18, 28, 54, 13, 3), PAL.wood, 2.4);
-  paint(g, ink, (p) => p.roundRect(4, 38, 18, 10, 2), PAL.woodDark, 2.2);
+  paint(g, ink, (p) => p.circle(16, 29, 5), PAL.brass, 2);
+
+  // Cheek around the trunnion, overlapping the wheel so the barrel has a seat.
+  paint(g, ink, (p) => p.poly([
+    -8, 36,
+    36, 34,
+    40, 50,
+    22, 62,
+    0, 60,
+    -14, 46,
+  ]), PAL.wood, 2.4);
+  paint(g, ink, (p) => p.poly([
+    2, 42,
+    28, 40,
+    30, 50,
+    16, 56,
+    4, 52,
+  ]), PAL.woodDark, 2);
+
   root.addChild(g, ink);
 
   const pivot = new Container();
   pivot.position.set(PIVOT_X, PIVOT_Y);
+
+  // Child 0 stays behind the kitten. placeKitten inserts the cat at child 1.
+  const bore = new Graphics();
+  bore.circle(MUZZLE_LIP - 2, 0, 12);
+  bore.fill(0x14181c);
+
   const barrel = new Graphics();
   const barrelInk = new Graphics();
+  const lip = MUZZLE_LIP;
   paint(barrel, barrelInk, (p) => {
-    p.poly([0, -11, BARREL_LEN - 6, -15.5, BARREL_LEN - 6, 15.5, 0, 11]);
+    p.poly([
+      -14, -14,
+      20, -15,
+      lip - 8, -17,
+      lip, -15,
+      lip, 15,
+      lip - 8, 17,
+      20, 15,
+      -14, 14,
+    ]);
   }, PAL.metal, 2.6);
-  barrel.poly([10, 5.5, BARREL_LEN - 16, 8, BARREL_LEN - 16, 4.2, 14, 2.4]);
-  barrel.fill({ color: PAL.metalLite, alpha: 0.75 });
-  for (const t of [0.24, 0.72]) {
-    const x = BARREL_LEN * t;
-    barrel.roundRect(x - 3.5, -16.5, 7, 33, 2);
+  barrel.poly([8, 6, lip - 18, 8, lip - 18, 4, 14, 3]);
+  barrel.fill({ color: PAL.metalLite, alpha: 0.72 });
+  for (const x of [18, 46]) {
+    barrel.roundRect(x - 4, -18.5, 9, 37, 2);
     barrel.fill(PAL.metalDark);
   }
-  barrel.circle(BARREL_LEN - 2, 0, 10);
-  barrel.fill(0x1a1e22);
-  barrel.circle(BARREL_LEN - 2, 0, 10);
-  barrel.stroke(strokeOf(2.6, PAL.metalDark));
-  barrel.circle(BARREL_LEN - 2, 3, 3);
-  barrel.fill({ color: 0x8fd4ff, alpha: 0.35 });
+  // The band ends at the lip so it frames the neck and leaves the face clear.
+  barrel.roundRect(lip - 12, -18, 14, 36, 3);
+  barrel.fill(PAL.metalDark);
 
   const ticks = new Container();
   for (let i = 0; i < 6; i++) {
@@ -187,8 +254,13 @@ export function createCannon() {
   }
   const muzzle = new Container();
   muzzle.position.set(BARREL_LEN, 0);
-  pivot.addChild(barrel, barrelInk, ticks, muzzle);
-  root.addChild(pivot);
+
+  const pin = new Graphics();
+  const pinInk = new Graphics();
+  paint(pin, pinInk, (p) => p.circle(PIVOT_X, PIVOT_Y, 6.5), PAL.brass, 2.2);
+
+  pivot.addChild(bore, barrel, barrelInk, ticks, muzzle);
+  root.addChild(pivot, pin, pinInk);
   return { root, pivot, ticks, muzzle };
 }
 

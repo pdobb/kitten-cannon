@@ -34,7 +34,7 @@ function skyCss(y) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
-function fillRidge(g, pts, x0, color, line) {
+function fillRidge(g, pts, x0, color, line, sharp) {
   const base = -48;
   g.moveTo(x0 + pts[0].x, base);
   for (let i = 0; i < pts.length; i++) g.lineTo(x0 + pts[i].x, pts[i].y);
@@ -43,57 +43,100 @@ function fillRidge(g, pts, x0, color, line) {
   g.fill(color);
   g.moveTo(x0 + pts[0].x, pts[0].y);
   for (let i = 1; i < pts.length; i++) g.lineTo(x0 + pts[i].x, pts[i].y);
-  g.stroke({ width: 3, color: line, join: 'round', cap: 'round' });
+  g.stroke({
+    width: 3,
+    color: line,
+    join: sharp ? 'miter' : 'round',
+    cap: 'butt',
+    miterLimit: 3,
+  });
 }
 
+// Where the slope from `outer` up to `tip` crosses `line`.
+function snowCut(outer, tip, line) {
+  const dy = tip.y - outer.y;
+  const t = dy <= 1 ? 0.35 : Math.max(0, Math.min(1, (tip.y - line) / dy));
+  return {
+    x: tip.x + (outer.x - tip.x) * t,
+    y: tip.y + (outer.y - tip.y) * t,
+  };
+}
+
+// A thin wedge on the crest. A wide white triangle on a round mound read as a cap in the wrong way.
 function fillSnow(g, pts, x0, limit) {
   for (let i = 1; i < pts.length - 1; i++) {
-    const y = pts[i].y;
-    if (y < limit) continue;
-    if (y < pts[i - 1].y || y < pts[i + 1].y) continue;
     const tip = pts[i];
-    const left = pts[i - 1];
-    const right = pts[i + 1];
-    const snow = tip.y * 0.62;
+    if (tip.y < limit) continue;
+    if (tip.y <= pts[i - 1].y || tip.y <= pts[i + 1].y) continue;
+    const line = tip.y * 0.86;
+    const left = snowCut(pts[i - 1], tip, line);
+    const right = snowCut(pts[i + 1], tip, line);
+    const drop = Math.max(8, (tip.y - line) * 0.45);
     g.poly([
-      x0 + left.x + (tip.x - left.x) * 0.35, left.y + (snow - left.y) * 0.15,
-      x0 + tip.x, tip.y + 3,
-      x0 + right.x + (tip.x - right.x) * 0.35, right.y + (snow - right.y) * 0.15,
+      x0 + left.x, left.y,
+      x0 + tip.x, tip.y + 1,
+      x0 + right.x, right.y,
+      x0 + right.x, Math.max(0, right.y - drop * 0.25),
+      x0 + tip.x, tip.y - drop,
+      x0 + left.x, Math.max(0, left.y - drop * 0.25),
     ]);
     g.fill(0xfffdf8);
   }
 }
 
-// Peaks along one tile. Both ends sit at y = 0 so the next copy meets this one.
-function peakSamples(span, height, seed) {
+// Jagged ridges along one tile. Both ends sit at y = 0 so the next copy meets this one.
+// Straight runs, not bells: a smooth mound read as the wrong shape.
+function ridgeSamples(span, height, seed) {
   const rng = mulberry32(seed);
   const pts = [{ x: 0, y: 0 }];
-  let x = 30;
-  while (x < span - 100) {
-    const gap = 60 + rng() * 200;
-    const width = 200 + rng() * 480;
-    const left = x + gap;
-    const right = Math.min(span - 16, left + width);
-    if (right - left < 120) break;
-    const peak = height * (0.4 + rng() * 0.6);
-    const power = 0.65 + rng() * 0.7;
-    const skew = (rng() - 0.5) * 0.16;
-    const steps = 16;
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps;
-      const u = Math.max(0, Math.min(1, t - skew * Math.sin(t * Math.PI)));
-      const bell = Math.sin(u * Math.PI) ** power;
-      pts.push({ x: left + (right - left) * t, y: peak * bell });
+  let x = 16 + rng() * 48;
+  while (x < span - 80) {
+    const narrow = rng() < 0.38;
+    const width = narrow ? 100 + rng() * 130 : 210 + rng() * 320;
+    const right = Math.min(span - 8, x + width);
+    if (right - x < 90) break;
+    const peak = height * (narrow ? 0.74 + rng() * 0.26 : 0.46 + rng() * 0.4);
+    const valley = height * (0.04 + rng() * 0.08);
+    const summitX = x + (right - x) * (narrow ? 0.42 + rng() * 0.16 : 0.28 + rng() * 0.36);
+
+    let lastY = pts[pts.length - 1].y;
+    const cuts = narrow ? [0.55] : [0.34, 0.68];
+    for (let c = 0; c < cuts.length; c++) {
+      const along = cuts[c];
+      const cx = x + (summitX - x) * along;
+      const ceiling = lastY + (peak - lastY) * along;
+      const y = Math.max(6, ceiling * (0.42 + rng() * 0.28));
+      pts.push({ x: cx, y });
+      lastY = y;
     }
-    x = right;
+    pts.push({ x: summitX, y: peak });
+
+    const drop = right - summitX;
+    if (!narrow && drop > 70 && rng() < 0.8) {
+      const spurX = summitX + drop * (0.4 + rng() * 0.28);
+      const notchX = summitX + (spurX - summitX) * (0.4 + rng() * 0.15);
+      const spurY = peak * (0.32 + rng() * 0.24);
+      const notchY = spurY * (0.42 + rng() * 0.16);
+      pts.push({ x: notchX, y: notchY });
+      pts.push({ x: spurX, y: Math.max(spurY, notchY + 10) });
+    } else if (drop > 36) {
+      pts.push({
+        x: summitX + drop * (0.5 + rng() * 0.2),
+        y: peak * (narrow ? 0.18 + rng() * 0.12 : 0.28 + rng() * 0.16),
+      });
+    }
+    pts.push({ x: right, y: valley });
+    x = right + 4 + rng() * 22;
   }
   pts.push({ x: span, y: 0 });
-  for (let i = 1; i < pts.length; i++) {
-    if (pts[i].x <= pts[i - 1].x) pts[i].x = pts[i - 1].x + 1;
+  for (let i = 1; i < pts.length - 1; i++) {
+    if (pts[i].x <= pts[i - 1].x) pts[i].x = pts[i - 1].x + 4;
   }
+  pts[0].x = 0;
   pts[0].y = 0;
   pts[pts.length - 1].x = span;
   pts[pts.length - 1].y = 0;
+  if (pts[pts.length - 2].x >= span) pts[pts.length - 2].x = span - 4;
   return pts;
 }
 
@@ -217,13 +260,13 @@ export function createScenery(world) {
   world.addChild(sun);
 
   const ranges = [
-    { color: 0xc5d8ea, line: 0xa9c4da, height: 320, parallax: 0.12, seed: 0x51a3, span: 3000, snow: 0.58 },
-    { color: 0x8aa4bc, line: 0x6d8eab, height: 230, parallax: 0.28, seed: 0x51a2, span: 2600, snow: 0.64 },
+    { color: 0xc5d8ea, line: 0xa9c4da, height: 320, parallax: 0.12, seed: 0x51a3, span: 3000, snow: 0.72 },
+    { color: 0x8aa4bc, line: 0x6d8eab, height: 230, parallax: 0.28, seed: 0x51a2, span: 2600, snow: 0.76 },
     { color: 0x6d9462, line: 0x4e7848, height: 150, parallax: 0.46, seed: 0x51a1, span: 2200, snow: 0 },
   ].map((spec) => {
-    const pts = peakSamples(spec.span, spec.height, spec.seed);
+    const pts = ridgeSamples(spec.span, spec.height, spec.seed);
     return tiledLayer(world, spec.span, (g, x0) => {
-      fillRidge(g, pts, x0, spec.color, spec.line);
+      fillRidge(g, pts, x0, spec.color, spec.line, true);
       if (spec.snow) fillSnow(g, pts, x0, spec.height * spec.snow);
     });
   });
