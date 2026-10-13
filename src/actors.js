@@ -127,19 +127,20 @@ export function createKitten() {
   detail.quadraticCurveTo(23.6, -0.6, 24.6, 0.15);
   detail.stroke(strokeOf(1.3, INK));
   // A cream core with a dark edge stays visible on a black coat and on a white one.
-  const whisker = (y0, y1) => {
+  // They leave the cheek and run back along the head, toward the neck. The nose stays ahead of them.
+  const whisker = (x0, y0, cx, cy, x1, y1) => {
     const draw = (g) => {
-      g.moveTo(22.2, y0);
-      g.quadraticCurveTo(27.4, y0 + (y1 - y0) * 0.35, 33.2, y1);
+      g.moveTo(x0, y0);
+      g.quadraticCurveTo(cx, cy, x1, y1);
     };
     draw(detail);
     detail.stroke(strokeOf(2.2, INK));
     draw(detail);
     detail.stroke(strokeOf(1.05, 0xfffdf8));
   };
-  whisker(3.05, 6.6);
-  whisker(1.5, 1.85);
-  whisker(0.15, -2.8);
+  whisker(19.2, 3.5, 15.2, 4.9, 10.6, 3.2);
+  whisker(19.8, 0.25, 14.6, -1.7, 9.8, -2.2);
+  whisker(19.4, -1.25, 14.8, -3.5, 10.2, -4.6);
 
   const eye = new Container();
   eye.position.set(16.2, 1.2);
@@ -319,53 +320,94 @@ function crate() {
 
 function trampoline() {
   const root = new Container();
-  const g = new Graphics();
-  for (const x of [-24, 24]) {
-    g.roundRect(x - 2, 2, 4, 16, 1.5);
-    g.fill(0xc5ced6);
+  const frame = new Graphics();
+  // Short A-frames in the grass. The bed is a round mat, not a plank on edge.
+  const brace = (outer, inner, apex) => {
+    frame.moveTo(outer, 2.2);
+    frame.lineTo(apex, 11.5);
+    frame.lineTo(inner, 2.2);
+    frame.stroke(strokeOf(3.3, 0x4e5963));
+  };
+  brace(-34, -18, -26);
+  brace(34, 18, 26);
+  frame.roundRect(-38, 0.7, 16, 3.4, 1.3);
+  frame.roundRect(-20, 0.7, 10, 3.4, 1.3);
+  frame.roundRect(10, 0.7, 10, 3.4, 1.3);
+  frame.roundRect(22, 0.7, 16, 3.4, 1.3);
+  frame.fill(PAL.metalDark);
+
+  // Same flat-oval read as a tar pool, lifted just enough to show the legs.
+  frame.ellipse(0, 15.5, 30, 8.2);
+  frame.fill(PAL.metal);
+  frame.ellipse(0, 15.5, 30, 8.2);
+  frame.stroke(strokeOf(2.4));
+  for (const x of [-20, -10, 0, 10, 20]) {
+    frame.moveTo(x - 2.1, 9.2);
+    frame.quadraticCurveTo(x, 12.4, x + 2.1, 9.4);
+    frame.stroke(strokeOf(1.6, PAL.metalDark));
   }
-  paint(g, g, (p) => p.roundRect(-32, 14, 64, 5, 2), PAL.metalDark, 2.2);
-  root.addChild(g);
+  for (const x of [-26.5, 26.5]) {
+    frame.moveTo(x, 14.2);
+    frame.lineTo(x + Math.sign(x) * 2.6, 16.2);
+    frame.moveTo(x, 17.2);
+    frame.lineTo(x + Math.sign(x) * 2.6, 19.2);
+    frame.stroke(strokeOf(1.6, PAL.metalDark));
+  }
+  root.addChild(frame);
 
+  // The red oval is the top you land on. A pale center marks the middle.
   const bed = new Container();
-  bed.position.set(0, 18);
+  bed.position.set(0, 17.4);
   const pad = new Graphics();
-  pad.roundRect(-29, 0, 58, 8, 3);
+  pad.ellipse(0, 0, 23.5, 5.4);
   pad.fill(PAL.red);
-  pad.roundRect(-29, 0, 58, 8, 3);
+  pad.ellipse(0, 0, 23.5, 5.4);
   pad.stroke(strokeOf(2.2));
+  pad.ellipse(0, -1.5, 17, 2.6);
+  pad.fill(0xb42e24);
+  pad.ellipse(0, 1.5, 10.5, 2.1);
+  pad.fill(0xfff6e4);
+  pad.ellipse(0, 1.7, 3.1, 0.95);
+  pad.fill(0xf3b2a4);
   bed.addChild(pad);
-
-  const stripe = new Graphics();
-  stripe.roundRect(-29, -1.2, 58, 2.6, 1);
-  stripe.fill(PAL.cream);
-  stripe.position.y = 25.2;
-  root.addChild(bed, stripe);
-  return { mesh: root, parts: { bed, stripe } };
+  root.addChild(bed);
+  return { mesh: root, parts: { bed } };
 }
 
 function tarPit() {
   const root = new Container();
   const g = new Graphics();
-  // A glossy pool in the grass. A dirt ring around the black read as a border.
-  for (const [x, y, rx, ry] of [[-4, 8, 36, 11], [-22, 7.2, 16, 7], [20, 7.6, 15, 6.6]]) {
+  // Half again as wide as the old pool. No dirt ring. The black is the tar.
+  for (const [x, y, rx, ry] of [[-6, 12, 54, 16.5], [-33, 10.8, 24, 10.5], [30, 11.4, 22.5, 10]]) {
     g.ellipse(x, y, rx, ry);
     g.fill(0x0c0b09);
   }
-  g.ellipse(0, 10.2, 24, 6.2);
-  g.fill(0x1c1915);
-  g.ellipse(-9, 12.8, 13, 2.3);
-  g.fill({ color: 0x24343c, alpha: 0.55 });
-  g.ellipse(8, 11.6, 6.2, 1.45);
-  g.fill({ color: 0xd7d2c6, alpha: 0.22 });
-  for (const [x, y, h, lean] of [[-34, 5, 9, -1.6], [-24, 4, 6, 1.2], [26, 4.5, 7, -0.8], [34, 5, 8, 1.8], [4, 3.5, 5, 0.4]]) {
-    g.poly([x, y, x + 2, y, x + 1 + lean, y + h]);
+  g.ellipse(0, 15, 36, 9);
+  g.fill(0x14110e);
+  g.ellipse(-14, 18.5, 20, 3.4);
+  g.fill({ color: 0x1c3a28, alpha: 0.55 });
+  g.ellipse(12, 16.6, 9, 2.1);
+  g.fill({ color: 0xd7d2c6, alpha: 0.18 });
+  // A rib and a skull, stuck in the tar.
+  g.moveTo(-18, 14);
+  g.quadraticCurveTo(-8, 28, 2, 15);
+  g.stroke(strokeOf(2.4, 0xe4dcc8));
+  g.moveTo(-16, 16);
+  g.quadraticCurveTo(-8, 24, 0, 16.5);
+  g.stroke(strokeOf(1.5, 0xe4dcc8));
+  g.ellipse(22, 20, 5.2, 4.2);
+  g.fill(0xe4dcc8);
+  g.circle(20.4, 21.2, 1.15);
+  g.circle(23.8, 21.2, 1.15);
+  g.fill(0x1a120c);
+  for (const [x, y, h, lean] of [[-52, 6, 12, -2], [-40, 5, 8, 1.4], [40, 5.5, 9, -1], [52, 6, 11, 2.2], [6, 4, 7, 0.5]]) {
+    g.poly([x, y, x + 2.4, y, x + 1.2 + lean, y + h]);
     g.fill(PAL.grassDark);
   }
   root.addChild(g);
 
   const bubbles = [];
-  for (const [x, y, r] of [[10, 12.4, 2.6], [-8, 11.6, 1.9], [1, 13.6, 1.4]]) {
+  for (const [x, y, r] of [[16, 18, 3.6], [-12, 17, 2.6], [2, 20, 2], [-28, 15, 1.8]]) {
     const bubble = new Container();
     bubble.position.set(x, y);
     bubble.userData = { baseY: y };
@@ -391,15 +433,16 @@ function lobe(sign) {
   g.ellipse(-17, 0, 17, 7.2);
   g.stroke(strokeOf(2.5));
   g.ellipse(-16, sign * -1.4, 12, 3.8);
-  g.fill(PAL.mouth);
-  g.circle(-6, sign * -1.6, 3.2);
+  g.fill(0x8d1020);
+  g.circle(-6, sign * -1.6, 3.4);
   g.fill(PAL.throat);
   const dir = sign > 0 ? -1 : 1;
-  for (let i = 0; i < 6; i++) {
-    const x = -8 - i * 3.6;
-    const base = dir * -2.4;
-    const tip = dir * -8;
-    g.poly([x, base, x + 1.7, base, x + 0.85, tip]);
+  const teeth = [8.6, 5.4, 10.2, 4.6, 9.2, 6.2, 7.4];
+  for (let i = 0; i < teeth.length; i++) {
+    const x = -6.5 - i * 3.3;
+    const base = dir * -2.2;
+    const tip = dir * -(2.2 + teeth[i]);
+    g.poly([x, base, x + 1.8, base, x + 0.7, tip]);
     g.fill(PAL.tooth);
   }
   pivot.addChild(g);
@@ -420,9 +463,26 @@ function venus() {
 
   const head = new Container();
   head.position.set(6, 46);
+  const tongue = new Graphics();
+  tongue.ellipse(-10, -1, 9, 3.4);
+  tongue.fill(0xd24a62);
   const upper = lobe(1);
   const lower = lobe(-1);
-  head.addChild(lower, upper);
+  // On the green outside of the top leaf, clear of the red throat.
+  const eyes = new Graphics();
+  eyes.ellipse(-9, 5.2, 3.4, 2.3);
+  eyes.ellipse(-18, 4.6, 2.9, 2.0);
+  eyes.fill(0xfff2c4);
+  eyes.ellipse(-8.5, 5.7, 1.25, 1.45);
+  eyes.ellipse(-17.6, 5.0, 1.1, 1.25);
+  eyes.fill(0x1a120c);
+  eyes.moveTo(-13.6, 7.8);
+  eyes.lineTo(-5.4, 6.6);
+  eyes.moveTo(-22.4, 6.8);
+  eyes.lineTo(-14.6, 6.0);
+  eyes.stroke(strokeOf(1.5, 0x1a120c));
+  upper.addChild(eyes);
+  head.addChild(tongue, lower, upper);
   root.addChild(head);
   return { mesh: root, parts: { head, upper, lower, open: TRAP_OPEN } };
 }

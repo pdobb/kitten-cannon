@@ -54,16 +54,44 @@ function clampSpeed(k) {
 }
 
 // Ground objects only connect when the kitten is on the way down, same as the
-// Flash hit tests (`ysp > 0` with +y down). Balloons and flytraps connect either way.
+// Flash hit tests (`ysp > 0` with +y down). Balloons, flytraps, and TNT connect
+// either way. The whole crate counts, not only a fall onto the lid.
 function canHit(k, prop) {
   if (k.frame < ARM_FRAME || k.dead || prop.spent) return false;
   if (prop.ready && k.frame < prop.ready) return false;
-  if (prop.type === 'balloon' || prop.type === 'venus') return true;
+  if (prop.type === 'balloon' || prop.type === 'venus' || prop.type === 'tnt') return true;
   return k.vy < 0;
 }
 
+// Nose, chest, belly, and paws. Local +X is the nose. spin matches the mesh:
+// world = (lx cos - ly sin, lx sin + ly cos).
+const TNT_POINTS = [
+  [0, 0],
+  [23, 1.2],
+  [16, 1],
+  [6, -1],
+  [1, -8],
+  [3, -13],
+  [-2, -12],
+];
+
 function overlaps(k, prop) {
-  return Math.abs(k.x - prop.x) < prop.hw && Math.abs(k.y - prop.y) < prop.hh;
+  const point = Math.abs(k.x - prop.x) < prop.hw && Math.abs(k.y - prop.y) < prop.hh;
+  if (prop.type !== 'tnt') return point;
+  // The body point keeps the padded box. Nose, chest, and paws use the painted
+  // crate (x ±25, and y from 4 to 50 when the crate sits on cy 26).
+  if (point) return true;
+  const rad = (k.spin * Math.PI) / 180;
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  for (let i = 1; i < TNT_POINTS.length; i++) {
+    const lx = TNT_POINTS[i][0];
+    const ly = TNT_POINTS[i][1];
+    const x = k.x + lx * c - ly * s;
+    const y = k.y + lx * s + ly * c;
+    if (Math.abs(x - prop.x) < 25 && y > prop.y - 22 && y < prop.y + 24) return true;
+  }
+  return false;
 }
 
 function pickHit(k, props) {
@@ -71,7 +99,9 @@ function pickHit(k, props) {
   let bestD = Infinity;
   for (let i = 0; i < props.length; i++) {
     const prop = props[i];
-    if (Math.abs(prop.x - k.x) > prop.hw + 1) continue;
+    // The nose sits well ahead of the body point, so a crate needs a longer reject.
+    const reach = prop.type === 'tnt' ? 30 : 1;
+    if (Math.abs(prop.x - k.x) > prop.hw + reach) continue;
     if (!canHit(k, prop) || !overlaps(k, prop)) continue;
     const d = Math.abs(k.x - prop.x) + Math.abs(k.y - prop.y);
     if (d < bestD) {

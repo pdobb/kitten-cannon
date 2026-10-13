@@ -111,6 +111,22 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(crate.spent, true);
 }
 
+// The nose on the side of the crate counts, even while the kitten is climbing.
+// The body point itself stays outside the painted box.
+{
+  const k = createKitten(10, 20);
+  k.frame = 20;
+  k.spin = 0;
+  k.x = 60;
+  k.y = 27;
+  k.vx = 0;
+  k.vy = 6;
+  const crate = prop('tnt', 100);
+  assert.ok(Math.abs(k.x - crate.x) > crate.hw);
+  assert.equal(step(k, [crate]), 'tnt');
+  assert.equal(crate.spent, true);
+}
+
 {
   const k = createKitten(10, 20);
   k.frame = 20;
@@ -220,9 +236,9 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.ok(Math.abs(bomb.turn) > 11, 'a crate should speed the tumble');
 }
 
-// A full bar flies on its own. A low bar is a short hop. The field still
-// rewards the default aim when the bar is full. Balloons continue up through
-// the high sky, so a steep lob can pop several and travel much farther.
+// A full bar flies on its own. A low bar is a short hop. A full-power 32°
+// shot catches crates with its nose and ends in a flytrap. A 70° lob pops
+// balloons, then the wider tar catches the descent.
 {
   const course = buildCourse();
   assert.equal(buildCourse().length, course.length);
@@ -235,11 +251,11 @@ function shot(angle, power, props, frames = 30 * 60) {
   const natural = shot(32, POWER_MAX, course);
   const lob = shot(70, POWER_MAX, course, 30 * 160);
   const weak = shot(32, POWER_MIN, course);
-  assert.equal(feetFromTravel(natural.kitten.startX, natural.kitten.x), 1269);
-  assert.equal(natural.kitten.cause, 'landed');
+  assert.equal(feetFromTravel(natural.kitten.startX, natural.kitten.x), 2348);
+  assert.equal(natural.kitten.cause, 'venus');
   assert.ok(natural.hits.includes('balloon') && natural.hits.includes('tnt'));
-  assert.equal(feetFromTravel(lob.kitten.startX, lob.kitten.x), 5001);
-  assert.equal(lob.kitten.cause, 'landed');
+  assert.equal(feetFromTravel(lob.kitten.startX, lob.kitten.x), 2203);
+  assert.equal(lob.kitten.cause, 'spikes');
   assert.ok(lob.hits.includes('balloon'));
   assert.ok(feetFromTravel(weak.kitten.startX, weak.kitten.x) < 20);
 
@@ -292,8 +308,10 @@ function shot(angle, power, props, frames = 30 * 60) {
 
   const nearNatural = runNear(32, POWER_MAX, course, 30 * 60);
   const nearLob = runNear(70, POWER_MAX, course, 30 * 160);
-  assert.equal(feetFromTravel(nearNatural.kitten.startX, nearNatural.kitten.x), 1269);
-  assert.equal(feetFromTravel(nearLob.kitten.startX, nearLob.kitten.x), 5001);
+  assert.equal(feetFromTravel(nearNatural.kitten.startX, nearNatural.kitten.x), 2348);
+  assert.equal(nearNatural.kitten.cause, 'venus');
+  assert.equal(feetFromTravel(nearLob.kitten.startX, nearLob.kitten.x), 2203);
+  assert.equal(nearLob.kitten.cause, 'spikes');
 }
 
 console.log('physics ok');

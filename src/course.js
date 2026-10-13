@@ -1,5 +1,5 @@
 // The opening is fixed, so a run can be learned the way the Flash game was.
-// Those props sit on the landing spots of a full-power shot (see sim.test).
+// sim.test records where a full-power 32° shot and a 70° lob end.
 // After that, a seeded pattern keeps boosters and hazards coming, and the
 // same pattern continues for as far as the flight goes. Low balloons stay
 // near the grass. Extra lanes carry balloons up through the high sky.
