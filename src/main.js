@@ -971,30 +971,60 @@ for (const button of document.querySelectorAll('#pad button')) {
   });
 }
 
-function resize() {
+function installedApp() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.matchMedia('(display-mode: fullscreen)').matches
+    || window.navigator.standalone === true;
+}
+
+// The home-screen window reports a height short of the screen. A fixed box
+// clipped to that window buried the aim card in the dirt strip. The shell
+// stays in normal flow at the full screen height, and the HUD lifts by
+// however much of that shell still sits below the visible window.
+function placeShell() {
   const vv = window.visualViewport;
-  const standalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.matchMedia('(display-mode: fullscreen)').matches ||
-    window.navigator.standalone === true;
-  // innerHeight in an installed app stops short of the screen and leaves the
-  // dirt color showing. 100vh reaches the edge. A browser tab still follows
-  // the visual viewport so the address bar can come and go.
-  if (standalone) {
+  const root = document.documentElement;
+  if (installedApp()) {
+    root.classList.add('installed');
+    root.style.position = 'static';
+    root.style.width = '100%';
+    root.style.height = '100vh';
+    document.body.style.position = 'static';
+    document.body.style.width = '100%';
+    document.body.style.height = '100vh';
+    app.style.position = 'relative';
     app.style.left = '0px';
     app.style.top = '0px';
     app.style.right = 'auto';
     app.style.bottom = 'auto';
     app.style.width = '100vw';
     app.style.height = '100vh';
-  } else if (vv) {
-    app.style.left = `${vv.offsetLeft}px`;
-    app.style.top = `${vv.offsetTop}px`;
-    app.style.width = `${vv.width}px`;
-    app.style.height = `${vv.height}px`;
-    app.style.right = 'auto';
-    app.style.bottom = 'auto';
+    const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    const hang = Math.round(app.getBoundingClientRect().bottom - visibleBottom);
+    const gap = Math.min(96, Math.max(0, hang));
+    root.style.setProperty('--clip-gap', `${gap}px`);
+    return;
   }
+  root.classList.remove('installed');
+  root.style.position = '';
+  root.style.width = '';
+  root.style.height = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.body.style.height = '';
+  app.style.position = '';
+  root.style.setProperty('--clip-gap', '0px');
+  if (!vv) return;
+  app.style.left = `${vv.offsetLeft}px`;
+  app.style.top = `${vv.offsetTop}px`;
+  app.style.width = `${vv.width}px`;
+  app.style.height = `${vv.height}px`;
+  app.style.right = 'auto';
+  app.style.bottom = 'auto';
+}
+
+function resize() {
+  placeShell();
   if (!pixi.renderer) return;
   const w = canvas.clientWidth || window.innerWidth;
   const h = canvas.clientHeight || window.innerHeight;
@@ -1021,6 +1051,7 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', queueResize);
   window.visualViewport.addEventListener('scroll', queueResize);
 }
+placeShell();
 function seatKitten() {
   if (kitten.mesh.parent === cannon.pivot) return;
   // Bore is child 0. The tube is drawn after the cat, so the body stays inside.

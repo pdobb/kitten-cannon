@@ -32,9 +32,11 @@
   color: #2b2118;
   font-family: Nunito, "Trebuchet MS", sans-serif;
   background: #c4894e;
+  /* How far a home-screen shell still hangs below the visible window. */
+  --clip-gap: 0px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--clip-gap));
   --safe-left: env(safe-area-inset-left, 0px);
 }
 
@@ -68,44 +70,40 @@ html, body {
   --overlay-side: 20px;
 }
 
-/* The installed app. height: 100% stops viewport-fit=cover, so the canvas
-   ends early and the dirt color shows under it. 100vh is the height that
-   reaches the screen edge from a cold start. A browser tab stays on the
-   visual viewport, because 100vh runs behind the address bar there. */
+/* The installed app. A position:fixed shell is clipped to the short viewport,
+   so a 100vh box hangs off the bottom and the aim card sinks into the dirt
+   strip. Normal flow lets the canvas use the full screen height. A browser
+   tab stays on the visual viewport, because 100vh runs behind the address bar. */
 @media (display-mode: standalone), (display-mode: fullscreen) {
-  html, body, #app {
+  html, body {
+    position: static;
+    width: 100%;
+    height: 100vh;
+  }
+  #app {
+    position: relative;
+    inset: auto;
     top: 0;
     left: 0;
-    right: auto;
-    bottom: auto;
     width: 100vw;
     height: 100vh;
   }
 }
 
-/* iOS frosts the top of a home-screen app when it sees no fixed bar there.
-   This strip satisfies that check and clips its own background to empty text,
-   so it does not paint over the field. A nearly clear color keeps the clock
-   sitting on the game instead of on a solid bar. */
-.edge-fix {
-  display: none;
+html.installed,
+html.installed body {
+  position: static;
+  width: 100%;
+  height: 100vh;
 }
 
-@media (display-mode: standalone), (display-mode: fullscreen) {
-  .edge-fix {
-    display: block;
-    position: fixed;
-    left: 0;
-    right: 0;
-    height: 11px;
-    z-index: 8;
-    pointer-events: none;
-    background-color: rgba(0, 0, 0, 0.01);
-    -webkit-background-clip: text;
-    background-clip: text;
-  }
-  .edge-fix-top { top: 0; }
-  .edge-fix-bottom { bottom: 0; }
+html.installed #app {
+  position: relative;
+  inset: auto;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
 }
 
 #app[data-phase="aim"] {

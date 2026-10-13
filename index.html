@@ -29,10 +29,20 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <title>Kitten Cannon</title>
   <link rel="stylesheet" href="/src/style.css" />
+  <script>
+    // iOS reads these before the first paint. The class drops the fixed shell.
+    // The gap is a guess until resize() measures how far the shell really hangs.
+    if (navigator.standalone) {
+      document.documentElement.classList.add('installed');
+      var reported = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      var gap = Math.round((window.screen.height || 0) - reported);
+      if (gap < 0) gap = 0;
+      if (gap > 96) gap = 96;
+      document.documentElement.style.setProperty('--clip-gap', gap + 'px');
+    }
+  </script>
 </head>
 <body>
-  <div class="edge-fix edge-fix-top" aria-hidden="true"></div>
-  <div class="edge-fix edge-fix-bottom" aria-hidden="true"></div>
   <div id="app" data-phase="title">
     <canvas id="view"></canvas>
     <div id="vignette"></div>
