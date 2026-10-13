@@ -1,5 +1,7 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { PAL } from './look.js';
+import { skyCss, spaceBlend } from './sky.js';
+import { GROUND_Y, PIXELS_PER_FOOT } from './tune.js';
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -10,28 +12,6 @@ function mulberry32(seed) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-// Sky color is a function of world height, sampled down the screen. The warm
-// band sits on world y = 0, the same line the grass and the ranges use.
-const SKY_STOPS = [
-  [-800, [196, 137, 78]],
-  [0, [186, 220, 150]],
-  [50, [176, 222, 236]],
-  [160, [158, 212, 246]],
-  [480, [110, 186, 232]],
-  [1400, [74, 156, 214]],
-  [5000, [46, 122, 196]],
-];
-
-function skyCss(y) {
-  let i = 1;
-  while (i < SKY_STOPS.length - 1 && y > SKY_STOPS[i][0]) i += 1;
-  const a = SKY_STOPS[i - 1];
-  const b = SKY_STOPS[i];
-  const t = Math.max(0, Math.min(1, (y - a[0]) / (b[0] - a[0])));
-  const c = a[1].map((v, k) => Math.round(v + (b[1][k] - v) * t));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
 function fillRidge(g, pts, x0, color, line, sharp) {
@@ -212,6 +192,64 @@ function drawCloud(rng) {
   return { graphic: g, width: maxX - minX };
 }
 
+// Same pattern on every tile, so the wrap meets. Stars are small on purpose.
+// A dot of a few world units is a point of light once the view is on screen.
+function drawStars(g, x0, span) {
+  const rng = mulberry32(0x57a11);
+  const band = 860;
+  for (let i = 0; i < 360; i++) {
+    const x = x0 + rng() * span;
+    const y = (rng() - 0.5) * band;
+    const bright = rng();
+    const color = bright > 0.88 ? 0xffe2b8 : bright > 0.72 ? 0xc9d7ff : 0xfffdf8;
+    const r = bright > 0.94 ? 2.4 + rng() * 1.3 : 0.7 + rng() * 1.1;
+    const alpha = 0.45 + rng() * 0.55;
+    if (bright > 0.96) {
+      g.circle(x, y, r * 2.6);
+      g.fill({ color, alpha: 0.16 });
+    }
+    g.circle(x, y, r);
+    g.fill({ color, alpha });
+    if (bright > 0.975) {
+      const arm = r * 3.6;
+      g.moveTo(x - arm, y);
+      g.lineTo(x + arm, y);
+      g.stroke({ width: 0.7, color, alpha: 0.85, cap: 'round' });
+      g.moveTo(x, y - arm);
+      g.lineTo(x, y + arm);
+      g.stroke({ width: 0.7, color, alpha: 0.85, cap: 'round' });
+    }
+  }
+}
+
+// Rust, a dark plain, a pale cap. Drawn at radius 100. The view scales it.
+function drawMars(g) {
+  g.circle(0, 0, 114);
+  g.fill({ color: 0xd98a6a, alpha: 0.16 });
+
+  g.circle(0, 0, 100);
+  g.fill(0xc24a28);
+
+  g.ellipse(-6, 6, 46, 28);
+  g.fill(0x8c2e14);
+  g.ellipse(22, -28, 24, 16);
+  g.fill(0x9a3418);
+  g.circle(-30, -18, 9);
+  g.fill(0x7c2812);
+
+  // The right limb stays inside the disc. +Y is up, so the cap sits at the top.
+  g.ellipse(46, -4, 28, 72);
+  g.fill({ color: 0x4a160c, alpha: 0.55 });
+
+  g.ellipse(0, 86, 28, 12);
+  g.fill(0xfff7f1);
+  g.ellipse(-2, 88, 16, 7);
+  g.fill(0xffffff);
+
+  g.ellipse(-46, 34, 22, 14);
+  g.fill({ color: 0xffd2b4, alpha: 0.5 });
+}
+
 function grassDecor(g, x0, span) {
   const rng = mulberry32(0x67a55);
   for (let i = 0; i < 28; i++) {
@@ -245,6 +283,17 @@ export function createScenery(world) {
   const skyTexture = Texture.from(skyCanvas);
   const sky = new Sprite(skyTexture);
   let skyKey = '';
+
+  // Distant, so the field follows the camera and only creeps as the shot travels.
+  // The band is taller than the view, and the alpha is what brings it in at 1000 ft.
+  const starSpan = 2200;
+  const stars = tiledLayer(world, starSpan, (g, x0) => drawStars(g, x0, starSpan));
+
+  const mars = new Container();
+  const marsGfx = new Graphics();
+  drawMars(marsGfx);
+  mars.addChild(marsGfx);
+  world.addChild(mars);
 
   const sun = new Container();
   const sunGfx = new Graphics();
@@ -370,6 +419,18 @@ export function createScenery(world) {
       paintSky(view.screenW, view.screenH, cam.y, view.scale);
       const halfW = view.halfW;
       const halfH = view.halfH;
+      const feet = (cam.y - GROUND_Y) / PIXELS_PER_FOOT;
+      const space = spaceBlend(feet);
+      track(stars, cam.x, 0.02);
+      stars.layer.position.y = cam.y;
+      stars.layer.alpha = space;
+      stars.layer.visible = space > 0.02;
+      const radius = Math.max(28, Math.min(halfH * 0.34, halfW * 0.3, 104));
+      mars.scale.set(radius / 100);
+      mars.position.set(cam.x + halfW * 0.48, cam.y - halfH * 0.06);
+      mars.alpha = space;
+      mars.visible = space > 0.02;
+      sun.alpha = 1 - space;
       sun.position.set(cam.x - halfW * 0.72, cam.y + halfH * 0.58);
       for (let i = 0; i < ranges.length; i++) track(ranges[i], cam.x, ranges[i].parallax);
       for (let i = 0; i < foothills.length; i++) track(foothills[i], cam.x, foothills[i].parallax);

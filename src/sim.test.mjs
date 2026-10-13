@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { buildCourse, resetCourse } from './course.js';
 import { createKitten, runUntilDone, step } from './physics.js';
 import { HIT } from './propspec.js';
+import { skyRgb, spaceBlend, SPACE_FEET } from './sky.js';
 import {
   aimVector,
   barrelMuzzle,
@@ -53,6 +54,21 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(powerPercent(POWER_MIN), 0);
   assert.equal(powerPercent(POWER_MAX), 100);
   assert.equal(powerPercent((POWER_MIN + POWER_MAX) / 2), 50);
+}
+
+// Daytime colors stay put. Above 1000 ft the sample is night, and it stays night.
+{
+  assert.deepEqual(skyRgb(0), [186, 220, 150]);
+  assert.deepEqual(skyRgb(120), [165, 216, 242]);
+  assert.deepEqual(skyRgb(8000), [46, 122, 196]);
+  assert.equal(spaceBlend(100), 0);
+  assert.equal(spaceBlend(860), 0);
+  assert.equal(spaceBlend(930), 0.5);
+  assert.equal(spaceBlend(SPACE_FEET), 1);
+  assert.equal(spaceBlend(2000), 1);
+  const night = skyRgb(GROUND_Y + SPACE_FEET * PIXELS_PER_FOOT);
+  assert.deepEqual(night, [5, 7, 18]);
+  assert.deepEqual(skyRgb(GROUND_Y + 4000 * PIXELS_PER_FOOT), night);
 }
 
 // The aim vector is the only barrel direction. 0° is +X, 90° is +Y.
