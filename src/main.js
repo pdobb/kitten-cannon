@@ -134,7 +134,15 @@ const cardBestEl = document.querySelector('#card-best');
 const padFireEl = document.querySelector('#pad-fire');
 
 const audio = createAudio();
-let course = buildCourse();
+// A page load rolls a field. Space keeps it. R rolls another. The canonical
+// seed stays inside buildCourse() for the learned course the tests fly.
+function freshSeed() {
+  let seed = 0x20070321;
+  while (seed === 0x20070321) seed = (Math.random() * 0x100000000) >>> 0;
+  return seed;
+}
+
+let course = buildCourse(freshSeed());
 
 const pixi = new Application();
 const world = new Container();
@@ -593,14 +601,14 @@ function finish() {
   setPhase('result');
 }
 
-// A new page: the same seeded field, record stakes only, nothing spent.
+// A new page: a new roll of the field, record stakes only, nothing spent.
 // Full screen stays, and the start card stays hidden if the visit already began.
 function reloadField() {
   if (!kitten || !flybys) return;
   const onTitle = game.phase === 'title';
   if (game.paused) setPaused(false);
   for (let i = 0; i < course.length; i++) releaseProp(course[i]);
-  course = buildCourse();
+  course = buildCourse(freshSeed());
   for (let i = poles.length - 1; i >= 0; i--) {
     poles[i].mesh.destroy({ children: true });
     poles.pop();

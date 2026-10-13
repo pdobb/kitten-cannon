@@ -1,4 +1,5 @@
-// The opening is fixed, so a run can be learned the way the Flash game was.
+// buildCourse() with no seed is the learned opening, so a run can be repeated
+// the way the Flash game was. The game passes a seed on load and on R.
 // sim.test records where a full-power 32° shot and a 70° lob end.
 // After that, a seeded pattern keeps boosters and hazards coming, and the
 // same pattern continues for as far as the flight goes. Low balloons stay
@@ -106,11 +107,19 @@ function bucket(bins, prop) {
   bin.push(prop);
 }
 
-export function buildCourse() {
-  const raw = OPENING.map((p) => ({ ...p }));
-  const rng = mulberry32(0x20070321);
+// The no-argument course is the learned one. A passed seed is a new visit:
+// the hand-placed opening is replaced by the same generator, started near
+// the cannon, and the far lanes are rolled from that seed too.
+const CANON_SEED = 0x20070321;
+
+export function buildCourse(seed = CANON_SEED) {
+  const canon = (seed >>> 0) === CANON_SEED;
+  const raw = canon ? OPENING.map((p) => ({ ...p })) : [];
+  const rng = mulberry32(canon ? CANON_SEED : seed >>> 0);
   // The opening lane ends here. grow() carries the same cycle past it.
-  const state = { x: 12800, i: 0, lastHazard: 11000 };
+  const state = canon
+    ? { x: 12800, i: 0, lastHazard: 11000 }
+    : { x: 360, i: 0, lastHazard: 0 };
   layUntil(raw, rng, state, 260000);
   addSkyBalloons(raw, rng);
   const props = raw.map(materialize);
@@ -122,8 +131,9 @@ export function buildCourse() {
   // Separate streams so a short step and one long step lay the same props.
   // The high lane picks up where the ground lane ends, so a flight that
   // stays inside the opening still meets the same balloons.
-  const extGround = mulberry32(0x6a17e0);
-  const extSky = mulberry32(0x51de5);
+  const rolled = seed >>> 0;
+  const extGround = mulberry32(canon ? 0x6a17e0 : (rolled ^ 0x6a17e0) >>> 0);
+  const extSky = mulberry32(canon ? 0x51de5 : (rolled ^ 0x51de5) >>> 0);
   let skyFrom = state.x;
 
   props.grow = (untilX) => {
