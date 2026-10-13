@@ -17,7 +17,6 @@ import {
   BOUNCE,
   GRAVITY,
   GROUND_Y,
-  MAX_SPEED,
   SETTLE,
   aimVector,
   launchPoint,
@@ -46,11 +45,6 @@ export function createKitten(angleDeg, power) {
 // is squared, so the top of the arc hangs and a steep climb or dive whirls.
 function tumbleTarget(vx, vy) {
   return -(Math.abs(vx) * 0.045 + vy * vy * 0.012);
-}
-
-function clampSpeed(k) {
-  k.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, k.vx));
-  k.vy = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, k.vy));
 }
 
 // Ground objects only connect when the kitten is on the way down, same as the
@@ -133,7 +127,6 @@ export function resolveHit(k, prop) {
     k.vy = 28 + Math.abs(k.vy);
     k.vx = 5 + k.vx * 1.2;
     prop.spent = true;
-    clampSpeed(k);
     k.turn -= 11;
     return 'tnt';
   }
@@ -141,7 +134,6 @@ export function resolveHit(k, prop) {
     k.vy = 28 + Math.abs(k.vy);
     k.vx = 7 + k.vx * 1.2;
     prop.spent = true;
-    clampSpeed(k);
     k.turn -= 13;
     return 'balloon';
   }
@@ -151,7 +143,6 @@ export function resolveHit(k, prop) {
     // single landing as one hop.
     k.vy = -k.vy * 1.4;
     prop.ready = k.frame + 10;
-    clampSpeed(k);
     k.turn -= 8;
     return 'trampoline';
   }
@@ -193,7 +184,9 @@ export function step(k, props) {
   k.turn += (target - k.turn) * 0.25;
   k.spin += k.turn;
 
-  const samples = Math.max(1, Math.min(48, Math.ceil(Math.hypot(k.vx, k.vy) / 10)));
+  // One sample per 10px, with no ceiling. Speeds under the old 480px step match
+  // the capped sampler. Faster than that still walks the crate instead of skipping it.
+  const samples = Math.max(1, Math.ceil(Math.hypot(k.vx, k.vy) / 10));
   for (let i = 1; i <= samples; i++) {
     const t = i / samples;
     k.x = x0 + (x1 - x0) * t;

@@ -75,7 +75,7 @@ html, body {
   box-shadow: inset 0 0 140px rgba(40, 36, 20, 0.22);
 }
 
-button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer {
+button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
   font-family: "Lilita One", "Trebuchet MS", sans-serif;
   font-weight: 400;
 }
@@ -98,15 +98,35 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
   letter-spacing: 0.5px;
 }
 
-#altitude {
-  margin-top: 10px;
-  font-size: clamp(28px, 4.4vw, 48px);
-  line-height: 0.95;
-  color: #ffe56a;
-  -webkit-text-stroke: 6px #2b2118;
-  paint-order: stroke fill;
-  letter-spacing: 1px;
+#vectors {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 22px;
+  margin-top: 6px;
+  font-family: Nunito, sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.01em;
+  color: #fffaf0;
+  text-shadow: 0 2px 0 #2b2118, 0 0 8px rgba(43, 33, 24, 0.35);
+  white-space: nowrap;
 }
+
+#speed,
+#altitude {
+  display: inline-block;
+}
+
+#altitude {
+  transform-origin: center bottom;
+  transition: font-size 0.25s ease, color 0.25s ease;
+}
+
+#altitude[data-tier="1"] { font-size: 22px; color: #ffe56a; }
+#altitude[data-tier="2"] { font-size: 26px; color: #ffd23a; }
+#altitude[data-tier="3"] { font-size: 30px; color: #ffb703; }
+#altitude[data-tier="4"] { font-size: 32px; color: #ff922b; }
 
 #altitude.pop {
   animation: lift 0.42s ease-out;
@@ -116,16 +136,6 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
   0% { transform: scale(0.55) rotate(-7deg); }
   55% { transform: scale(1.08) rotate(2deg); }
   100% { transform: scale(1) rotate(0deg); }
-}
-
-#speed {
-  margin-top: 8px;
-  font-family: Nunito, sans-serif;
-  font-weight: 800;
-  font-size: 20px;
-  letter-spacing: 0.02em;
-  color: #fffaf0;
-  text-shadow: 0 2px 0 #2b2118, 0 0 8px rgba(43, 33, 24, 0.4);
 }
 
 #records {
@@ -728,6 +738,11 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   }
   #meter .barwrap { width: auto; flex: 1; max-width: 280px; }
   #scoreblock { top: calc(118px + var(--safe-top)); }
+  #vectors { gap: 14px; font-size: 16px; white-space: normal; flex-wrap: wrap; }
+  #altitude[data-tier="1"] { font-size: 18px; }
+  #altitude[data-tier="2"] { font-size: 21px; }
+  #altitude[data-tier="3"] { font-size: 24px; }
+  #altitude[data-tier="4"] { font-size: 26px; }
   #records {
     top: calc(10px + var(--safe-top));
     left: calc(10px + var(--safe-left));
@@ -749,7 +764,6 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   }
   #mute { left: calc(12px + var(--safe-left)); }
   #pause-btn { left: calc(68px + var(--safe-left)); }
-  #altitude { -webkit-text-stroke-width: 4px; }
 }
 
 /* A landscape phone is wider than 720px, so width alone still shows the keys.

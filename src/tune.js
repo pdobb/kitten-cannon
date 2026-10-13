@@ -12,7 +12,6 @@ export const BOUNCE = 0.72;
 export const SETTLE = 2;
 export const ARM_FRAME = 15;
 export const PIXELS_PER_FOOT = 30;
-export const MAX_SPEED = 240;
 
 // Kitten body-center height when it is sitting on the grass.
 export const GROUND_Y = 15;

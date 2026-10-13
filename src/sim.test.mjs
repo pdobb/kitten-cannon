@@ -47,6 +47,9 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(mphFromSpeed(-30), 0);
   assert.equal(formatMph(20), '20 mph');
   assert.equal(mphFromSpeed(0), 0);
+  // 240 px/frame used to be the ceiling, and it read as 164 mph. Past that still counts.
+  assert.equal(mphFromSpeed(240), 164);
+  assert.equal(mphFromSpeed(480), 327);
   assert.equal(powerPercent(POWER_MIN), 0);
   assert.equal(powerPercent(POWER_MAX), 100);
   assert.equal(powerPercent((POWER_MIN + POWER_MAX) / 2), 50);
@@ -109,6 +112,30 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(k.vy, 28 + 11);
   assert.equal(k.vx, 5 + 20 * 1.2);
   assert.equal(crate.spent, true);
+}
+
+// A crate can push past the old 240 px/frame ceiling, and a fast step still hits the wood.
+{
+  const k = createKitten(10, 20);
+  k.frame = 20;
+  k.x = 100;
+  k.y = 30;
+  k.vx = 200;
+  k.vy = -10;
+  const crate = prop('tnt', 100, 30);
+  assert.equal(step(k, [crate]), 'tnt');
+  assert.equal(k.vx, 5 + 200 * 1.2);
+  assert.ok(k.vx > 240);
+
+  const fast = createKitten(10, 20);
+  fast.frame = 20;
+  fast.x = 40;
+  fast.y = 26;
+  fast.vx = 2000;
+  fast.vy = 1;
+  const far = prop('tnt', 100);
+  assert.equal(step(fast, [far]), 'tnt');
+  assert.ok(fast.vx > 2000);
 }
 
 // The nose on the side of the crate counts, even while the kitten is climbing.

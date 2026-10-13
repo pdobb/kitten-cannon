@@ -19,7 +19,6 @@ import {
   DEFAULT_ANGLE,
   CANNON_X,
   GROUND_Y,
-  MAX_SPEED,
   PIVOT_X,
   PIVOT_Y,
   PIXELS_PER_FOOT,
@@ -343,12 +342,31 @@ function recordRows() {
   ];
 }
 
+// Height bands. Each step up is a little louder. Distance stays the big number.
+function heightTier(ft) {
+  if (ft >= 2000) return 4;
+  if (ft >= 800) return 3;
+  if (ft >= 300) return 2;
+  if (ft >= 100) return 1;
+  return 0;
+}
+
+function fillLiveLine(el, k) {
+  const ending = document.createElement('span');
+  ending.className = 'cause';
+  ending.textContent = 'So far';
+  const stats = document.createElement('span');
+  stats.className = 'stats';
+  stats.textContent = `↑ ${formatFt(feetFromAltitude(k.y))} · → ${formatMph(mphFromSpeed(k.vx))} · ${Math.round(game.angle)}°`;
+  el.replaceChildren(ending, stats);
+}
+
 function fillShotLine(el, cause) {
   const pct = powerPercent(game.power);
   const parts = [];
   const peakFt = feetFromAltitude(game.peakY);
-  if (peakFt > 100) parts.push(`${peakFt.toLocaleString('en-US')} ft up`);
-  parts.push(formatMph(mphFromSpeed(game.peakSpeed)));
+  parts.push(`↑ ${formatFt(peakFt)}`);
+  parts.push(`→ ${formatMph(mphFromSpeed(game.peakSpeed))}`);
   parts.push(`${Math.round(game.angle)}°`);
   const ending = document.createElement('span');
   ending.className = 'cause';
@@ -494,6 +512,8 @@ function beginShot(forcedPower) {
   game.squash = 0;
   game.sink = 0;
   game.recoil = 26;
+  altitudeEl.dataset.tier = '0';
+  altitudeEl.classList.remove('pop');
   stake.visible = false;
   kitten.mesh.visible = true;
   cam.shake = Math.min(1.4, cam.shake + 0.7);
@@ -803,7 +823,7 @@ function fillPauseCard() {
   pauseFeetEl.hidden = !inShot;
   pauseFeetEl.textContent = inShot ? formatFt(feetFromTravel(k.startX, k.x)) : '';
   if (!inShot) pauseNoteEl.replaceChildren();
-  else if (stillFlying) pauseNoteEl.textContent = 'So far';
+  else if (stillFlying) fillLiveLine(pauseNoteEl, k);
   else fillShotLine(pauseNoteEl, k.cause);
   pauseSheetEl.replaceChildren();
   appendPersonalStats(pauseSheetEl, null, stillFlying || !inShot ? null : k.cause);
@@ -1094,26 +1114,16 @@ function updateHud() {
     distanceEl.textContent = formatFt(feet);
     const alt = feetFromAltitude(game.kitten.y);
     const mph = mphFromSpeed(game.kitten.vx);
-    if (alt > 100) {
-      altitudeEl.textContent = `${alt.toLocaleString('en-US')} FT UP`;
-      if (altitudeEl.hidden) {
-        altitudeEl.hidden = false;
-        altitudeEl.classList.remove('pop');
-        void altitudeEl.offsetWidth;
-        altitudeEl.classList.add('pop');
-      }
-    } else {
-      altitudeEl.hidden = true;
-      altitudeEl.textContent = '';
+    const tier = heightTier(alt);
+    const prev = Number(altitudeEl.dataset.tier || 0);
+    altitudeEl.dataset.tier = String(tier);
+    if (tier > prev) {
       altitudeEl.classList.remove('pop');
+      void altitudeEl.offsetWidth;
+      altitudeEl.classList.add('pop');
     }
-    if (game.phase === 'flight' && !game.kitten.dead && mph > 0) {
-      speedEl.hidden = false;
-      speedEl.textContent = formatMph(mph);
-    } else {
-      speedEl.hidden = true;
-      speedEl.textContent = '';
-    }
+    altitudeEl.textContent = `↑ ${formatFt(alt)}`;
+    speedEl.textContent = `→ ${formatMph(mph)}`;
   }
   cannon.ticks.visible = game.phase === 'aim' || game.phase === 'title';
   cannon.pivot.rotation = (game.angle * Math.PI) / 180;
@@ -1202,7 +1212,8 @@ function frame(now) {
       acc -= STEP;
       steps += 1;
     }
-    audio.wind(Math.abs(game.kitten.vx) / MAX_SPEED);
+    // Loudness levels off around the old 240 px/frame. The flight itself does not.
+    audio.wind(Math.min(1, Math.abs(game.kitten.vx) / 240));
     commitRecords();
   } else {
     acc = 0;
