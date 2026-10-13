@@ -345,26 +345,30 @@ function recordRows() {
 
 function fillShotLine(el, cause) {
   const pct = powerPercent(game.power);
-  const parts = [NOTES[cause] || 'That is the end of the line'];
+  const parts = [];
   const peakFt = feetFromAltitude(game.peakY);
   if (peakFt > 100) parts.push(`${peakFt.toLocaleString('en-US')} ft up`);
   parts.push(formatMph(mphFromSpeed(game.peakSpeed)));
   parts.push(`${Math.round(game.angle)}°`);
-  el.replaceChildren(document.createTextNode(`${parts.join(' · ')} · `));
+  const ending = document.createElement('span');
+  ending.className = 'cause';
+  ending.textContent = NOTES[cause] || 'That is the end of the line';
+  const stats = document.createElement('span');
+  stats.className = 'stats';
+  stats.append(document.createTextNode(`${parts.join(' · ')} · `));
   const mark = document.createElement('b');
   if (pct >= 100) mark.className = 'perfect';
   mark.textContent = `${pct}% power`;
-  el.append(mark);
+  stats.append(mark);
+  el.replaceChildren(ending, stats);
 }
 
 function appendBestsKicker(el) {
   const best = document.createElement('p');
   best.className = 'kicker';
   const name = document.createElement('span');
-  name.textContent = 'Your bests';
-  const where = document.createElement('i');
-  where.textContent = 'on this device';
-  best.append(name, where);
+  name.textContent = 'Personal bests';
+  best.append(name);
   el.append(best);
 }
 
@@ -549,7 +553,7 @@ function finish() {
   if (marks.far) fresh.push('furthest');
   if (marks.high) fresh.push('highest');
   if (marks.fast) fresh.push('fastest');
-  cardKickerEl.textContent = fresh.length === 0 ? 'Your shot' : fresh.length === 1 ? `New ${fresh[0]}` : 'New records';
+  cardKickerEl.textContent = fresh.length === 0 ? 'Score' : fresh.length === 1 ? `New ${fresh[0]}` : 'New records';
   cardFeetEl.textContent = formatFt(game.feet);
   fillShotLine(cardNoteEl, k.cause);
   tallyEnding(k.cause);

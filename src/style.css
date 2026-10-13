@@ -183,17 +183,6 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
   margin-top: 8px;
 }
 
-.sheet p.kicker i,
-.bestline p.kicker i {
-  font-style: normal;
-  font-family: Nunito, sans-serif;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0;
-  text-transform: none;
-  color: #8a6240;
-}
-
 .sheet .fresh b {
   color: #d23b2e;
 }
@@ -226,6 +215,13 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
   font-size: clamp(14px, min(3.6vw, 3vh), 16px);
   line-height: 1.35;
   color: #3f2918;
+}
+
+#card-note .cause,
+#pause-note .cause,
+#card-note .stats,
+#pause-note .stats {
+  display: block;
 }
 
 #card-note:empty,
@@ -818,7 +814,6 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   .sheet { gap: 0; }
   .sheet p { line-height: 1.15; }
   .sheet p.kicker { margin-top: 4px; }
-  .sheet p.kicker i { font-size: 11px; }
   .sheet p.endings-kicker { margin: 3px 0 0; font-size: 10px; }
   #card .actions, #pause .actions { margin-top: 2px; }
   #card button#again, #pause button#resume { min-height: 32px; font-size: 16px; }
