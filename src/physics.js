@@ -8,7 +8,8 @@
 //   balloon: ysp = -28 - |ysp|, xsp = 7 + speed * 1.2
 //   trampoline: ysp = -ysp * 1.4 while falling, horizontal speed unchanged
 //   spikes and the flytrap call setZeroes()
-// Object hits are ignored until frame 15, matching Math.floor(_root.speed) != 0.
+// Object hits count from the first step. A 15-frame wait let a flat shot
+// pass through a crate that was already in front of the cannon.
 //
 // Here +y is up. Falling is vy < 0. Distances are still Flash pixels.
 

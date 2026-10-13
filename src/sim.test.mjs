@@ -103,15 +103,17 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(feetFromTravel(k.startX, k.x), Math.max(0, Math.round((k.x - k.startX) / 30)));
 }
 
-// Nothing on the field can touch the kitten during the 15-frame arming window.
+// A flat shot used to pass through a crate in front of the cannon. Hits waited
+// 15 frames, and by then the kitten had already gone past the box.
 {
-  const k = createKitten(20, 36);
-  const crate = prop('tnt', k.x, k.y);
-  let hit = null;
-  for (let i = 0; i < 14; i++) hit = step(k, [crate]) || hit;
-  assert.equal(hit, null);
-  assert.equal(crate.spent, false);
-  assert.equal(k.dead, false);
+  const k = createKitten(0, 62);
+  const crate = prop('tnt', 860);
+  let event = null;
+  while (!k.dead && !crate.spent && k.frame < 30) event = step(k, [crate]);
+  assert.equal(event, 'tnt');
+  assert.equal(crate.spent, true);
+  assert.ok(k.frame < 15, `the crate should go off before the old wait, frame ${k.frame}`);
+  assert.ok(k.x < crate.x + 25, `the kitten should still be on the crate, x=${k.x}`);
 }
 
 // Boosts match the Flash formulas. Falling is vy < 0.

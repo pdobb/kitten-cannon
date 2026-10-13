@@ -10,7 +10,10 @@ export const STEP = 1 / 30;
 export const GRAVITY = 1;
 export const BOUNCE = 0.72;
 export const SETTLE = 2;
-export const ARM_FRAME = 15;
+// The first step can hit. The old 15-frame wait matched a Flash clip whose
+// speed stayed 0, but this port launches at full speed, so the wait let a
+// flat shot pass through a crate.
+export const ARM_FRAME = 1;
 export const PIXELS_PER_FOOT = 30;
 
 // Kitten body-center height when it is sitting on the grass.
