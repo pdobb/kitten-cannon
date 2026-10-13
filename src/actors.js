@@ -126,21 +126,6 @@ export function createKitten() {
   detail.moveTo(22.6, 0.2);
   detail.quadraticCurveTo(23.6, -0.6, 24.6, 0.15);
   detail.stroke(strokeOf(1.3, INK));
-  // A cream core with a dark edge stays visible on a black coat and on a white one.
-  // They leave the cheek and run back along the head, toward the neck. The nose stays ahead of them.
-  const whisker = (x0, y0, cx, cy, x1, y1) => {
-    const draw = (g) => {
-      g.moveTo(x0, y0);
-      g.quadraticCurveTo(cx, cy, x1, y1);
-    };
-    draw(detail);
-    detail.stroke(strokeOf(2.2, INK));
-    draw(detail);
-    detail.stroke(strokeOf(1.05, 0xfffdf8));
-  };
-  whisker(19.2, 3.5, 15.2, 4.9, 10.6, 3.2);
-  whisker(19.8, 0.25, 14.6, -1.7, 9.8, -2.2);
-  whisker(19.4, -1.25, 14.8, -3.5, 10.2, -4.6);
 
   const eye = new Container();
   eye.position.set(16.2, 1.2);
