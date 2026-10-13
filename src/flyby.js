@@ -2,7 +2,7 @@ import { Container, Graphics } from 'pixi.js';
 import { INK, PAL, paint } from './look.js';
 import { CAM_Z, viewHalfWidthAt } from './view.js';
 
-// UFOs and planes wait until the kitten is above the low cloud lanes.
+// UFOs wait until the kitten is above the low cloud lanes.
 export const FLYBY_Y = 980;
 
 // Full stack, nose at local +X so atan2(vy, vx) aims it up the screen.
@@ -181,32 +181,8 @@ function ufo() {
   return { mesh: root, parts: { lights, bulbs } };
 }
 
-function plane() {
-  const root = new Container();
-  const g = new Graphics();
-  const ink = new Graphics();
-  paint(g, ink, (p) => p.ellipse(0, 0, 40, 12), 0xc47a3a, 2.4);
-  paint(g, ink, (p) => p.roundRect(-28, 10, 62, 7, 3), 0xf2c14e, 2.2);
-  paint(g, ink, (p) => p.roundRect(-22, -16, 52, 6, 3), 0xf2c14e, 2.2);
-  g.roundRect(-12, -16, 3.2, 34, 1);
-  g.fill(INK);
-  g.roundRect(14, -16, 3.2, 34, 1);
-  g.fill(INK);
-  paint(g, ink, (p) => p.roundRect(-52, 2, 18, 22, 3), PAL.red, 2.2);
-  paint(g, ink, (p) => p.roundRect(-54, -3, 16, 5, 2), PAL.red, 2);
-  paint(g, ink, (p) => p.ellipse(16, 6, 9, 6), 0x8fd4ff, 2.2);
-  root.addChild(g);
-
-  const prop = new Graphics();
-  prop.ellipse(0, 0, 2.2, 16);
-  prop.fill(INK);
-  prop.position.set(42, 0);
-  root.addChild(prop, ink);
-  return { mesh: root, parts: { prop } };
-}
-
-const MAKERS = { ufo, starship, plane };
-const VISITORS = ['ufo', 'plane'];
+const MAKERS = { ufo, starship };
+const VISITORS = ['ufo'];
 
 function pickKind() {
   return VISITORS[Math.floor(Math.random() * VISITORS.length)];
@@ -284,7 +260,7 @@ export function createFlybys(layer) {
     }
     const builtKind = type;
     let dir = Math.random() < 0.5 ? 1 : -1;
-    const speed = builtKind === 'plane' ? 90 + Math.random() * 40 : 70 + Math.random() * 30;
+    const speed = 70 + Math.random() * 30;
     const z = at && at.z != null ? at.z : -4000 - Math.random() * 1600;
     const lead = viewHalfWidthAt(z) + 220 + Math.random() * 280;
     const lift = (Math.random() < 0.6 ? 1 : -1) * (220 + Math.random() * 180);
@@ -339,7 +315,6 @@ export function createFlybys(layer) {
       } else if (craft.vx || craft.vy) {
         craft.mesh.rotation = Math.atan2(craft.vy, craft.vx);
       }
-      if (craft.parts.prop) craft.parts.prop.scale.y = Math.sin(time * 32);
       if (craft.parts.flame) {
         const flick = 0.72 + Math.abs(Math.sin(time * 34 + craft.phase)) * 0.5;
         craft.parts.flame.scale.x = flick;

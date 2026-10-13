@@ -319,8 +319,7 @@ export function createScenery(world) {
     entry.parallax = [0.12, 0.28, 0.46][i];
   });
 
-  // Each band wraps on its own. A single low band left the high sky empty,
-  // and a shot that climbed flew out of the clouds within a few hundred feet.
+  // Each band wraps on its own. Clouds stop at 100 ft, so a climb leaves them.
   function scatterClouds(rng, count, y0, y1, gap0, gap1) {
     const group = [];
     let cursor = rng() * 280;
@@ -351,15 +350,13 @@ export function createScenery(world) {
   }
 
   const cloudRng = mulberry32(0xc10d);
+  const cloudTop = GROUND_Y + 100 * PIXELS_PER_FOOT;
   const clouds = [
     ...scatterClouds(cloudRng, 12, 150, 470, 70, 200),
     ...scatterClouds(cloudRng, 10, 400, 1150, 80, 220),
     ...scatterClouds(cloudRng, 10, 1000, 1950, 80, 230),
     ...scatterClouds(cloudRng, 9, 1750, 2950, 90, 240),
-    ...scatterClouds(cloudRng, 9, 2700, 4200, 90, 250),
-    ...scatterClouds(cloudRng, 9, 3900, 5700, 100, 260),
-    ...scatterClouds(cloudRng, 8, 5300, 7500, 100, 280),
-    ...scatterClouds(cloudRng, 8, 7000, 9500, 110, 300),
+    ...scatterClouds(cloudRng, 9, 2700, cloudTop, 90, 250),
   ];
 
   const flyLayer = new Container();
