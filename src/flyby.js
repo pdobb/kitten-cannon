@@ -216,16 +216,11 @@ function parallaxFor(z) {
   return CAM_Z / (CAM_Z - z);
 }
 
-// World stations along the course. z is far (parallax about 0.05–0.07) so a
-// pass lingers. scale is the drawn size, not the parallax, so a far stack
-// stays large. y is the altitude band a shot at that distance flies through.
+// One stack, and not before about 2000 ft. x parallax is far, so the pass
+// lingers. y is the ship's real altitude: it does not ride the camera.
+// scale is the drawn size, half the old stack, and not tied to that parallax.
 const ASCENTS = [
-  { x: 11200, y: 2800, z: -15900, vx: 26, vy: 240, scale: 0.84 },
-  { x: 27000, y: 7600, z: -16800, vx: 32, vy: 280, scale: 0.78 },
-  { x: 48000, y: 3000, z: -15000, vx: 22, vy: 220, scale: 0.88 },
-  { x: 76000, y: 8400, z: -17200, vx: 30, vy: 300, scale: 0.76 },
-  { x: 116000, y: 14500, z: -16400, vx: 24, vy: 260, scale: 0.82 },
-  { x: 172000, y: 23500, z: -15600, vx: 28, vy: 320, scale: 0.86 },
+  { x: 74100, y: 330, z: -15400, vx: 3, vy: 12, scale: 0.42 },
 ];
 
 export function createFlybys(layer) {
@@ -250,6 +245,7 @@ export function createFlybys(layer) {
       anchored: !!spec.anchored,
       homeX: spec.x,
       homeY: spec.y,
+      seen: false,
     };
     if (craft.anchored) craft.mesh.visible = false;
     layer.addChild(craft.mesh);
@@ -261,6 +257,7 @@ export function createFlybys(layer) {
     craft.x = craft.homeX;
     craft.y = craft.homeY;
     craft.age = 0;
+    craft.seen = false;
     craft.mesh.visible = false;
   }
 
@@ -276,11 +273,11 @@ export function createFlybys(layer) {
       const parallax = parallaxFor(z);
       add('starship', {
         x: at ? cam.x + at.x : cam.x + 200 / parallax,
-        y: at ? kittenY + at.y : cam.y + 150 / parallax,
+        y: at ? kittenY + at.y : cam.y + 180,
         z,
-        vx: at && at.vx != null ? at.vx : 28,
-        vy: at && at.vy != null ? at.vy : 280,
-        scale: at && at.scale != null ? at.scale : 0.84,
+        vx: at && at.vx != null ? at.vx : 3,
+        vy: at && at.vy != null ? at.vy : 12,
+        scale: at && at.scale != null ? at.scale : 0.42,
         anchored: false,
       });
       return;
@@ -305,24 +302,31 @@ export function createFlybys(layer) {
     for (let i = crafts.length - 1; i >= 0; i--) {
       const craft = crafts[i];
       const climber = craft.kind === 'rocket';
+      const parallax = parallaxFor(craft.z);
       if (craft.anchored) {
+        // Parked on the course until the pass arrives, then a climb of its
+        // own. It stays in the sky after the landing until a retry parks it.
         if (flying) {
-          craft.x += craft.vx * dt;
-          craft.y += craft.vy * dt;
+          craft.seen = true;
+          if (Math.abs(craft.x - cam.x) < viewHalfWidthAt(craft.z)) {
+            craft.x += craft.vx * dt;
+            craft.y += craft.vy * dt;
+          }
         }
-        craft.mesh.visible = !!flying;
+        craft.mesh.visible = !!(flying || craft.seen);
       } else {
         craft.age += dt;
         craft.x += craft.vx * dt;
         craft.y += craft.vy * dt;
       }
-      const parallax = parallaxFor(craft.z);
-      const bobAmp = climber ? 0 : 10;
-      const bob = Math.sin(time * 1.5 + craft.phase) * bobAmp;
+      const bob = climber ? 0 : Math.sin(time * 1.5 + craft.phase) * 10;
       const shown = craft.scale == null ? parallax / 0.2 : craft.scale;
+      // Ships keep their real height, the way the ranges do. A UFO still
+      // drifts with the view.
+      const shownY = climber ? craft.y : cam.y + (craft.y - cam.y) * parallax + bob;
       craft.mesh.position.set(
         cam.x + (craft.x - cam.x) * parallax,
-        cam.y + (craft.y - cam.y) * parallax + bob,
+        shownY,
       );
       craft.mesh.scale.set(shown, shown);
       if (craft.kind === 'ufo') {
