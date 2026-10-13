@@ -106,6 +106,30 @@ html.installed #app {
   height: 100vh;
 }
 
+/* iOS 27 blurs the top of a home-screen app unless a fixed bar taller than
+   10px sits on the top edge. This one clips its background to empty text, so
+   it does not paint on the field. iOS still reads the color and uses it for
+   a flat status bar. The bar only exists once the status bar is not translucent. */
+.status-fix {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 11px;
+  z-index: 2147483647;
+  pointer-events: none;
+  background-color: #77bfeb;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .status-fix { display: block; }
+}
+
+html.installed .status-fix { display: block; }
+
 #app[data-phase="aim"] {
   --overlay-top: 20px;
   --overlay-bottom: 132px;
