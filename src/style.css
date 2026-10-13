@@ -180,7 +180,27 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
 .sheet p.kicker,
 .bestline p.kicker {
   align-items: baseline;
-  margin-top: 8px;
+  margin-top: 12px;
+}
+
+.sheet p.kicker {
+  justify-content: center;
+}
+
+.bestline p.kicker {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 3px solid #2b2118;
+}
+
+.bestline p.kicker span,
+.sheet p.kicker span,
+.sheet p.endings-kicker {
+  color: #d23b2e;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1.1;
 }
 
 .sheet .fresh b {
@@ -308,14 +328,10 @@ button, .panel, h1, h2, #distance, #altitude, #records b, #banner, #power-cheer 
 
 .sheet p.endings-kicker {
   display: block;
-  margin: 10px 0 2px;
+  margin: 14px 0 2px;
   text-align: center;
   font-family: Nunito, sans-serif;
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #5a3018;
 }
 
 #banner {
@@ -813,8 +829,13 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   #card-note, #pause-note { font-size: 13px; line-height: 1.2; }
   .sheet { gap: 0; }
   .sheet p { line-height: 1.15; }
-  .sheet p.kicker { margin-top: 4px; }
-  .sheet p.endings-kicker { margin: 3px 0 0; font-size: 10px; }
+  .sheet p.kicker,
+  .bestline p.kicker { margin-top: 6px; }
+  .bestline p.kicker { padding-top: 6px; }
+  .bestline p.kicker span,
+  .sheet p.kicker span,
+  .sheet p.endings-kicker { font-size: 13px; letter-spacing: 0.1em; }
+  .sheet p.endings-kicker { margin: 6px 0 0; }
   #card .actions, #pause .actions { margin-top: 2px; }
   #card button#again, #pause button#resume { min-height: 32px; font-size: 16px; }
 }

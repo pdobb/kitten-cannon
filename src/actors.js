@@ -119,62 +119,27 @@ export function createKitten() {
   tail.addChild(tailFur, tailInk);
 
   paint(detail, ink, (p) => p.ellipse(-1, -3.2, 5.6, 2.8), PAL.belly, 2);
-  // Ear stroke sits under the cap, so the tip shows and the base does not cut the leather.
-  const earInk = new Graphics();
-  for (const trace of darkPaths) {
-    trace(earInk);
-    earInk.stroke(strokeOf(2.2));
-  }
-  paint(detail, earInk, (p) => p.poly([14.4, 9.2, 16.2, 15.4, 18.2, 9.0]), PAL.ear, 1.5);
-
-  // Flight cap, open toward the nose. A closed dome with a brim read as a plunger.
-  // Tan stays visible on a black coat. White cotton is the lining at the opening.
-  const COTTON = 0xfffdf8;
-  const LEATHER = 0xd4924a;
-  paint(detail, ink, (p) => {
-    p.moveTo(19.2, 8.2);
-    p.bezierCurveTo(16.4, 13.6, 11.2, 12.6, 9.4, 7.2);
-    p.bezierCurveTo(7.8, 2.6, 8.8, -2.2, 12.8, -3.0);
-    p.bezierCurveTo(16.2, -3.6, 17.6, -0.6, 17.8, 1.6);
-    p.bezierCurveTo(18.0, 4.0, 18.2, 6.2, 19.2, 8.2);
-    p.closePath();
-  }, COTTON, 1.6);
-  paint(detail, ink, (p) => {
-    p.moveTo(18.0, 8.0);
-    p.bezierCurveTo(15.8, 11.4, 12.2, 10.6, 10.8, 7.0);
-    p.bezierCurveTo(9.6, 3.8, 10.4, 0.2, 13.4, -0.6);
-    p.bezierCurveTo(15.6, -1.2, 16.4, 0.8, 16.6, 2.6);
-    p.bezierCurveTo(16.8, 4.6, 17.0, 6.4, 18.0, 8.0);
-    p.closePath();
-  }, LEATHER, 1.7);
-  // Cotton tufts past the leather: nape, crown, and the brow of the face opening.
-  for (const [x, y, r] of [[8.8, 1.6, 1.7], [14.6, 13.2, 1.55], [20.4, 8.6, 1.6]]) {
-    detail.circle(x, y, r);
-    detail.fill(COTTON);
-    ink.circle(x, y, r);
-    ink.stroke(strokeOf(1.3));
-  }
-  // Goggles on the brow. A pale frame, not brass, so the ring does not vanish into the tan.
-  detail.ellipse(17.4, 8.8, 4.2, 2.6);
-  detail.fill(0x141c28);
-  detail.ellipse(17.4, 8.8, 4.2, 2.6);
-  detail.stroke(strokeOf(2.3, 0xf4f0e6));
-  detail.ellipse(18.7, 9.6, 1.35, 0.8);
-  detail.fill({ color: 0xfff6e0, alpha: 0.9 });
-  detail.moveTo(13.6, -0.4);
-  detail.quadraticCurveTo(16.8, -3.2, 19.6, -0.2);
-  detail.stroke(strokeOf(1.7, 0x8a4e22));
+  paint(detail, ink, (p) => p.poly([14.4, 9.2, 16.2, 15.4, 18.2, 9.0]), PAL.ear, 1.5);
   paint(detail, ink, (p) => p.ellipse(21.8, 1.2, 3.3, 2.4), PAL.belly, 1.8);
   paint(detail, ink, (p) => p.ellipse(24.2, 1.4, 1.25, 0.95), PAL.nose, 1.4);
 
   detail.moveTo(22.6, 0.2);
   detail.quadraticCurveTo(23.6, -0.6, 24.6, 0.15);
   detail.stroke(strokeOf(1.3, INK));
-  for (const [y, tilt] of [[2.4, 0.7], [1.5, 0], [0.6, -0.6]]) {
-    detail.moveTo(22.4, y);
-    detail.lineTo(28.5, y + tilt);
-    detail.stroke(strokeOf(1.05, 0x5c5148));
-  }
+  // A cream core with a dark edge stays visible on a black coat and on a white one.
+  const whisker = (y0, y1) => {
+    const draw = (g) => {
+      g.moveTo(22.2, y0);
+      g.quadraticCurveTo(27.4, y0 + (y1 - y0) * 0.35, 33.2, y1);
+    };
+    draw(detail);
+    detail.stroke(strokeOf(2.2, INK));
+    draw(detail);
+    detail.stroke(strokeOf(1.05, 0xfffdf8));
+  };
+  whisker(3.05, 6.6);
+  whisker(1.5, 1.85);
+  whisker(0.15, -2.8);
 
   const eye = new Container();
   eye.position.set(16.2, 1.2);
@@ -191,9 +156,13 @@ export function createKitten() {
     trace(ink);
     ink.stroke(strokeOf(2.5));
   }
+  for (const trace of darkPaths) {
+    trace(ink);
+    ink.stroke(strokeOf(2.2));
+  }
 
-  // Legs and the ear outline sit under the body and the cap. Body ink stays on top.
-  root.addChild(tail, legs, legInk, fur, dark, earInk, detail, eye, ink);
+  // Legs sit under the body. The ear outline is on top so the tip stays a clean point.
+  root.addChild(tail, legs, legInk, fur, dark, detail, eye, ink);
 
   let coatIndex = 0;
   fur.tint = COATS[0][0];
