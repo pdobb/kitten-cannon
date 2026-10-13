@@ -23,8 +23,7 @@
   <link rel="icon" href="./icon-192.png" type="image/png" sizes="192x192" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <!-- default: black-translucent makes iOS 27 blur the top, and that blur cannot be removed while the page draws under the clock. -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Kitten Cannon" />
   <link rel="apple-touch-icon" href="./icon-180.png" />
   <link rel="manifest" href="./manifest.webmanifest" />
@@ -44,7 +43,6 @@
   </script>
 </head>
 <body>
-  <div class="status-fix" aria-hidden="true"></div>
   <div id="app" data-phase="title">
     <canvas id="view"></canvas>
     <div id="vignette"></div>

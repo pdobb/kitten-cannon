@@ -12,7 +12,6 @@ import { buildCourse, resetCourse } from './course.js';
 import { createKitten as makeState, step } from './physics.js';
 import { createFlybys } from './flyby.js';
 import { createScenery } from './scenery.js';
-import { skyCss } from './sky.js';
 import { applyWorld, viewHalfWidth } from './view.js';
 import {
   ANGLE_MAX,
@@ -1244,23 +1243,10 @@ function updateHud() {
   );
 }
 
-const statusFix = document.querySelector('.status-fix');
-let statusSky = '';
-
-function paintStatusSky() {
-  if (!statusFix || !view) return;
-  if (!document.documentElement.classList.contains('installed')) return;
-  const color = skyCss(view.camY + view.halfH);
-  if (color === statusSky) return;
-  statusSky = color;
-  statusFix.style.backgroundColor = color;
-}
-
 function layoutView(jx, jy) {
   const w = canvas.clientWidth || window.innerWidth || 1;
   const h = canvas.clientHeight || window.innerHeight || 1;
   view = applyWorld(world, Math.max(1, w), Math.max(1, h), cam.x + jx, cam.y + jy);
-  paintStatusSky();
 }
 
 function worldOf(display, localX = 0, localY = 0) {
