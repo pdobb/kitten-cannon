@@ -843,6 +843,7 @@ document.addEventListener('webkitfullscreenchange', paintFullscreen);
 
 bindTap(document.querySelector('#start'), startAim);
 bindTap(document.querySelector('#again'), retry);
+bindTap(document.querySelector('#reload'), reloadField);
 
 function paintMute(muted) {
   muteEl.classList.toggle('is-muted', muted);

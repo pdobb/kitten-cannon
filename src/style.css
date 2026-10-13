@@ -691,7 +691,7 @@ button, #mute, #pause-btn {
   touch-action: manipulation;
 }
 
-button#start, button#again, button#resume, #pad button {
+button#start, button#again, button#resume, button#reload, #pad button {
   font-family: "Lilita One", "Trebuchet MS", sans-serif;
   border: 4px solid #2b2118;
   background: #e23b2e;
@@ -704,10 +704,17 @@ button#start, button#again, button#resume, #pad button {
   box-shadow: 4px 4px 0 #2b2118;
 }
 
-button#start:active, button#again:active, button#resume:active, #pad button:active {
+button#reload {
+  background: #fff7e8;
+  color: #2b2118;
+}
+
+button#start:active, button#again:active, button#resume:active, button#reload:active, #pad button:active {
   transform: translate(3px, 3px);
   box-shadow: none;
 }
+
+#card .actions { flex-wrap: wrap; }
 
 #pad {
   position: absolute;
@@ -864,7 +871,7 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   }
   .panel { gap: 4px; padding: 10px 14px; }
   .lede, #card-note, #pause-note { line-height: 1.25; }
-  button#start, button#again, button#resume {
+  button#start, button#again, button#resume, button#reload {
     min-height: 36px;
     padding: 4px 14px;
   }
@@ -881,7 +888,7 @@ button#start:active, button#again:active, button#resume:active, #pad button:acti
   .sheet p.endings-kicker { font-size: 13px; letter-spacing: 0.1em; }
   .sheet p.endings-kicker { margin: 6px 0 0; }
   #card .actions, #pause .actions { margin-top: 2px; }
-  #card button#again, #pause button#resume { min-height: 32px; font-size: 16px; }
+  #card button#again, #card button#reload, #pause button#resume { min-height: 32px; font-size: 16px; }
 }
 
 /* A short wide window still shows the aim pad, so the result card stays above it. */
