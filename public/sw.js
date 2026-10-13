@@ -1,7 +1,8 @@
 // Caches the single-file game so a home-screen install still runs offline.
-// Paths are relative to this file, which sits next to index.html on Pages.
+// The page inlines its script, its style, and its fonts. Paths are relative
+// to this file, which sits next to index.html on Pages.
 
-const CACHE = 'kitten-cannon-v1';
+const CACHE = 'kitten-cannon-v2';
 const SHELL = [
   './',
   './index.html',
@@ -32,13 +33,8 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
-  if (url.origin === self.location.origin && url.pathname.endsWith('/sw.js')) return;
-
-  if (url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com') {
-    event.respondWith(fromCache(request));
-    return;
-  }
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.endsWith('/sw.js')) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(fromNetwork(request));
@@ -47,22 +43,36 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(fromCache(request));
 });
 
+async function cachedPage(cache, request) {
+  return (await cache.match(request))
+    || (await cache.match(request, { ignoreSearch: true }))
+    || (await cache.match('./index.html'))
+    || (await cache.match('./'));
+}
+
 async function fromNetwork(request) {
   const cache = await caches.open(CACHE);
   try {
     const fresh = await fetch(request);
-    if (fresh.ok) cache.put(request, fresh.clone());
+    if (fresh.ok) {
+      cache.put(request, fresh.clone());
+      cache.put('./index.html', fresh.clone());
+    }
     return fresh;
   } catch {
-    return (await cache.match(request)) || (await cache.match('./index.html')) || (await cache.match('./'));
+    return (await cachedPage(cache, request)) || new Response('', { status: 503, statusText: 'offline' });
   }
 }
 
 async function fromCache(request) {
   const cache = await caches.open(CACHE);
-  const hit = await cache.match(request);
+  const hit = (await cache.match(request)) || (await cache.match(request, { ignoreSearch: true }));
   if (hit) return hit;
-  const fresh = await fetch(request);
-  if (fresh.ok) cache.put(request, fresh.clone());
-  return fresh;
+  try {
+    const fresh = await fetch(request);
+    if (fresh.ok) cache.put(request, fresh.clone());
+    return fresh;
+  } catch {
+    return new Response('', { status: 503, statusText: 'offline' });
+  }
 }

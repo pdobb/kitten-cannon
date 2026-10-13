@@ -31,4 +31,4 @@ npm run preview   # serves that build
 
 GitHub Pages serves `docs/index.html` at the play link above. The Vite entry stays `index.html`. Leave the source file alone when you publish. `docs/kitten_cannon.html` only redirects to `./`.
 
-On a phone, open the play link in the browser. A texted HTML file is only a preview, and the game will not start from it. Open the play link once while you are online, then add it to the home screen. After that the game runs with the network off. Arrows aim. Enter or Space fires, and fires again after a landing. R retries. M mutes. A touch screen can swipe up or down to aim and tap the field to fire.
+On a phone, open the play link in the browser. A texted HTML file is only a preview, and the game will not start from it. Open the play link once while you are online, then add it to the home screen. After that the game runs with the network off, fonts included. Arrows aim. Enter or Space fires, and fires again after a landing. R rebuilds the field without leaving the game or full screen. M mutes. A touch screen can swipe up or down to aim and tap the field to fire.

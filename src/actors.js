@@ -583,5 +583,10 @@ export function createParticles(parent) {
     }
   }
 
-  return { spawn, update };
+  function clear() {
+    for (let i = 0; i < pool.length; i++) pool[i].life = 0;
+    g.clear();
+  }
+
+  return { spawn, update, clear };
 }

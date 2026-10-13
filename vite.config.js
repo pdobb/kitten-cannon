@@ -38,6 +38,9 @@ export default defineConfig({
   base: './',
   plugins: [viteSingleFile(), classicInlineScript()],
   build: {
+    // The four latin faces are small. Inlining them keeps the published page
+    // one file, which is what the service worker caches for offline play.
+    assetsInlineLimit: 100000,
     rollupOptions: {
       input: resolve(root, 'index.html'),
     },

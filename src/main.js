@@ -134,7 +134,7 @@ const cardBestEl = document.querySelector('#card-best');
 const padFireEl = document.querySelector('#pad-fire');
 
 const audio = createAudio();
-const course = buildCourse();
+let course = buildCourse();
 
 const pixi = new Application();
 const world = new Container();
@@ -593,6 +593,57 @@ function finish() {
   setPhase('result');
 }
 
+// A new page: the same seeded field, record stakes only, nothing spent.
+// Full screen stays, and the start card stays hidden if the visit already began.
+function reloadField() {
+  if (!kitten || !flybys) return;
+  const onTitle = game.phase === 'title';
+  if (game.paused) setPaused(false);
+  for (let i = 0; i < course.length; i++) releaseProp(course[i]);
+  course = buildCourse();
+  for (let i = poles.length - 1; i >= 0; i--) {
+    poles[i].mesh.destroy({ children: true });
+    poles.pop();
+  }
+  if (game.furthest > 0) {
+    game.furthestX = xForFeet(game.furthest);
+    plantPole(game.furthestX, game.furthest);
+  }
+  if (particles) particles.clear();
+  bannerEl.classList.remove('show');
+  bannerEl.textContent = '';
+  powerCheerEl.className = '';
+  powerCheerEl.replaceChildren();
+  distanceEl.textContent = formatFt(0);
+  altitudeEl.textContent = `↑ ${formatFt(0)}`;
+  altitudeEl.dataset.tier = '0';
+  altitudeEl.classList.remove('pop');
+  speedEl.textContent = `→ ${formatMph(0)}`;
+  game.kitten = null;
+  game.feet = 0;
+  game.peakY = 0;
+  game.peakSpeed = 0;
+  game.hold = 0;
+  game.squash = 0;
+  game.sink = 0;
+  game.recoil = 0;
+  game.snap = true;
+  cam.shake = 0;
+  hold.ArrowUp = 0;
+  hold.ArrowDown = 0;
+  kitten.mesh.visible = true;
+  stake.visible = false;
+  const home = aimFocus();
+  cam.x = home.x;
+  cam.y = home.y;
+  if (onTitle) {
+    flybys.clear();
+    setPhase('title');
+    return;
+  }
+  startAim();
+}
+
 function retry() {
   if (!kitten) return;
   resetCourse(course);
@@ -689,11 +740,11 @@ function onAction() {
 }
 
 window.addEventListener('keydown', (e) => {
-  // Space and Enter start the same visit over. R loads the page again.
+  // Space and Enter start the same visit over. R rebuilds the field in place.
   if (e.code === 'KeyR') {
     if (e.repeat) return;
     e.preventDefault();
-    window.location.reload();
+    reloadField();
     return;
   }
   const accept = e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter';
@@ -1073,14 +1124,21 @@ function updateProps(time, dt) {
   }
 }
 
+function aimFocus() {
+  const w = canvas.clientWidth || window.innerWidth;
+  const h = canvas.clientHeight || window.innerHeight;
+  const halfW = viewHalfWidth(w / Math.max(1, h));
+  // x=490 looks down the field. A narrow view then starts past the wheels.
+  return { x: Math.min(490, CANNON_X + PIVOT_X - 84 + halfW), y: 120, halfW };
+}
+
 function updateCamera(dt) {
   const flying = game.phase === 'flight' || game.phase === 'result';
   const k = game.kitten;
   // One distance for the whole flight. The camera follows; it does not zoom.
   // The lead shrinks on a narrow screen so the kitten stays in frame.
-  const w = canvas.clientWidth || window.innerWidth;
-  const h = canvas.clientHeight || window.innerHeight;
-  const halfW = viewHalfWidth(w / Math.max(1, h));
+  const home = aimFocus();
+  const halfW = home.halfW;
   const lead = Math.min(220, halfW * 0.42);
   // The score card sits on the center of the screen. On the result, look
   // further ahead so the landing flag clears that card. Flight keeps the
@@ -1092,9 +1150,7 @@ function updateCamera(dt) {
     const cardHalfWorld = (cardPx * 0.5) / Math.max(1, viewW) * (halfW * 2);
     focusLead = Math.min(halfW * 0.78, Math.max(lead, cardHalfWorld + 48));
   }
-  // x=490 looks down the field. A narrow view then starts past the wheels.
-  const aimX = Math.min(490, CANNON_X + PIVOT_X - 84 + halfW);
-  const focusX = flying ? k.x + focusLead : aimX;
+  const focusX = flying ? k.x + focusLead : home.x;
   const focusY = flying ? Math.max(120, k.y - 36) : 120;
   if (flying) {
     cam.x = focusX;
@@ -1366,4 +1422,5 @@ window.__kitten = {
     flybys.launch(cam, game.kitten ? game.kitten.y : cam.y, kind, at || null);
   },
   retry,
+  reload: reloadField,
 };

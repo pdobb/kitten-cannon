@@ -1,3 +1,33 @@
+/* Latin cuts, bundled with the page so a home-screen install does not ask Google. */
+@font-face {
+  font-family: Nunito;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/nunito-700-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: Nunito;
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("./fonts/nunito-800-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Lilita One";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/lilita-one-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/plex-mono-600-latin.woff2") format("woff2");
+}
+
 :root {
   color: #2b2118;
   font-family: Nunito, "Trebuchet MS", sans-serif;
