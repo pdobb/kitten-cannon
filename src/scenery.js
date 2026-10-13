@@ -32,91 +32,75 @@ function fillRidge(g, pts, x0, color, line, sharp) {
   });
 }
 
-// Where the slope from `outer` up to `tip` crosses `line`.
-function snowCut(outer, tip, line) {
-  const dy = tip.y - outer.y;
-  const t = dy <= 1 ? 0.35 : Math.max(0, Math.min(1, (tip.y - line) / dy));
-  return {
-    x: tip.x + (outer.x - tip.x) * t,
-    y: tip.y + (outer.y - tip.y) * t,
-  };
-}
-
-// A thin wedge on the crest. A wide white triangle on a round mound read as a cap in the wrong way.
+// Snow follows the rounded crest and stops on the slope. It does not sit
+// above the outline, and it is not a triangle perched on the tip.
 function fillSnow(g, pts, x0, limit) {
   for (let i = 1; i < pts.length - 1; i++) {
     const tip = pts[i];
     if (tip.y < limit) continue;
     if (tip.y <= pts[i - 1].y || tip.y <= pts[i + 1].y) continue;
-    const line = tip.y * 0.86;
-    const left = snowCut(pts[i - 1], tip, line);
-    const right = snowCut(pts[i + 1], tip, line);
-    const drop = Math.max(8, (tip.y - line) * 0.45);
-    g.poly([
-      x0 + left.x, left.y,
-      x0 + tip.x, tip.y + 1,
-      x0 + right.x, right.y,
-      x0 + right.x, Math.max(0, right.y - drop * 0.25),
-      x0 + tip.x, tip.y - drop,
-      x0 + left.x, Math.max(0, left.y - drop * 0.25),
-    ]);
+    // The upper part of a tall crest. The hem is the snowline, so the cap
+    // stays on the silhouette instead of floating above the tip.
+    const line = tip.y * 0.6;
+    let left = i;
+    while (left > 0 && pts[left - 1].y >= line) left -= 1;
+    let right = i;
+    while (right < pts.length - 1 && pts[right + 1].y >= line) right += 1;
+    if (right - left < 2) continue;
+    const cap = [];
+    for (let k = left; k <= right; k++) cap.push(x0 + pts[k].x, pts[k].y);
+    cap.push(x0 + pts[right].x, line);
+    cap.push(x0 + pts[left].x, line);
+    g.poly(cap);
     g.fill(0xfffdf8);
   }
 }
 
-// Jagged ridges along one tile. Both ends sit at y = 0 so the next copy meets this one.
-// Straight runs, not bells: a smooth mound read as the wrong shape.
-function ridgeSamples(span, height, seed) {
+function addBell(pts, left, right, peak, power, skew) {
+  const steps = 24;
+  for (let s = 0; s <= steps; s++) {
+    const t = s / steps;
+    const u = Math.max(0, Math.min(1, t + skew * Math.sin(t * Math.PI)));
+    const bell = Math.sin(u * Math.PI) ** power;
+    pts.push({ x: left + (right - left) * t, y: peak * bell });
+  }
+}
+
+// Broad bells. Both ends sit at y = 0 so the next copy meets this one.
+// A grand range is wider and stays tall. A near range is lower and rounder.
+// saddle[0] is where peaks stop, so the title sun has a valley. crown is the
+// first peak, placed so its crest sits in that same view.
+function peakSamples(span, height, seed, grand, saddle, crown) {
   const rng = mulberry32(seed);
   const pts = [{ x: 0, y: 0 }];
-  let x = 16 + rng() * 48;
-  while (x < span - 80) {
-    const narrow = rng() < 0.38;
-    const width = narrow ? 100 + rng() * 130 : 210 + rng() * 320;
-    const right = Math.min(span - 8, x + width);
-    if (right - x < 90) break;
-    const peak = height * (narrow ? 0.74 + rng() * 0.26 : 0.46 + rng() * 0.4);
-    const valley = height * (0.04 + rng() * 0.08);
-    const summitX = x + (right - x) * (narrow ? 0.42 + rng() * 0.16 : 0.28 + rng() * 0.36);
-
-    let lastY = pts[pts.length - 1].y;
-    const cuts = narrow ? [0.55] : [0.34, 0.68];
-    for (let c = 0; c < cuts.length; c++) {
-      const along = cuts[c];
-      const cx = x + (summitX - x) * along;
-      const ceiling = lastY + (peak - lastY) * along;
-      const y = Math.max(6, ceiling * (0.42 + rng() * 0.28));
-      pts.push({ x: cx, y });
-      lastY = y;
-    }
-    pts.push({ x: summitX, y: peak });
-
-    const drop = right - summitX;
-    if (!narrow && drop > 70 && rng() < 0.8) {
-      const spurX = summitX + drop * (0.4 + rng() * 0.28);
-      const notchX = summitX + (spurX - summitX) * (0.4 + rng() * 0.15);
-      const spurY = peak * (0.32 + rng() * 0.24);
-      const notchY = spurY * (0.42 + rng() * 0.16);
-      pts.push({ x: notchX, y: notchY });
-      pts.push({ x: spurX, y: Math.max(spurY, notchY + 10) });
-    } else if (drop > 36) {
-      pts.push({
-        x: summitX + drop * (0.5 + rng() * 0.2),
-        y: peak * (narrow ? 0.18 + rng() * 0.12 : 0.28 + rng() * 0.16),
-      });
-    }
-    pts.push({ x: right, y: valley });
-    x = right + 4 + rng() * 22;
+  const stop = saddle ? saddle[0] : span;
+  let x = 16;
+  if (crown) {
+    const left = Math.max(18, crown.at - crown.width * 0.5);
+    const right = Math.min(stop - 8, left + crown.width);
+    addBell(pts, left, right, height * 0.98, 1.22, 0.04);
+    x = right;
+  }
+  while (x < stop - 80) {
+    const gap = (grand ? 90 : 40) + rng() * (grand ? 140 : 120);
+    const width = (grand ? 720 : 260) + rng() * (grand ? 520 : 280);
+    const left = x + gap;
+    const right = Math.min(stop - 8, left + width);
+    if (right - left < (grand ? 420 : 180)) break;
+    const peak = height * (grand ? 0.9 + rng() * 0.1 : 0.58 + rng() * 0.36);
+    const power = grand ? 1.2 + rng() * 0.35 : 1.35 + rng() * 0.45;
+    const skew = (rng() - 0.42) * 0.18;
+    addBell(pts, left, right, peak, power, skew);
+    x = right;
   }
   pts.push({ x: span, y: 0 });
-  for (let i = 1; i < pts.length - 1; i++) {
-    if (pts[i].x <= pts[i - 1].x) pts[i].x = pts[i - 1].x + 4;
+  for (let i = 1; i < pts.length; i++) {
+    if (pts[i].x <= pts[i - 1].x) pts[i].x = pts[i - 1].x + 1;
   }
   pts[0].x = 0;
   pts[0].y = 0;
   pts[pts.length - 1].x = span;
   pts[pts.length - 1].y = 0;
-  if (pts[pts.length - 2].x >= span) pts[pts.length - 2].x = span - 4;
   return pts;
 }
 
@@ -309,13 +293,14 @@ export function createScenery(world) {
   world.addChild(sun);
 
   const ranges = [
-    { color: 0xc5d8ea, line: 0xa9c4da, height: 320, parallax: 0.12, seed: 0x51a3, span: 3000, snow: 0.72 },
-    { color: 0x8aa4bc, line: 0x6d8eab, height: 230, parallax: 0.28, seed: 0x51a2, span: 2600, snow: 0.76 },
-    { color: 0x6d9462, line: 0x4e7848, height: 150, parallax: 0.46, seed: 0x51a1, span: 2200, snow: 0 },
+    // The saddle is the valley under the title sun. The crown is the peak beside it.
+    { color: 0xc5d8ea, line: 0xa9c4da, height: 370, parallax: 0.12, seed: 0x51a3, span: 5200, snow: 0.55, grand: true, saddle: [4580, 5200], crown: { at: 470, width: 920 } },
+    { color: 0x8aa4bc, line: 0x6d8eab, height: 268, parallax: 0.28, seed: 0x51a2, span: 3800, snow: 0.55, grand: true, saddle: [3280, 3800], crown: { at: 400, width: 800 } },
+    { color: 0x6d9462, line: 0x4e7848, height: 168, parallax: 0.46, seed: 0x51a1, span: 2400, snow: 0, grand: false, saddle: null, crown: null },
   ].map((spec) => {
-    const pts = ridgeSamples(spec.span, spec.height, spec.seed);
+    const pts = peakSamples(spec.span, spec.height, spec.seed, spec.grand, spec.saddle, spec.crown);
     return tiledLayer(world, spec.span, (g, x0) => {
-      fillRidge(g, pts, x0, spec.color, spec.line, true);
+      fillRidge(g, pts, x0, spec.color, spec.line, false);
       if (spec.snow) fillSnow(g, pts, x0, spec.height * spec.snow);
     });
   });

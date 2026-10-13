@@ -689,6 +689,13 @@ function onAction() {
 }
 
 window.addEventListener('keydown', (e) => {
+  // Space and Enter start the same visit over. R loads the page again.
+  if (e.code === 'KeyR') {
+    if (e.repeat) return;
+    e.preventDefault();
+    window.location.reload();
+    return;
+  }
   const accept = e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter';
   if (accept || e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'KeyP') e.preventDefault();
   if (game.paused) {
@@ -701,7 +708,6 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.repeat) return;
   if (accept) onAction();
-  else if (e.code === 'KeyR') retry();
   else if (e.code === 'KeyP') setPaused(true);
   else if (e.code === 'KeyM') {
     safeAudio(() => audio.unlock());

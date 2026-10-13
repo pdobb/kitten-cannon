@@ -62,93 +62,131 @@ export function createKitten() {
   const furShape = (trace) => coat(furPaths, fur, trace);
   const darkShape = (trace) => coat(darkPaths, dark, trace);
 
-  // One bean, one head, two legs. Nose stays toward +X. Local (20, 0) is that way.
-  const headX = 16.5;
-  const headR = 7.2;
+  // Nose toward +X. The skull's back is headX - headR, which is what seats
+  // the head outside the muzzle. The torso stays behind that.
+  const headX = 16.8;
+  const headR = 6.3;
   const legs = new Graphics();
   const legInk = new Graphics();
   const limb = (trace) => {
     trace(legs);
     legs.fill(0xffffff);
     trace(legInk);
-    legInk.stroke(strokeOf(2.3));
+    legInk.stroke(strokeOf(2.05));
   };
-  // Tops tuck under the belly. The paws hang below it so the bean has legs.
+  // Hind paw, then the forepaw. Each foot is wider than the shin.
   limb((p) => {
-    p.moveTo(-1.2, -2.4);
-    p.bezierCurveTo(0.4, -7.2, -2.6, -11.4, -5.6, -13.6);
-    p.bezierCurveTo(-8.2, -15.4, -11.4, -14.6, -11.0, -12.2);
-    p.bezierCurveTo(-10.6, -10.2, -8.0, -10.0, -6.6, -8.4);
-    p.bezierCurveTo(-5.2, -6.6, -5.6, -4.2, -4.2, -2.2);
+    p.moveTo(-8.2, -1.0);
+    p.bezierCurveTo(-6.4, -4.6, -5.0, -8.6, -4.0, -11.4);
+    p.quadraticCurveTo(-3.0, -13.6, -5.2, -14.4);
+    p.quadraticCurveTo(-8.0, -15.0, -8.4, -13.0);
+    p.quadraticCurveTo(-7.2, -10.4, -8.4, -6.8);
+    p.bezierCurveTo(-9.4, -3.6, -10.0, -1.8, -9.2, -0.6);
     p.closePath();
   });
   limb((p) => {
-    p.moveTo(4.6, -2.6);
-    p.bezierCurveTo(6.8, -6.2, 7.6, -10.2, 6.4, -13.2);
-    p.bezierCurveTo(5.4, -15.2, 2.2, -14.8, 2.4, -12.4);
-    p.bezierCurveTo(2.6, -10.2, 3.6, -7.6, 2.8, -5.2);
-    p.bezierCurveTo(2.2, -3.4, 2.6, -2.4, 4.6, -2.6);
+    p.moveTo(3.0, -1.4);
+    p.bezierCurveTo(4.6, -5.0, 5.0, -9.0, 4.2, -11.8);
+    p.quadraticCurveTo(5.0, -13.8, 3.2, -14.5);
+    p.quadraticCurveTo(0.6, -15.0, 0.6, -12.6);
+    p.quadraticCurveTo(1.6, -10.2, 1.6, -6.6);
+    p.bezierCurveTo(1.4, -3.4, 1.8, -2.0, 2.4, -1.0);
     p.closePath();
   });
+  // Short thick neck. The head covers the far end, the chest covers the near end.
   furShape((p) => {
-    p.moveTo(10, 0.4);
-    p.bezierCurveTo(8, 6.2, 1, 7.6, -6, 5.6);
-    p.bezierCurveTo(-13, 3.6, -14.5, -1.2, -11, -4.6);
-    p.bezierCurveTo(-7.5, -7.4, 0, -7.6, 7, -4.2);
-    p.bezierCurveTo(11.5, -2, 12.4, -0.6, 10, 0.4);
+    p.moveTo(4.2, 3.8);
+    p.quadraticCurveTo(8.0, 5.8, 11.4, 6.3);
+    p.lineTo(11.8, 0.6);
+    p.quadraticCurveTo(8.2, -0.5, 4.8, -0.2);
     p.closePath();
   });
-  furShape((p) => p.circle(headX, 2.2, headR));
-  darkShape((p) => p.poly([13.2, 8.4, 16.2, 17.4, 19.4, 8.2]));
+  // Haunch higher than the chest, belly along the bottom.
+  furShape((p) => {
+    p.moveTo(5.6, 1.2);
+    p.quadraticCurveTo(6.4, 4.2, 3.2, 5.5);
+    p.quadraticCurveTo(-1.6, 6.6, -6.4, 6.7);
+    p.quadraticCurveTo(-11.2, 6.8, -14.2, 3.4);
+    p.quadraticCurveTo(-16.0, 0.4, -14.4, -2.8);
+    p.quadraticCurveTo(-12.0, -5.6, -5.6, -6.3);
+    p.quadraticCurveTo(0.6, -6.8, 4.4, -4.4);
+    p.quadraticCurveTo(6.6, -2.2, 5.6, 1.2);
+    p.closePath();
+  });
+  furShape((p) => p.ellipse(headX, 3.5, headR, 6.55));
+  // Far ear behind the skull, near ear on top of it. Bases sit inside the head.
+  darkShape((p) => {
+    p.moveTo(12.0, 6.9);
+    p.lineTo(13.0, 13.6);
+    p.lineTo(14.4, 6.6);
+    p.closePath();
+  });
+  const earPaths = [];
+  const earShape = (trace) => {
+    trace(fur);
+    fur.fill(0xffffff);
+    earPaths.push(trace);
+  };
+  earShape((p) => {
+    p.moveTo(14.9, 8.7);
+    p.lineTo(16.7, 17.6);
+    p.lineTo(19.3, 8.4);
+    p.closePath();
+  });
 
   const tail = new Container();
-  tail.position.set(-11.5, 2.2);
+  tail.position.set(-13.6, 1.6);
   const tailFur = new Graphics();
   const tailInk = new Graphics();
   const tailShape = (p) => {
-    p.moveTo(2.6, -2.6);
-    p.bezierCurveTo(-1.5, 0.2, -7, 3.2, -10.5, 9);
-    p.quadraticCurveTo(-13.2, 13.2, -8.6, 11.4);
-    p.bezierCurveTo(-6.4, 7.2, -3.2, 2.4, 0.4, 1.6);
+    p.moveTo(2.0, -1.2);
+    p.bezierCurveTo(-0.4, 2.2, -0.8, 6.6, 2.0, 10.0);
+    p.bezierCurveTo(4.2, 12.6, 7.4, 11.6, 7.0, 8.8);
+    p.bezierCurveTo(6.0, 10.0, 4.2, 8.6, 3.0, 6.2);
+    p.bezierCurveTo(1.6, 3.4, 1.8, 1.0, 3.2, -0.6);
     p.closePath();
   };
   tailShape(tailFur);
   tailFur.fill(0xffffff);
   tailShape(tailInk);
-  tailInk.stroke(strokeOf(2.4));
+  tailInk.stroke(strokeOf(2.15));
   tail.addChild(tailFur, tailInk);
 
-  paint(detail, ink, (p) => p.ellipse(-1, -3.2, 5.6, 2.8), PAL.belly, 2);
-  paint(detail, ink, (p) => p.poly([14.4, 9.2, 16.2, 15.4, 18.2, 9.0]), PAL.ear, 1.5);
-  paint(detail, ink, (p) => p.ellipse(21.8, 1.2, 3.3, 2.4), PAL.belly, 1.8);
-  paint(detail, ink, (p) => p.ellipse(24.2, 1.4, 1.25, 0.95), PAL.nose, 1.4);
+  paint(detail, ink, (p) => p.ellipse(-2.2, -4.05, 4.3, 1.65), PAL.belly, 1.8);
+  paint(detail, ink, (p) => p.poly([15.8, 10.2, 16.7, 15.4, 18.2, 9.6]), PAL.ear, 1.35);
+  paint(detail, ink, (p) => p.ellipse(21.5, 2.35, 2.65, 2.1), PAL.belly, 1.7);
+  paint(detail, ink, (p) => p.poly([22.55, 3.15, 24.15, 2.85, 23.4, 1.45]), PAL.nose, 1.25);
 
-  detail.moveTo(22.6, 0.2);
-  detail.quadraticCurveTo(23.6, -0.6, 24.6, 0.15);
-  detail.stroke(strokeOf(1.3, INK));
+  detail.moveTo(22.9, 1.25);
+  detail.quadraticCurveTo(23.5, 0.6, 24.15, 1.15);
+  detail.stroke(strokeOf(1.2, INK));
 
   const eye = new Container();
-  eye.position.set(16.2, 1.2);
+  eye.position.set(18.35, 5.15);
   const gaze = new Graphics();
-  gaze.circle(0, 0, 2.15);
+  gaze.ellipse(0, 0, 2.05, 2.25);
   gaze.fill(0xfffaf4);
-  gaze.circle(0.55, -0.1, 1.05);
+  gaze.circle(0.42, -0.15, 1.02);
   gaze.fill(0x1c1720);
-  gaze.circle(0.95, 0.45, 0.38);
+  gaze.circle(0.85, 0.38, 0.36);
   gaze.fill(PAL.cream);
   eye.addChild(gaze);
 
   for (const trace of furPaths) {
     trace(ink);
-    ink.stroke(strokeOf(2.5));
+    ink.stroke(strokeOf(2.35));
+  }
+  for (const trace of earPaths) {
+    trace(ink);
+    ink.stroke({ width: 2.15, color: INK, join: 'miter', cap: 'butt', miterLimit: 4, alignment: 0.5 });
   }
   for (const trace of darkPaths) {
     trace(ink);
-    ink.stroke(strokeOf(2.2));
+    ink.stroke({ width: 2.05, color: INK, join: 'miter', cap: 'butt', miterLimit: 4, alignment: 0.5 });
   }
 
-  // Legs sit under the body. The ear outline is on top so the tip stays a clean point.
-  root.addChild(tail, legs, legInk, fur, dark, detail, eye, ink);
+  // Far ear behind the head. Legs under the belly. Outline on top.
+  root.addChild(tail, legs, legInk, dark, fur, detail, eye, ink);
 
   let coatIndex = 0;
   fur.tint = COATS[0][0];
@@ -172,9 +210,9 @@ export function createKitten() {
     tail,
     recolor,
     coat() { return COATS[coatIndex][0]; },
-    // Lip metal ends near x = 82. The skull's back is headX - headR, so this
-    // puts the whole head outside the muzzle and leaves a little neck showing.
-    seat: { x: MUZZLE_LIP - (headX - headR) + 8, y: -1 },
+    // Lip metal ends near x = 80. The skull's back is headX - headR, so this
+    // puts the whole head outside the muzzle and leaves a short neck showing.
+    seat: { x: MUZZLE_LIP - (headX - headR) + 4, y: -1 },
   };
 }
 
