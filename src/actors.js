@@ -181,7 +181,7 @@ export function createCannon() {
   const g = new Graphics();
   const ink = new Graphics();
 
-  // Far wheel shares the ground line and only peeks out behind the near one.
+  // Far wheel. It shares the ground line and only peeks out behind the carriage.
   paint(g, ink, (p) => p.circle(-2, 27, 21), PAL.woodDark, 2.4);
   g.circle(-2, 27, 14);
   g.fill(0x4a2c16);
@@ -196,19 +196,7 @@ export function createCannon() {
   ]), PAL.wood, 2.4);
   paint(g, ink, (p) => p.roundRect(-88, 4, 32, 10, 3), PAL.woodDark, 2.2);
 
-  // Near wheel. The grass tops out near y = 10, so a bottom at y = 6 sits in it.
-  paint(g, ink, (p) => p.circle(16, 29, 23), PAL.wood, 2.6);
-  g.circle(16, 29, 16);
-  g.fill(0x9a6236);
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI;
-    g.moveTo(16 + Math.cos(a) * 5, 29 + Math.sin(a) * 5);
-    g.lineTo(16 + Math.cos(a) * 15.5, 29 + Math.sin(a) * 15.5);
-    g.stroke(strokeOf(2.4, PAL.woodDark));
-  }
-  paint(g, ink, (p) => p.circle(16, 29, 5), PAL.brass, 2);
-
-  // Cheek around the trunnion, overlapping the wheel so the barrel has a seat.
+  // Cheek around the trunnion. The barrel sits on this, behind the near wheel.
   paint(g, ink, (p) => p.poly([
     -8, 36,
     36, 34,
@@ -226,6 +214,23 @@ export function createCannon() {
   ]), PAL.woodDark, 2);
 
   root.addChild(g, ink);
+
+  // Near wheel is its own layer so it covers the cheek, outline included.
+  // The grass tops out near y = 10, so a bottom at y = 6 sits in it.
+  // The barrel and the trunnion pin are added after this and stay in front.
+  const near = new Graphics();
+  const nearInk = new Graphics();
+  paint(near, nearInk, (p) => p.circle(16, 29, 23), PAL.wood, 2.6);
+  near.circle(16, 29, 16);
+  near.fill(0x9a6236);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI;
+    near.moveTo(16 + Math.cos(a) * 5, 29 + Math.sin(a) * 5);
+    near.lineTo(16 + Math.cos(a) * 15.5, 29 + Math.sin(a) * 15.5);
+    near.stroke(strokeOf(2.4, PAL.woodDark));
+  }
+  paint(near, nearInk, (p) => p.circle(16, 29, 5), PAL.brass, 2);
+  root.addChild(near, nearInk);
 
   const pivot = new Container();
   pivot.position.set(PIVOT_X, PIVOT_Y);
