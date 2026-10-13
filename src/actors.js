@@ -62,10 +62,34 @@ export function createKitten() {
   const furShape = (trace) => coat(furPaths, fur, trace);
   const darkShape = (trace) => coat(darkPaths, dark, trace);
 
-  // One bean and one head. The old pile of circles read as lumps, and the
-  // tail was four beads. Nose stays toward +X. Local (20, 0) is that way.
+  // One bean, one head, two legs. Nose stays toward +X. Local (20, 0) is that way.
   const headX = 16.5;
   const headR = 7.2;
+  const legs = new Graphics();
+  const legInk = new Graphics();
+  const limb = (trace) => {
+    trace(legs);
+    legs.fill(0xffffff);
+    trace(legInk);
+    legInk.stroke(strokeOf(2.3));
+  };
+  // Tops tuck under the belly. The paws hang below it so the bean has legs.
+  limb((p) => {
+    p.moveTo(-1.2, -2.4);
+    p.bezierCurveTo(0.4, -7.2, -2.6, -11.4, -5.6, -13.6);
+    p.bezierCurveTo(-8.2, -15.4, -11.4, -14.6, -11.0, -12.2);
+    p.bezierCurveTo(-10.6, -10.2, -8.0, -10.0, -6.6, -8.4);
+    p.bezierCurveTo(-5.2, -6.6, -5.6, -4.2, -4.2, -2.2);
+    p.closePath();
+  });
+  limb((p) => {
+    p.moveTo(4.6, -2.6);
+    p.bezierCurveTo(6.8, -6.2, 7.6, -10.2, 6.4, -13.2);
+    p.bezierCurveTo(5.4, -15.2, 2.2, -14.8, 2.4, -12.4);
+    p.bezierCurveTo(2.6, -10.2, 3.6, -7.6, 2.8, -5.2);
+    p.bezierCurveTo(2.2, -3.4, 2.6, -2.4, 4.6, -2.6);
+    p.closePath();
+  });
   furShape((p) => {
     p.moveTo(10, 0.4);
     p.bezierCurveTo(8, 6.2, 1, 7.6, -6, 5.6);
@@ -75,7 +99,7 @@ export function createKitten() {
     p.closePath();
   });
   furShape((p) => p.circle(headX, 2.2, headR));
-  darkShape((p) => p.poly([12.6, 6.8, 15.6, 14.6, 19.6, 6.2]));
+  darkShape((p) => p.poly([13.2, 8.4, 16.2, 17.4, 19.4, 8.2]));
 
   const tail = new Container();
   tail.position.set(-11.5, 2.2);
@@ -95,10 +119,51 @@ export function createKitten() {
   tail.addChild(tailFur, tailInk);
 
   paint(detail, ink, (p) => p.ellipse(-1, -3.2, 5.6, 2.8), PAL.belly, 2);
-  paint(detail, ink, (p) => p.poly([13.8, 7.4, 15.6, 12.8, 17.8, 7]), PAL.ear, 1.6);
-  paint(detail, ink, (p) => p.ellipse(15.4, 6.6, 6.4, 3.2), PAL.leather, 2);
-  paint(detail, ink, (p) => p.roundRect(11.6, 8, 8.4, 2, 1), PAL.leatherDark, 1.8);
-  paint(detail, ink, (p) => p.roundRect(12.8, -0.8, 6.8, 4.2, 2), PAL.leatherDark, 1.8);
+  // Ear stroke sits under the cap, so the tip shows and the base does not cut the leather.
+  const earInk = new Graphics();
+  for (const trace of darkPaths) {
+    trace(earInk);
+    earInk.stroke(strokeOf(2.2));
+  }
+  paint(detail, earInk, (p) => p.poly([14.4, 9.2, 16.2, 15.4, 18.2, 9.0]), PAL.ear, 1.5);
+
+  // Flight cap, open toward the nose. A closed dome with a brim read as a plunger.
+  // Tan stays visible on a black coat. White cotton is the lining at the opening.
+  const COTTON = 0xfffdf8;
+  const LEATHER = 0xd4924a;
+  paint(detail, ink, (p) => {
+    p.moveTo(19.2, 8.2);
+    p.bezierCurveTo(16.4, 13.6, 11.2, 12.6, 9.4, 7.2);
+    p.bezierCurveTo(7.8, 2.6, 8.8, -2.2, 12.8, -3.0);
+    p.bezierCurveTo(16.2, -3.6, 17.6, -0.6, 17.8, 1.6);
+    p.bezierCurveTo(18.0, 4.0, 18.2, 6.2, 19.2, 8.2);
+    p.closePath();
+  }, COTTON, 1.6);
+  paint(detail, ink, (p) => {
+    p.moveTo(18.0, 8.0);
+    p.bezierCurveTo(15.8, 11.4, 12.2, 10.6, 10.8, 7.0);
+    p.bezierCurveTo(9.6, 3.8, 10.4, 0.2, 13.4, -0.6);
+    p.bezierCurveTo(15.6, -1.2, 16.4, 0.8, 16.6, 2.6);
+    p.bezierCurveTo(16.8, 4.6, 17.0, 6.4, 18.0, 8.0);
+    p.closePath();
+  }, LEATHER, 1.7);
+  // Cotton tufts past the leather: nape, crown, and the brow of the face opening.
+  for (const [x, y, r] of [[8.8, 1.6, 1.7], [14.6, 13.2, 1.55], [20.4, 8.6, 1.6]]) {
+    detail.circle(x, y, r);
+    detail.fill(COTTON);
+    ink.circle(x, y, r);
+    ink.stroke(strokeOf(1.3));
+  }
+  // Goggles on the brow. A pale frame, not brass, so the ring does not vanish into the tan.
+  detail.ellipse(17.4, 8.8, 4.2, 2.6);
+  detail.fill(0x141c28);
+  detail.ellipse(17.4, 8.8, 4.2, 2.6);
+  detail.stroke(strokeOf(2.3, 0xf4f0e6));
+  detail.ellipse(18.7, 9.6, 1.35, 0.8);
+  detail.fill({ color: 0xfff6e0, alpha: 0.9 });
+  detail.moveTo(13.6, -0.4);
+  detail.quadraticCurveTo(16.8, -3.2, 19.6, -0.2);
+  detail.stroke(strokeOf(1.7, 0x8a4e22));
   paint(detail, ink, (p) => p.ellipse(21.8, 1.2, 3.3, 2.4), PAL.belly, 1.8);
   paint(detail, ink, (p) => p.ellipse(24.2, 1.4, 1.25, 0.95), PAL.nose, 1.4);
 
@@ -126,15 +191,13 @@ export function createKitten() {
     trace(ink);
     ink.stroke(strokeOf(2.5));
   }
-  for (const trace of darkPaths) {
-    trace(ink);
-    ink.stroke(strokeOf(2.3));
-  }
 
-  root.addChild(tail, fur, dark, detail, eye, ink);
+  // Legs and the ear outline sit under the body and the cap. Body ink stays on top.
+  root.addChild(tail, legs, legInk, fur, dark, earInk, detail, eye, ink);
 
   let coatIndex = 0;
   fur.tint = COATS[0][0];
+  legs.tint = COATS[0][0];
   tailFur.tint = COATS[0][0];
   dark.tint = COATS[0][1];
 
@@ -143,6 +206,7 @@ export function createKitten() {
     if (next === coatIndex) next = (next + 1) % COATS.length;
     coatIndex = next;
     fur.tint = COATS[next][0];
+    legs.tint = COATS[next][0];
     tailFur.tint = COATS[next][0];
     dark.tint = COATS[next][1];
   }
@@ -153,9 +217,9 @@ export function createKitten() {
     tail,
     recolor,
     coat() { return COATS[coatIndex][0]; },
-    // Eyes clear the lip. The helmet sits high, so the body rides a little low
-    // in the bore and the face stays in the opening.
-    seat: { x: MUZZLE_LIP - (headX - headR) - 3, y: -4.5 },
+    // Lip metal ends near x = 82. The skull's back is headX - headR, so this
+    // puts the whole head outside the muzzle and leaves a little neck showing.
+    seat: { x: MUZZLE_LIP - (headX - headR) + 8, y: -1 },
   };
 }
 
