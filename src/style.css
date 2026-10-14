@@ -412,6 +412,12 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
   text-transform: uppercase;
 }
 
+.sheet p.total {
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 2px solid #2b2118;
+}
+
 #banner {
   position: absolute;
   top: 28%;
@@ -925,6 +931,7 @@ button#start:active, button#again:active, button#resume:active, button#reload:ac
   .sheet p.kicker span,
   .sheet p.endings-kicker { font-size: 13px; letter-spacing: 0.1em; }
   .sheet p.endings-kicker { margin: 6px 0 0; }
+  .sheet p.total { margin-top: 3px; padding-top: 2px; }
   #card .actions, #pause .actions { margin-top: 2px; }
   #card button#again, #card button#reload, #pause button#resume { min-height: 32px; font-size: 16px; }
 }

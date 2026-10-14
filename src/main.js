@@ -275,6 +275,14 @@ function appendEndingRows(el, cause, kicker = true) {
     row.append(name, num);
     el.append(row);
   }
+  const sum = document.createElement('p');
+  sum.className = 'total';
+  const sumName = document.createElement('span');
+  sumName.textContent = 'Total';
+  const sumNum = document.createElement('b');
+  sumNum.textContent = total > 0 ? total.toLocaleString('en-US') : '0';
+  sum.append(sumName, sumNum);
+  el.append(sum);
 }
 
 try {
