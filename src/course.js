@@ -112,8 +112,10 @@ function bucket(bins, prop) {
 // the cannon, and the far lanes are rolled from that seed too.
 const CANON_SEED = 0x20070321;
 
-export function buildCourse(seed = CANON_SEED) {
+// A crowd above 1 adds one more high lane. The learned course ignores it.
+export function buildCourse(seed = CANON_SEED, crowd = 1) {
   const canon = (seed >>> 0) === CANON_SEED;
+  const thick = !canon && (crowd | 0) >= 2;
   const raw = canon ? OPENING.map((p) => ({ ...p })) : [];
   const rng = mulberry32(canon ? CANON_SEED : seed >>> 0);
   // The opening lane ends here. grow() carries the same cycle past it.
@@ -122,6 +124,9 @@ export function buildCourse(seed = CANON_SEED) {
     : { x: 360, i: 0, lastHazard: 0 };
   layUntil(raw, rng, state, 260000);
   addSkyBalloons(raw, rng);
+  // A second stream, and no draws from rng, so the normal lane stays put.
+  let crowdX = 360;
+  if (thick) crowdX = layThick(raw, crowdX, state.x);
   const props = raw.map(materialize);
   const bins = [];
   for (let n = 0; n < props.length; n++) {
@@ -150,6 +155,7 @@ export function buildCourse(seed = CANON_SEED) {
         skip: 0.28,
       });
     }
+    if (thick && crowdX < untilX) crowdX = layThick(raw, crowdX, untilX);
     for (let n = from; n < raw.length; n++) {
       const prop = materialize(raw[n]);
       prop.ord = props.length;
@@ -184,6 +190,21 @@ export function buildCourse(seed = CANON_SEED) {
 function addSkyBalloons(raw, rng) {
   sprinkle(raw, rng, { from: 850, to: 42000, step: 1500, y0: 760, y1: 8800, rise: 520, skip: 0.18 });
   sprinkle(raw, rng, { from: 42000, to: 120000, step: 3000, y0: 760, y1: 5600, rise: 700, skip: 0.28 });
+}
+
+// One extra high lane. The columns are fixed, so they do not disturb the seeded field.
+function layThick(raw, x, untilX) {
+  while (x < untilX) {
+    const near = x < 14000;
+    const step = near ? 1100 : 4200;
+    const y0 = near ? 520 : 900;
+    const rise = near ? 700 : 900;
+    for (let y = y0; y < 8800; y += rise) {
+      raw.push({ type: 'balloon', x: Math.round(x), y });
+    }
+    x += step;
+  }
+  return x;
 }
 
 function sprinkle(raw, rng, zone) {
