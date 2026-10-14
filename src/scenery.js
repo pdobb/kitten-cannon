@@ -416,8 +416,8 @@ export function createScenery(world) {
       stars.layer.visible = space > 0.02;
       const radius = Math.max(28, Math.min(halfH * 0.34, halfW * 0.3, 104));
       mars.scale.set(radius / 100);
-      // The old right-hand spot, mirrored. Same distance from the top.
-      mars.position.set(cam.x - halfW * 0.48, cam.y - halfH * 0.06);
+      // Right of the kitten. The left-hand mirror sat on the flight path.
+      mars.position.set(cam.x + halfW * 0.48, cam.y - halfH * 0.06);
       mars.alpha = space;
       mars.visible = space > 0.02;
       // The disc stays lit in the night sky. 84 keeps the core inside the corner.
