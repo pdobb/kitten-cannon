@@ -125,7 +125,6 @@ const powerLabelEl = document.querySelector('#power-label');
 const bannerEl = document.querySelector('#banner');
 const powerCheerEl = document.querySelector('#power-cheer');
 const muteEl = document.querySelector('#mute');
-const glintEl = document.querySelector('#glint');
 const pauseBtn = document.querySelector('#pause-btn');
 const pauseEl = document.querySelector('#pause');
 const pauseFeetEl = document.querySelector('#pause-feet');
@@ -159,8 +158,8 @@ function balloonCrowd() {
   }
 }
 
-function paintGlint() {
-  if (glintEl) glintEl.hidden = balloonCrowd() < 2;
+function paintMark() {
+  if (muteEl) muteEl.classList.toggle('is-marked', balloonCrowd() > 1);
 }
 
 let course = buildCourse(freshSeed(), balloonCrowd());
@@ -819,7 +818,7 @@ function toggleBalloons() {
     reloadField();
   }
   shout(on ? 'BALLOONS' : 'NORMAL');
-  paintGlint();
+  paintMark();
 }
 
 window.addEventListener('keydown', (e) => {
@@ -1499,7 +1498,7 @@ async function boot() {
   assertFrames();
   setPhase('title');
   paintRecords();
-  paintGlint();
+  paintMark();
   applyQuery();
   requestAnimationFrame(frame);
 }
