@@ -494,24 +494,14 @@ function trapLobe(sign) {
   g.moveTo(-8, py(5.4));
   g.quadraticCurveTo(-24, py(7.6), -40, py(2.4));
   g.stroke(strokeOf(1.6, TRAP_LIME));
-  for (const x of [-16, -24, -32]) {
-    g.moveTo(x, py(0.2));
-    g.lineTo(x - 0.4, py(-4.2));
-  }
-  g.stroke(strokeOf(1.05, 0x6a2430));
-  // Hairs only on the lip, the way a real trap fringes the margin.
+  // A short fringe on the lip. Enough to read as hairs, not a full comb.
   const fringe = [
-    [-8, 5.6, 0.4, 13],
-    [-16, 6.8, -0.6, 15],
-    [-24, 7.2, -1.2, 16],
-    [-32, 6.2, -2.4, 15],
-    [-38, 4.2, -4, 13],
-    [-42, 2.2, -7, 9],
-    [-44, 0.2, -12, 3],
-    [-42, -1.2, -8, -6],
-    [-34, -2.2, -3, -11],
-    [-24, -2.2, -1, -13],
-    [-14, -1.6, 0.2, -12],
+    [-12, 5.6, 0.2, 11],
+    [-24, 6.4, -1, 12],
+    [-36, 4.2, -3, 10],
+    [-42, 1.2, -7, 5],
+    [-36, -1.6, -4, -8],
+    [-22, -2, -1, -10],
   ];
   for (let i = 0; i < fringe.length; i++) {
     const [x, y, dx, dy] = fringe[i];
@@ -542,38 +532,20 @@ function trapHead(open) {
 function venus(salt) {
   const root = new Container();
   const g = new Graphics();
-  // Two flat leaves on the soil, then one tall stalk. The mouth faces the kitten.
-  g.ellipse(-7, 2.2, 12, 3.1);
+  // One flat leaf on the soil, then one stalk. The mouth faces the kitten.
+  g.ellipse(-4, 2.2, 11, 2.8);
   g.fill(TRAP_GREEN_DARK);
-  g.ellipse(-7, 2.2, 12, 3.1);
+  g.ellipse(-4, 2.2, 11, 2.8);
   g.stroke(strokeOf(1.8));
-  g.ellipse(8, 2.4, 10, 2.8);
-  g.fill(TRAP_GREEN);
-  g.ellipse(8, 2.4, 10, 2.8);
-  g.stroke(strokeOf(1.8));
-  leafBlade(g, 0, 3, 1, 50, 6, 8.5);
+  const side = Math.abs(Math.round(salt || 0)) % 2 ? 1 : -1;
+  leafBlade(g, 0, 3, 1, 50, side * 5, 7.2);
   root.addChild(g);
 
   const main = trapHead();
   main.head.position.set(1, 50);
   root.addChild(main.head);
 
-  const n = Math.abs(Math.round(salt || 0));
-  const lean = new Container();
-  const side = new Graphics();
-  // The second stalk stays on the far side of the hinge so it does not fill the mouth.
-  const tipX = n % 2 ? 34 : 28;
-  const tipY = n % 2 ? 30 : 24;
-  leafBlade(side, 8, 3, tipX, tipY, n % 2 ? 16 : 9, 6.2);
-  lean.addChild(side);
-  const small = trapHead(0.5);
-  small.head.position.set(tipX, tipY);
-  small.head.scale.set(0.56);
-  small.head.rotation = n % 2 ? -0.42 : 0.28;
-  lean.addChild(small.head);
-  root.addChild(lean);
-
-  return { mesh: root, parts: { head: main.head, upper: main.upper, lower: main.lower, open: TRAP_OPEN, lean } };
+  return { mesh: root, parts: { head: main.head, upper: main.upper, lower: main.lower, open: TRAP_OPEN } };
 }
 
 function balloon(salt) {

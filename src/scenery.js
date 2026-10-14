@@ -68,30 +68,38 @@ function addBell(pts, left, right, peak, power, skew) {
 
 // Broad bells. Both ends sit at y = 0 so the next copy meets this one.
 // A grand range is wider and stays tall. A near range is lower and rounder.
-// saddle[0] is where peaks stop, so the title sun has a valley. crown is the
-// first peak, placed so its crest sits in that same view.
-function peakSamples(span, height, seed, grand, saddle, crown) {
+// saddle[0] is where peaks stop. lead is a flat opening. A crown past the
+// middle of the tile is the peak on the left of the title. One before that
+// is the peak on the right. The sun sits in the opening, not on a crest.
+function peakSamples(span, height, seed, grand, saddle, crown, lead) {
   const rng = mulberry32(seed);
   const pts = [{ x: 0, y: 0 }];
   const stop = saddle ? saddle[0] : span;
-  let x = 16;
-  if (crown) {
+  const crownAtEnd = !!(crown && crown.at > span * 0.5);
+  let x = Math.max(16, lead || 0);
+  if (crown && !crownAtEnd) {
     const left = Math.max(18, crown.at - crown.width * 0.5);
     const right = Math.min(stop - 8, left + crown.width);
     addBell(pts, left, right, height * 0.98, 1.22, 0.04);
-    x = right;
+    x = Math.max(x, right);
   }
-  while (x < stop - 80) {
+  const peakStop = crownAtEnd ? Math.min(stop, crown.at - crown.width * 0.5) : stop;
+  while (x < peakStop - 80) {
     const gap = (grand ? 90 : 40) + rng() * (grand ? 140 : 120);
     const width = (grand ? 720 : 260) + rng() * (grand ? 520 : 280);
     const left = x + gap;
-    const right = Math.min(stop - 8, left + width);
+    const right = Math.min(peakStop - 8, left + width);
     if (right - left < (grand ? 420 : 180)) break;
     const peak = height * (grand ? 0.9 + rng() * 0.1 : 0.58 + rng() * 0.36);
     const power = grand ? 1.2 + rng() * 0.35 : 1.35 + rng() * 0.45;
     const skew = (rng() - 0.42) * 0.18;
     addBell(pts, left, right, peak, power, skew);
     x = right;
+  }
+  if (crownAtEnd) {
+    const right = Math.min(span - 1, crown.at + crown.width * 0.5);
+    const left = Math.max(x + 8, right - crown.width);
+    if (right - left > 180) addBell(pts, left, right, height * 0.98, 1.22, 0.04);
   }
   pts.push({ x: span, y: 0 });
   for (let i = 1; i < pts.length; i++) {
@@ -293,12 +301,12 @@ export function createScenery(world) {
   world.addChild(sun);
 
   const ranges = [
-    // The saddle is the valley under the title sun. The crown is the peak beside it.
-    { color: 0xc5d8ea, line: 0xa9c4da, height: 370, parallax: 0.12, seed: 0x51a3, span: 5200, snow: 0.55, grand: true, saddle: [4580, 5200], crown: { at: 470, width: 920 } },
+    // Open on the right of the title, where the sun sits. The crown is the peak on the left.
+    { color: 0xc5d8ea, line: 0xa9c4da, height: 370, parallax: 0.12, seed: 0x51a3, span: 5200, snow: 0.55, grand: true, saddle: null, crown: { at: 4700, width: 1000 }, lead: 1200 },
     { color: 0x8aa4bc, line: 0x6d8eab, height: 268, parallax: 0.28, seed: 0x51a2, span: 3800, snow: 0.55, grand: true, saddle: [3280, 3800], crown: { at: 400, width: 800 } },
     { color: 0x6d9462, line: 0x4e7848, height: 168, parallax: 0.46, seed: 0x51a1, span: 2400, snow: 0, grand: false, saddle: null, crown: null },
   ].map((spec) => {
-    const pts = peakSamples(spec.span, spec.height, spec.seed, spec.grand, spec.saddle, spec.crown);
+    const pts = peakSamples(spec.span, spec.height, spec.seed, spec.grand, spec.saddle, spec.crown, spec.lead);
     return tiledLayer(world, spec.span, (g, x0) => {
       fillRidge(g, pts, x0, spec.color, spec.line, false);
       if (spec.snow) fillSnow(g, pts, x0, spec.height * spec.snow);
@@ -412,8 +420,8 @@ export function createScenery(world) {
       mars.position.set(cam.x + halfW * 0.48, cam.y - halfH * 0.06);
       mars.alpha = space;
       mars.visible = space > 0.02;
-      sun.alpha = 1 - space;
-      sun.position.set(cam.x - halfW * 0.72, cam.y + halfH * 0.58);
+      // The disc stays lit in the night sky. 84 keeps the core inside the corner.
+      sun.position.set(cam.x + halfW - 84, cam.y + halfH - 84);
       for (let i = 0; i < ranges.length; i++) track(ranges[i], cam.x, ranges[i].parallax);
       for (let i = 0; i < foothills.length; i++) track(foothills[i], cam.x, foothills[i].parallax);
       track(tufts, cam.x, 1);

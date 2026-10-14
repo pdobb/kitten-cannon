@@ -293,8 +293,13 @@ function appendEndingRows(el, cause, kicker = true) {
     const name = document.createElement('span');
     name.textContent = label;
     const num = document.createElement('b');
-    num.textContent = total > 0 ? `${n.toLocaleString('en-US')} · ${Math.round((n / total) * 100)}%` : '0';
-    row.append(name, num);
+    num.className = 'count';
+    num.textContent = n.toLocaleString('en-US');
+    const pct = document.createElement('b');
+    pct.className = 'pct';
+    if (total > 0) pct.textContent = `· ${Math.round((n / total) * 100)}%`;
+    row.classList.add('landing');
+    row.append(name, num, pct);
     el.append(row);
   }
   const sum = document.createElement('p');
@@ -302,8 +307,11 @@ function appendEndingRows(el, cause, kicker = true) {
   const sumName = document.createElement('span');
   sumName.textContent = 'Total';
   const sumNum = document.createElement('b');
-  sumNum.textContent = total > 0 ? total.toLocaleString('en-US') : '0';
-  sum.append(sumName, sumNum);
+  sumNum.className = 'count';
+  sumNum.textContent = total.toLocaleString('en-US');
+  const sumPct = document.createElement('b');
+  sumPct.className = 'pct';
+  sum.append(sumName, sumNum, sumPct);
   el.append(sum);
 }
 
@@ -1228,7 +1236,6 @@ function updateProps(time, dt) {
       const open = prop.parts.open * (1 - shut);
       prop.parts.upper.rotation = -open;
       prop.parts.lower.rotation = open;
-      if (prop.parts.lean) prop.parts.lean.rotation = Math.sin(time * 1.35 + prop.bob) * 0.07;
     }
     if (prop.parts.bubbles) {
       const bubbles = prop.parts.bubbles;
