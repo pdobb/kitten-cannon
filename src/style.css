@@ -342,8 +342,10 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
 #glint {
   position: absolute;
   z-index: 4;
-  top: calc(16px + var(--safe-top));
-  right: calc(72px + var(--safe-right));
+  top: auto;
+  right: auto;
+  bottom: calc(16px + var(--safe-bottom));
+  left: calc(128px + var(--safe-left));
   width: 48px;
   height: 48px;
   display: grid;
@@ -419,7 +421,8 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
 #app.is-paused #hint,
 #app.is-paused #pad { visibility: hidden; }
 #app.is-paused #mute,
-#app.is-paused #pause-btn { z-index: 7; }
+#app.is-paused #pause-btn,
+#app.is-paused #glint { z-index: 7; }
 #app.is-paused #banner,
 #app.is-paused #power-cheer { visibility: hidden; }
 
@@ -853,6 +856,9 @@ button#start:active, button#again:active, button#resume:active, button#reload:ac
     transform: none;
     justify-content: center;
   }
+  #app:has(#glint:not([hidden])) #meter {
+    left: calc(180px + var(--safe-left));
+  }
   #meter .barwrap { width: auto; flex: 1; max-width: 280px; }
   #scoreblock { top: calc(118px + var(--safe-top)); }
   #vectors { gap: 14px; font-size: 16px; white-space: normal; flex-wrap: wrap; }
@@ -873,8 +879,10 @@ button#start:active, button#again:active, button#resume:active, button#reload:ac
     right: calc(10px + var(--safe-right));
   }
   #glint {
-    top: calc(10px + var(--safe-top));
-    right: calc(66px + var(--safe-right));
+    top: auto;
+    right: auto;
+    bottom: calc(12px + var(--safe-bottom));
+    left: calc(124px + var(--safe-left));
   }
   #records span, .sheet span, .bestline span { font-size: 12px; }
   #records b, .sheet b, .bestline b { font-size: 16px; }
@@ -892,7 +900,6 @@ button#start:active, button#again:active, button#resume:active, button#reload:ac
 @media (pointer: coarse), (hover: none) {
   #hint { display: none; }
   #fullscreen { display: none; }
-  #glint { right: calc(10px + var(--safe-right)); }
 }
 
 @media (max-width: 720px), (pointer: coarse) {
@@ -920,6 +927,7 @@ button#start:active, button#again:active, button#resume:active, button#reload:ac
   #meter .col span { font-size: 11px; }
   #meter .col b { font-size: 18px; }
   #meter .barwrap { height: 12px; width: auto; flex: 1; max-width: 280px; }
+  #app:has(#glint:not([hidden])) #meter { left: calc(180px + var(--safe-left)); }
   #power-cheer { bottom: calc(8px + var(--safe-bottom)); }
   #power-cheer b { font-size: 44px; }
   #power-cheer.perfect b { font-size: 56px; -webkit-text-stroke-width: 5px; }
