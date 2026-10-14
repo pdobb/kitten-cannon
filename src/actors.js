@@ -410,45 +410,27 @@ function tarPit() {
   return { mesh: root, parts: { bubbles } };
 }
 
-const TRAP_OPEN = 1.12;
+const TRAP_OPEN = 0.9;
 const TRAP_GREEN = 0x7ec84a;
 const TRAP_GREEN_DARK = 0x2f8a34;
 const TRAP_PINK = 0xf27d86;
-const HAIR = 0xfffaf3;
 
 // One jaw. The lip points up. sign flips it to the other side of the stem.
 function trapLobe(sign) {
   const pivot = new Container();
   const g = new Graphics();
   const s = sign > 0 ? 1 : -1;
-  const px = (x) => x * s;
-  const outline = [
-    px(1), 2,
-    px(6), 16,
-    px(7), 30,
-    px(3.5), 42,
-    px(0), 46,
-    px(-2), 38,
-    px(-1.4), 22,
-    px(-0.4), 4,
-  ];
-  paint(g, g, (p) => p.poly(outline), TRAP_GREEN, 2.2);
-  g.poly([
-    px(0.4), 10,
-    px(3.4), 20,
-    px(3.6), 32,
-    px(1.2), 40,
-    px(-0.6), 28,
-    px(-0.2), 16,
-  ]);
+  paint(g, g, (p) => p.ellipse(s * 2, 22, 10, 18), TRAP_GREEN, 2.2);
+  g.ellipse(s * 0.6, 24, 5.4, 11);
   g.fill(TRAP_PINK);
-  g.moveTo(px(5.2), 18);
-  g.lineTo(px(10), 16);
-  g.moveTo(px(6.2), 30);
-  g.lineTo(px(12), 30);
-  g.moveTo(px(3.2), 40);
-  g.lineTo(px(7), 46);
-  g.stroke({ width: 1.8, color: HAIR, cap: 'round' });
+  const teeth = [6.2, 7.2, 6.4, 5.2];
+  for (let i = 0; i < teeth.length; i++) {
+    const y = 12 + i * 7;
+    const base = s * -2;
+    const tip = s * -(2 + teeth[i]);
+    g.poly([base - s * 1.6, y - 2.1, base + s * 1.6, y + 2.1, tip, y]);
+    g.fill(PAL.tooth);
+  }
   pivot.addChild(g);
   pivot.rotation = sign > 0 ? -TRAP_OPEN : TRAP_OPEN;
   return pivot;
@@ -462,33 +444,28 @@ function trapHead(open) {
     upper.rotation = -open;
     lower.rotation = open;
   }
+  const tongue = new Graphics();
+  tongue.ellipse(0, 12, 4.2, 7);
+  tongue.fill(PAL.mouth);
   const knuckle = new Graphics();
   knuckle.circle(0, 0, 4.6);
   knuckle.fill(TRAP_GREEN_DARK);
   knuckle.circle(0, 0, 4.6);
   knuckle.stroke(strokeOf(2));
-  head.addChild(lower, upper, knuckle);
+  head.addChild(tongue, lower, upper, knuckle);
   return { head, upper, lower };
 }
 
 function venus() {
   const root = new Container();
   const g = new Graphics();
-  g.ellipse(0, 2, 9, 2.6);
+  g.ellipse(0, 2, 11, 3);
   g.fill(TRAP_GREEN_DARK);
-  g.ellipse(0, 2, 9, 2.6);
+  g.ellipse(0, 2, 11, 3);
   g.stroke(strokeOf(1.8));
-  paint(g, g, (p) => p.poly([
-    -3.2, 3,
-    -5.5, 26,
-    -2.4, 50,
-    2.8, 50,
-    5.2, 26,
-    3.4, 3,
-  ]), TRAP_GREEN, 2.2);
-  g.moveTo(0, 6);
-  g.lineTo(0.2, 48);
-  g.stroke(strokeOf(1.5, TRAP_GREEN_DARK));
+  paint(g, g, (p) => p.ellipse(-12, 7, 11, 3.6), TRAP_GREEN, 2);
+  paint(g, g, (p) => p.ellipse(13, 6, 10, 3.2), TRAP_GREEN, 2);
+  paint(g, g, (p) => p.roundRect(-4.5, 4, 9, 48, 4), TRAP_GREEN, 2.2);
   root.addChild(g);
 
   const main = trapHead();
