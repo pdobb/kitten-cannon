@@ -410,68 +410,170 @@ function tarPit() {
   return { mesh: root, parts: { bubbles } };
 }
 
-const TRAP_OPEN = 0.72;
+const TRAP_OPEN = 1.12;
+const TRAP_GREEN = 0x7ec84a;
+const TRAP_GREEN_DARK = 0x2f8a34;
+const TRAP_LIME = 0xd6f28a;
+const TRAP_PINK = 0xf27d86;
+const TRAP_THROAT = 0xc42e48;
+const HAIR = 0xfffaf3;
 
-function lobe(sign) {
+// A winged petiole: wide in the middle, pinched at the soil and at the trap.
+function leafBlade(g, x0, y0, x1, y1, bend, width) {
+  const cx = (x0 + x1) / 2 + bend;
+  const cy = (y0 + y1) / 2;
+  const steps = 8;
+  const side = (t, dir) => {
+    const u = 1 - t;
+    const x = u * u * x0 + 2 * u * t * cx + t * t * x1;
+    const y = u * u * y0 + 2 * u * t * cy + t * t * y1;
+    const dx = 2 * u * (cx - x0) + 2 * t * (x1 - cx);
+    const dy = 2 * u * (cy - y0) + 2 * t * (y1 - cy);
+    const len = Math.hypot(dx, dy) || 1;
+    const belly = Math.sin(t * Math.PI) * width + 2.2;
+    return [x + (-dy / len) * belly * dir, y + (dx / len) * belly * dir];
+  };
+  const pts = [];
+  for (let i = 0; i <= steps; i++) pts.push(side(i / steps, 1));
+  for (let i = steps; i >= 0; i--) pts.push(side(i / steps, -1));
+  paint(g, g, (p) => p.poly(pts.flat()), TRAP_GREEN, 2.2);
+  g.moveTo(x0, y0);
+  g.quadraticCurveTo(cx, cy, x1, y1);
+  g.stroke(strokeOf(1.8, TRAP_GREEN_DARK));
+  g.moveTo(x0, y0 + 1);
+  g.quadraticCurveTo(cx - bend * 0.35, cy + 1, x1, y1);
+  g.stroke(strokeOf(1.6, TRAP_LIME));
+}
+
+// A pale eyelash. The green under-stroke keeps the hair visible on the sky
+// without turning it into a black thorn.
+function cilium(g, x, y, dx, dy) {
+  g.moveTo(x, y);
+  g.lineTo(x + dx, y + dy);
+  g.stroke({ width: 2.5, color: 0x3c8a34, cap: 'round' });
+  g.moveTo(x, y);
+  g.lineTo(x + dx, y + dy);
+  g.stroke({ width: 1.25, color: HAIR, cap: 'round' });
+}
+
+// One jaw of the trap, hinge at the origin, lip toward -X.
+// sign > 0 is the upper jaw. The red side faces the other jaw.
+function trapLobe(sign) {
   const pivot = new Container();
   const g = new Graphics();
-  g.ellipse(-17, 0, 17, 7.2);
-  g.fill(PAL.leaf);
-  g.ellipse(-17, 0, 17, 7.2);
-  g.stroke(strokeOf(2.5));
-  g.ellipse(-16, sign * -1.4, 12, 3.8);
-  g.fill(0x8d1020);
-  g.circle(-6, sign * -1.6, 3.4);
-  g.fill(PAL.throat);
-  const dir = sign > 0 ? -1 : 1;
-  const teeth = [8.6, 5.4, 10.2, 4.6, 9.2, 6.2, 7.4];
-  for (let i = 0; i < teeth.length; i++) {
-    const x = -6.5 - i * 3.3;
-    const base = dir * -2.2;
-    const tip = dir * -(2.2 + teeth[i]);
-    g.poly([x, base, x + 1.8, base, x + 0.7, tip]);
-    g.fill(PAL.tooth);
+  const s = sign > 0 ? 1 : -1;
+  const py = (y) => y * s;
+  // A thin curved plate. The fat side is the green back. The flat side is the mouth.
+  const outline = [
+    0, py(1.4),
+    -10, py(6.4),
+    -22, py(7.2),
+    -34, py(5.2),
+    -42, py(2.2),
+    -44, py(0.2),
+    -42, py(-1.6),
+    -32, py(-2.5),
+    -18, py(-2.2),
+    -8, py(-1.2),
+    0, py(-0.6),
+  ];
+  paint(g, g, (p) => p.poly(outline), TRAP_GREEN, 2.2);
+  g.poly([
+    -4, py(0.2),
+    -14, py(2.4),
+    -26, py(2.2),
+    -38, py(0.8),
+    -40, py(-0.8),
+    -30, py(-1.8),
+    -16, py(-1.6),
+    -6, py(-0.5),
+  ]);
+  g.fill(TRAP_PINK);
+  g.ellipse(-24, py(-0.2), 9, 1.7);
+  g.fill(TRAP_THROAT);
+  g.moveTo(-8, py(5.4));
+  g.quadraticCurveTo(-24, py(7.6), -40, py(2.4));
+  g.stroke(strokeOf(1.6, TRAP_LIME));
+  for (const x of [-16, -24, -32]) {
+    g.moveTo(x, py(0.2));
+    g.lineTo(x - 0.4, py(-4.2));
+  }
+  g.stroke(strokeOf(1.05, 0x6a2430));
+  // Hairs only on the lip, the way a real trap fringes the margin.
+  const fringe = [
+    [-8, 5.6, 0.4, 13],
+    [-16, 6.8, -0.6, 15],
+    [-24, 7.2, -1.2, 16],
+    [-32, 6.2, -2.4, 15],
+    [-38, 4.2, -4, 13],
+    [-42, 2.2, -7, 9],
+    [-44, 0.2, -12, 3],
+    [-42, -1.2, -8, -6],
+    [-34, -2.2, -3, -11],
+    [-24, -2.2, -1, -13],
+    [-14, -1.6, 0.2, -12],
+  ];
+  for (let i = 0; i < fringe.length; i++) {
+    const [x, y, dx, dy] = fringe[i];
+    cilium(g, x, py(y), dx, py(dy));
   }
   pivot.addChild(g);
   pivot.rotation = sign > 0 ? -TRAP_OPEN : TRAP_OPEN;
   return pivot;
 }
 
-function venus() {
+function trapHead(open) {
+  const head = new Container();
+  const lower = trapLobe(-1);
+  const upper = trapLobe(1);
+  if (open != null) {
+    upper.rotation = -open;
+    lower.rotation = open;
+  }
+  const knuckle = new Graphics();
+  knuckle.circle(0, 0, 4.6);
+  knuckle.fill(TRAP_GREEN_DARK);
+  knuckle.circle(0, 0, 4.6);
+  knuckle.stroke(strokeOf(2));
+  head.addChild(lower, upper, knuckle);
+  return { head, upper, lower };
+}
+
+function venus(salt) {
   const root = new Container();
   const g = new Graphics();
-  for (let i = 0; i < 5; i++) {
-    const ang = -1.15 + i * 0.55;
-    g.ellipse(Math.cos(ang) * 14, 5 + Math.sin(ang) * 6, 13, 4.2);
-    g.fill(i % 2 ? PAL.leaf : PAL.leafDark);
-  }
-  paint(g, g, (p) => p.roundRect(-1, 8, 8, 34, 4), PAL.leafDark, 2.2);
+  // Two flat leaves on the soil, then one tall stalk. The mouth faces the kitten.
+  g.ellipse(-7, 2.2, 12, 3.1);
+  g.fill(TRAP_GREEN_DARK);
+  g.ellipse(-7, 2.2, 12, 3.1);
+  g.stroke(strokeOf(1.8));
+  g.ellipse(8, 2.4, 10, 2.8);
+  g.fill(TRAP_GREEN);
+  g.ellipse(8, 2.4, 10, 2.8);
+  g.stroke(strokeOf(1.8));
+  leafBlade(g, 0, 3, 1, 50, 6, 8.5);
   root.addChild(g);
 
-  const head = new Container();
-  head.position.set(6, 46);
-  const tongue = new Graphics();
-  tongue.ellipse(-10, -1, 9, 3.4);
-  tongue.fill(0xd24a62);
-  const upper = lobe(1);
-  const lower = lobe(-1);
-  // On the green outside of the top leaf, clear of the red throat.
-  const eyes = new Graphics();
-  eyes.ellipse(-9, 5.2, 3.4, 2.3);
-  eyes.ellipse(-18, 4.6, 2.9, 2.0);
-  eyes.fill(0xfff2c4);
-  eyes.ellipse(-8.5, 5.7, 1.25, 1.45);
-  eyes.ellipse(-17.6, 5.0, 1.1, 1.25);
-  eyes.fill(0x1a120c);
-  eyes.moveTo(-13.6, 7.8);
-  eyes.lineTo(-5.4, 6.6);
-  eyes.moveTo(-22.4, 6.8);
-  eyes.lineTo(-14.6, 6.0);
-  eyes.stroke(strokeOf(1.5, 0x1a120c));
-  upper.addChild(eyes);
-  head.addChild(tongue, lower, upper);
-  root.addChild(head);
-  return { mesh: root, parts: { head, upper, lower, open: TRAP_OPEN } };
+  const main = trapHead();
+  main.head.position.set(1, 50);
+  root.addChild(main.head);
+
+  const n = Math.abs(Math.round(salt || 0));
+  const lean = new Container();
+  const side = new Graphics();
+  // The second stalk stays on the far side of the hinge so it does not fill the mouth.
+  const tipX = n % 2 ? 34 : 28;
+  const tipY = n % 2 ? 30 : 24;
+  leafBlade(side, 8, 3, tipX, tipY, n % 2 ? 16 : 9, 6.2);
+  lean.addChild(side);
+  const small = trapHead(0.5);
+  small.head.position.set(tipX, tipY);
+  small.head.scale.set(0.56);
+  small.head.rotation = n % 2 ? -0.42 : 0.28;
+  lean.addChild(small.head);
+  root.addChild(lean);
+
+  return { mesh: root, parts: { head: main.head, upper: main.upper, lower: main.lower, open: TRAP_OPEN, lean } };
 }
 
 function balloon(salt) {
@@ -512,7 +614,7 @@ export function createProp(type, salt) {
   if (type === 'tnt') return crate();
   if (type === 'trampoline') return trampoline();
   if (type === 'spikes') return tarPit();
-  if (type === 'venus') return venus();
+  if (type === 'venus') return venus(salt);
   return balloon(salt);
 }
 

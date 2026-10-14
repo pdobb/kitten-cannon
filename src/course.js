@@ -112,8 +112,10 @@ function bucket(bins, prop) {
 // the cannon, and the far lanes are rolled from that seed too.
 const CANON_SEED = 0x20070321;
 
-export function buildCourse(seed = CANON_SEED) {
+// A crowd of 3 adds two high lanes. The learned course ignores it.
+export function buildCourse(seed = CANON_SEED, crowd = 1) {
   const canon = (seed >>> 0) === CANON_SEED;
+  const extras = !canon ? Math.max(0, (crowd | 0) - 1) : 0;
   const raw = canon ? OPENING.map((p) => ({ ...p })) : [];
   const rng = mulberry32(canon ? CANON_SEED : seed >>> 0);
   // The opening lane ends here. grow() carries the same cycle past it.
@@ -122,6 +124,11 @@ export function buildCourse(seed = CANON_SEED) {
     : { x: 360, i: 0, lastHazard: 0 };
   layUntil(raw, rng, state, 260000);
   addSkyBalloons(raw, rng);
+  // Extra streams, and no draws from rng, so the normal lane stays put.
+  const crowdXs = [];
+  for (let n = 0; n < extras; n++) {
+    crowdXs.push(layThick(raw, 360 + n * 220, state.x));
+  }
   const props = raw.map(materialize);
   const bins = [];
   for (let n = 0; n < props.length; n++) {
@@ -129,7 +136,7 @@ export function buildCourse(seed = CANON_SEED) {
     bucket(bins, props[n]);
   }
   // Separate streams so a short step and one long step lay the same props.
-  // The high lane picks up where the ground lane ends, so a flight that
+  // The high lanes pick up where the ground lane ends, so a flight that
   // stays inside the opening still meets the same balloons.
   const rolled = seed >>> 0;
   const extGround = mulberry32(canon ? 0x6a17e0 : (rolled ^ 0x6a17e0) >>> 0);
@@ -149,6 +156,9 @@ export function buildCourse(seed = CANON_SEED) {
         rise: 700,
         skip: 0.28,
       });
+    }
+    for (let n = 0; n < crowdXs.length; n++) {
+      if (crowdXs[n] < untilX) crowdXs[n] = layThick(raw, crowdXs[n], untilX);
     }
     for (let n = from; n < raw.length; n++) {
       const prop = materialize(raw[n]);
@@ -184,6 +194,21 @@ export function buildCourse(seed = CANON_SEED) {
 function addSkyBalloons(raw, rng) {
   sprinkle(raw, rng, { from: 850, to: 42000, step: 1500, y0: 760, y1: 8800, rise: 520, skip: 0.18 });
   sprinkle(raw, rng, { from: 42000, to: 120000, step: 3000, y0: 760, y1: 5600, rise: 700, skip: 0.28 });
+}
+
+// Extra high lanes. The columns are fixed, so they do not disturb the seeded field.
+function layThick(raw, x, untilX) {
+  while (x < untilX) {
+    const near = x < 14000;
+    const step = near ? 1100 : 4200;
+    const y0 = near ? 520 : 900;
+    const rise = near ? 700 : 900;
+    for (let y = y0; y < 8800; y += rise) {
+      raw.push({ type: 'balloon', x: Math.round(x), y });
+    }
+    x += step;
+  }
+  return x;
 }
 
 function sprinkle(raw, rng, zone) {

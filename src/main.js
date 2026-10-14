@@ -106,6 +106,11 @@ const SHOUT = {
 };
 const NEAR_PROP = 8000;
 const FAR_PROP = 14000;
+// The view is about 600px tall. A balloon picture is only needed near the camera.
+const NEAR_BALLOON_Y = 1100;
+const FAR_BALLOON_Y = 1600;
+const BALLOON_KEY = 'kitten-cannon-balloons';
+const LANE_KEYS = ['KeyS', 'KeyP', 'KeyA', 'KeyC', 'KeyE'];
 
 const app = document.querySelector('#app');
 const canvas = document.querySelector('#view');
@@ -120,6 +125,7 @@ const powerLabelEl = document.querySelector('#power-label');
 const bannerEl = document.querySelector('#banner');
 const powerCheerEl = document.querySelector('#power-cheer');
 const muteEl = document.querySelector('#mute');
+const glintEl = document.querySelector('#glint');
 const pauseBtn = document.querySelector('#pause-btn');
 const pauseEl = document.querySelector('#pause');
 const pauseFeetEl = document.querySelector('#pause-feet');
@@ -142,7 +148,22 @@ function freshSeed() {
   return seed;
 }
 
-let course = buildCourse(freshSeed());
+// 3 packs the high lanes. 1 is the normal field. Saved rides stay on 1.
+let laneAt = 0;
+function balloonCrowd() {
+  try {
+    const saved = localStorage.getItem(BALLOON_KEY);
+    return saved === '3' || saved === '2' || saved === '10' ? 3 : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function paintGlint() {
+  if (glintEl) glintEl.hidden = balloonCrowd() < 2;
+}
+
+let course = buildCourse(freshSeed(), balloonCrowd());
 
 const pixi = new Application();
 const world = new Container();
@@ -247,6 +268,7 @@ function saveEndings() {
 }
 
 function tallyEnding(cause) {
+  if (balloonCrowd() > 1) return;
   if (!Object.prototype.hasOwnProperty.call(game.endings, cause)) return;
   game.endings[cause] += 1;
   saveEndings();
@@ -551,7 +573,7 @@ function afterStep() {
 
 function commitRecords() {
   const k = game.kitten;
-  if (!k) return;
+  if (!k || balloonCrowd() > 1) return;
   const far = feetFromTravel(k.startX, k.x);
   const high = feetFromAltitude(game.peakY);
   const fast = game.peakSpeed;
@@ -580,7 +602,8 @@ function finish() {
   afterStep();
   commitRecords();
   game.feet = feetFromTravel(k.startX, k.x);
-  const marks = {
+  const quiet = balloonCrowd() > 1;
+  const marks = quiet ? { far: false, high: false, fast: false } : {
     far: game.feet > game.was.furthest,
     high: feetFromAltitude(game.peakY) > game.was.highest,
     fast: game.peakSpeed > game.was.fastest,
@@ -616,7 +639,7 @@ function reloadField() {
   const onTitle = game.phase === 'title';
   if (game.paused) setPaused(false);
   for (let i = 0; i < course.length; i++) releaseProp(course[i]);
-  course = buildCourse(freshSeed());
+  course = buildCourse(freshSeed(), balloonCrowd());
   for (let i = poles.length - 1; i >= 0; i--) {
     poles[i].mesh.destroy({ children: true });
     poles.pop();
@@ -755,7 +778,47 @@ function onAction() {
   else if (game.phase === 'flight' || game.phase === 'result') retry();
 }
 
+function noteLane(code) {
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return false;
+  if (code === LANE_KEYS[laneAt]) {
+    laneAt += 1;
+    if (laneAt === LANE_KEYS.length) {
+      laneAt = 0;
+      toggleBalloons();
+    }
+    return true;
+  }
+  if (code === LANE_KEYS[0]) {
+    laneAt = 1;
+    return true;
+  }
+  laneAt = 0;
+  return false;
+}
+
+function toggleBalloons() {
+  const on = balloonCrowd() === 1;
+  try {
+    if (on) localStorage.setItem(BALLOON_KEY, '3');
+    else localStorage.removeItem(BALLOON_KEY);
+  } catch {
+    // Private mode can refuse storage. This visit can still switch.
+  }
+  if (!kitten || !flybys) {
+    for (let i = 0; i < course.length; i++) releaseProp(course[i]);
+    course = buildCourse(freshSeed(), balloonCrowd());
+  } else {
+    reloadField();
+  }
+  shout(on ? 'BALLOONS' : 'NORMAL');
+  paintGlint();
+}
+
 window.addEventListener('keydown', (e) => {
+  if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && noteLane(e.code)) {
+    e.preventDefault();
+    return;
+  }
   // Space and Enter start the same visit over. R rebuilds the field in place.
   if (e.code === 'KeyR') {
     if (e.repeat) return;
@@ -1130,9 +1193,13 @@ function updateProps(time, dt) {
   for (let i = 0; i < course.length; i++) {
     const prop = course[i];
     const dist = Math.abs(prop.x - cam.x);
+    const yDist = prop.type === 'balloon' ? Math.abs(prop.baseY - cam.y) : 0;
     // Build the picture only near the lens, and drop it again on a long flight.
-    // The hit data stays on the course either way.
-    if (dist > (prop.mesh ? FAR_PROP : NEAR_PROP)) {
+    // The hit data stays on the course either way. Balloons also have to be
+    // near the camera in height, or a tall column would all draw at once.
+    const xLimit = prop.mesh ? FAR_PROP : NEAR_PROP;
+    const yLimit = prop.mesh ? FAR_BALLOON_Y : NEAR_BALLOON_Y;
+    if (dist > xLimit || yDist > yLimit) {
       releaseProp(prop);
       continue;
     }
@@ -1161,6 +1228,7 @@ function updateProps(time, dt) {
       const open = prop.parts.open * (1 - shut);
       prop.parts.upper.rotation = -open;
       prop.parts.lower.rotation = open;
+      if (prop.parts.lean) prop.parts.lean.rotation = Math.sin(time * 1.35 + prop.bob) * 0.07;
     }
     if (prop.parts.bubbles) {
       const bubbles = prop.parts.bubbles;
@@ -1424,6 +1492,7 @@ async function boot() {
   assertFrames();
   setPhase('title');
   paintRecords();
+  paintGlint();
   applyQuery();
   requestAnimationFrame(frame);
 }

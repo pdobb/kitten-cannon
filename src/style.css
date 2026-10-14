@@ -339,6 +339,25 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
   margin: clamp(4px, 0.8vh, 12px) 0 0;
 }
 
+#glint {
+  position: absolute;
+  z-index: 4;
+  top: calc(16px + var(--safe-top));
+  right: calc(72px + var(--safe-right));
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 3px solid #2b2118;
+  background: #fff6e4;
+  border-radius: 14px;
+  box-shadow: 3px 3px 0 #2b2118;
+  pointer-events: none;
+}
+
+#glint[hidden] { display: none; }
+#glint svg { width: 26px; height: 26px; display: block; }
+
 #fullscreen {
   position: absolute;
   z-index: 4;
@@ -836,6 +855,10 @@ button#start:active, button#again:active, button#resume:active, button#reload:ac
     top: calc(10px + var(--safe-top));
     right: calc(10px + var(--safe-right));
   }
+  #glint {
+    top: calc(10px + var(--safe-top));
+    right: calc(66px + var(--safe-right));
+  }
   #records span, .sheet span, .bestline span { font-size: 12px; }
   #records b, .sheet b, .bestline b { font-size: 16px; }
   #mute, #pause-btn {
@@ -852,6 +875,7 @@ button#start:active, button#again:active, button#resume:active, button#reload:ac
 @media (pointer: coarse), (hover: none) {
   #hint { display: none; }
   #fullscreen { display: none; }
+  #glint { right: calc(10px + var(--safe-right)); }
 }
 
 @media (max-width: 720px), (pointer: coarse) {

@@ -359,4 +359,17 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(nearLob.kitten.cause, 'spikes');
 }
 
+// Two extra high lanes about triple the balloons. The learned course ignores it.
+{
+  assert.equal(buildCourse(0x20070321, 3).length, 1020);
+  for (const seed of [1, 2, 9]) {
+    const plain = buildCourse(seed);
+    const thick = buildCourse(seed, 3);
+    const plainBalloons = plain.filter((prop) => prop.type === 'balloon').length;
+    const thickBalloons = thick.filter((prop) => prop.type === 'balloon').length;
+    const ratio = thickBalloons / plainBalloons;
+    assert.ok(ratio > 2.4 && ratio < 3.6, `seed ${seed} lane ${thickBalloons} vs ${plainBalloons}`);
+  }
+}
+
 console.log('physics ok');
