@@ -416,7 +416,9 @@ export function createScenery(world) {
       stars.layer.visible = space > 0.02;
       const radius = Math.max(28, Math.min(halfH * 0.34, halfW * 0.3, 104));
       mars.scale.set(radius / 100);
-      mars.position.set(cam.x + halfW * 0.48, cam.y - halfH * 0.06);
+      // Top-left, opposite the sun. The pad keeps the disc inside a narrow view.
+      const pad = Math.max(84, radius + 16);
+      mars.position.set(cam.x - halfW + pad, cam.y + halfH - pad);
       mars.alpha = space;
       mars.visible = space > 0.02;
       // The disc stays lit in the night sky. 84 keeps the core inside the corner.
