@@ -431,6 +431,23 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
   text-transform: uppercase;
 }
 
+.sheet p.landing,
+.sheet p.total {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  column-gap: 0.4em;
+  align-items: baseline;
+}
+
+.sheet b.count,
+.sheet b.pct {
+  text-align: right;
+}
+
+.sheet b.pct {
+  width: 5.6ch;
+}
+
 .sheet p.total {
   margin-top: 5px;
   padding-top: 4px;
