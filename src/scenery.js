@@ -327,7 +327,7 @@ export function createScenery(world) {
     entry.parallax = [0.12, 0.28, 0.46][i];
   });
 
-  // Each band wraps on its own. Clouds stop at 100 ft, so a climb leaves them.
+  // Each band wraps on its own. Clouds stop below 50 ft, so a climb leaves them.
   function scatterClouds(rng, count, y0, y1, gap0, gap1) {
     const group = [];
     let cursor = rng() * 280;
@@ -358,13 +358,12 @@ export function createScenery(world) {
   }
 
   const cloudRng = mulberry32(0xc10d);
-  const cloudTop = GROUND_Y + 100 * PIXELS_PER_FOOT;
+  // Puffs and the bob sit above the anchor. 84 keeps that drawing under 50 ft.
+  const cloudTop = GROUND_Y + 50 * PIXELS_PER_FOOT - 84;
   const clouds = [
     ...scatterClouds(cloudRng, 12, 150, 470, 70, 200),
     ...scatterClouds(cloudRng, 10, 400, 1150, 80, 220),
-    ...scatterClouds(cloudRng, 10, 1000, 1950, 80, 230),
-    ...scatterClouds(cloudRng, 9, 1750, 2950, 90, 240),
-    ...scatterClouds(cloudRng, 9, 2700, cloudTop, 90, 250),
+    ...scatterClouds(cloudRng, 10, 1000, cloudTop, 80, 230),
   ];
 
   const flyLayer = new Container();
