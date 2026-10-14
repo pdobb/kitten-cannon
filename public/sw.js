@@ -2,7 +2,7 @@
 // The page inlines its script, its style, and its fonts. Paths are relative
 // to this file, which sits next to index.html on Pages.
 
-const CACHE = 'kitten-cannon-v2';
+const CACHE = 'kitten-cannon-v3';
 const SHELL = [
   './',
   './index.html',
