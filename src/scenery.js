@@ -414,10 +414,15 @@ export function createScenery(world) {
       stars.layer.position.y = cam.y;
       stars.layer.alpha = space;
       stars.layer.visible = space > 0.02;
-      const radius = Math.max(28, Math.min(halfH * 0.34, halfW * 0.3, 104));
+      // The camera looks ahead, so the kitten is left of center by this lead.
+      // A mirror of the old right-hand spot still covered that path.
+      const lead = Math.min(220, halfW * 0.42);
+      const margin = 36;
+      const room = Math.max(20, (halfW - lead - margin - 18) / 2);
+      const radius = Math.max(14, Math.min(halfH * 0.15, room / 1.16, 46));
+      const reach = radius * 1.16;
       mars.scale.set(radius / 100);
-      // Right of the kitten. The left-hand mirror sat on the flight path.
-      mars.position.set(cam.x + halfW * 0.48, cam.y - halfH * 0.06);
+      mars.position.set(cam.x - lead - margin - reach, cam.y - halfH * 0.06);
       mars.alpha = space;
       mars.visible = space > 0.02;
       // The disc stays lit in the night sky. 84 keeps the core inside the corner.
