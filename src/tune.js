@@ -99,3 +99,22 @@ export function formatFt(n) {
 export function formatMph(mph) {
   return `${Math.max(0, Math.round(mph)).toLocaleString('en-US')} mph`;
 }
+
+// This ride only. One frame is STEP seconds, so a pause does not add time.
+export function flightSeconds(frame) {
+  return Math.max(0, frame) * STEP;
+}
+
+// A short hop keeps a tenth of a second. A minute or more reads as a clock.
+export function formatFlight(seconds) {
+  const safe = Math.max(0, seconds);
+  const tenths = Math.round(safe * 10) / 10;
+  if (tenths < 60) return `${tenths.toFixed(1)} s`;
+  const whole = Math.round(safe);
+  const h = Math.floor(whole / 3600);
+  const m = Math.floor((whole % 3600) / 60);
+  const s = whole % 60;
+  const ss = String(s).padStart(2, '0');
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${ss}`;
+  return `${m}:${ss}`;
+}

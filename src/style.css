@@ -182,7 +182,8 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
 }
 
 #speed,
-#altitude {
+#altitude,
+#time {
   display: inline-block;
 }
 

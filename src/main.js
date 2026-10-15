@@ -29,6 +29,8 @@ import {
   barrelMuzzle,
   feetFromAltitude,
   feetFromTravel,
+  flightSeconds,
+  formatFlight,
   formatFt,
   formatMph,
   launchPoint,
@@ -117,6 +119,7 @@ const canvas = document.querySelector('#view');
 const distanceEl = document.querySelector('#distance');
 const altitudeEl = document.querySelector('#altitude');
 const speedEl = document.querySelector('#speed');
+const timeEl = document.querySelector('#time');
 const recordsEl = document.querySelector('#records');
 const titleBestEl = document.querySelector('#title-best');
 const angleEl = document.querySelector('#angle');
@@ -402,7 +405,7 @@ function fillLiveLine(el, k) {
   ending.textContent = 'So far';
   const stats = document.createElement('span');
   stats.className = 'stats';
-  stats.textContent = `↑ ${formatFt(feetFromAltitude(k.y))} · → ${formatMph(mphFromSpeed(k.vx))} · ${Math.round(game.angle)}°`;
+  stats.textContent = `↑ ${formatFt(feetFromAltitude(k.y))} · → ${formatMph(mphFromSpeed(k.vx))} · ${Math.round(game.angle)}° · ${formatFlight(flightSeconds(k.frame))}`;
   el.replaceChildren(ending, stats);
 }
 
@@ -423,6 +426,8 @@ function fillShotLine(el, cause) {
   if (pct >= 100) mark.className = 'perfect';
   mark.textContent = `${pct}% power`;
   stats.append(mark);
+  const flown = formatFlight(flightSeconds(game.kitten ? game.kitten.frame : 0));
+  stats.append(document.createTextNode(` · ${flown}`));
   el.replaceChildren(ending, stats);
 }
 
@@ -559,6 +564,7 @@ function beginShot(forcedPower) {
   game.recoil = 26;
   altitudeEl.dataset.tier = '0';
   altitudeEl.classList.remove('pop');
+  timeEl.textContent = formatFlight(0);
   stake.visible = false;
   kitten.mesh.visible = true;
   cam.shake = Math.min(1.4, cam.shake + 0.7);
@@ -665,6 +671,7 @@ function reloadField() {
   altitudeEl.dataset.tier = '0';
   altitudeEl.classList.remove('pop');
   speedEl.textContent = `→ ${formatMph(0)}`;
+  timeEl.textContent = formatFlight(0);
   game.kitten = null;
   game.feet = 0;
   game.peakY = 0;
@@ -1314,6 +1321,7 @@ function updateHud() {
     }
     altitudeEl.textContent = `↑ ${formatFt(alt)}`;
     speedEl.textContent = `→ ${formatMph(mph)}`;
+    timeEl.textContent = formatFlight(flightSeconds(game.kitten.frame));
   }
   cannon.ticks.visible = game.phase === 'aim' || game.phase === 'title';
   cannon.pivot.rotation = (game.angle * Math.PI) / 180;

@@ -8,6 +8,8 @@ import {
   barrelMuzzle,
   feetFromAltitude,
   feetFromTravel,
+  flightSeconds,
+  formatFlight,
   formatMph,
   launchPoint,
   mphFromSpeed,
@@ -47,6 +49,17 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(mphFromSpeed(30), 20);
   assert.equal(mphFromSpeed(-30), 0);
   assert.equal(formatMph(20), '20 mph');
+  assert.equal(flightSeconds(0), 0);
+  assert.equal(flightSeconds(30), 1);
+  assert.equal(flightSeconds(90), 3);
+  assert.equal(formatFlight(0), '0.0 s');
+  assert.equal(formatFlight(flightSeconds(45)), '1.5 s');
+  assert.equal(formatFlight(4.16), '4.2 s');
+  assert.equal(formatFlight(59.94), '59.9 s');
+  assert.equal(formatFlight(59.96), '1:00');
+  assert.equal(formatFlight(90), '1:30');
+  assert.equal(formatFlight(61.4), '1:01');
+  assert.equal(formatFlight(3661), '1:01:01');
   assert.equal(mphFromSpeed(0), 0);
   // 240 px/frame used to be the ceiling, and it read as 164 mph. Past that still counts.
   assert.equal(mphFromSpeed(240), 164);
