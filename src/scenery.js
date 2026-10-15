@@ -32,25 +32,43 @@ function fillRidge(g, pts, x0, color, line, sharp) {
   });
 }
 
-// Snow follows the rounded crest and stops on the slope. It does not sit
-// above the outline, and it is not a triangle perched on the tip.
+// Where the ridge crosses the snowline. The cap ends on that point so the
+// hem meets the slope instead of dropping straight down beside it.
+function snowlinePoint(below, above, line) {
+  const dy = above.y - below.y;
+  if (dy === 0) return { x: above.x, y: line };
+  const t = Math.max(0, Math.min(1, (line - below.y) / dy));
+  return { x: below.x + (above.x - below.x) * t, y: line };
+}
+
+// Snow follows this crest only. The inner edge echoes the ridge and pinches
+// to the outline, so the cap does not end in a flat cut across the slope.
 function fillSnow(g, pts, x0, limit) {
   for (let i = 1; i < pts.length - 1; i++) {
     const tip = pts[i];
     if (tip.y < limit) continue;
     if (tip.y <= pts[i - 1].y || tip.y <= pts[i + 1].y) continue;
-    // The upper part of a tall crest. The hem is the snowline, so the cap
-    // stays on the silhouette instead of floating above the tip.
     const line = tip.y * 0.6;
     let left = i;
-    while (left > 0 && pts[left - 1].y >= line) left -= 1;
+    while (left > 1 && pts[left - 1].y >= line && pts[left - 1].y <= pts[left].y) left -= 1;
     let right = i;
-    while (right < pts.length - 1 && pts[right + 1].y >= line) right += 1;
+    while (right < pts.length - 2 && pts[right + 1].y >= line && pts[right + 1].y <= pts[right].y) right += 1;
     if (right - left < 2) continue;
+    const top = [];
+    if (left > 0 && pts[left - 1].y < line && pts[left].y > line) {
+      top.push(snowlinePoint(pts[left - 1], pts[left], line));
+    }
+    for (let k = left; k <= right; k++) top.push(pts[k]);
+    if (right < pts.length - 1 && pts[right + 1].y < line && pts[right].y > line) {
+      top.push(snowlinePoint(pts[right], pts[right + 1], line));
+    }
+    if (top.length < 3) continue;
     const cap = [];
-    for (let k = left; k <= right; k++) cap.push(x0 + pts[k].x, pts[k].y);
-    cap.push(x0 + pts[right].x, line);
-    cap.push(x0 + pts[left].x, line);
+    for (let k = 0; k < top.length; k++) cap.push(x0 + top[k].x, top[k].y);
+    for (let k = top.length - 1; k >= 0; k--) {
+      const drop = (top[k].y - line) * 0.72;
+      cap.push(x0 + top[k].x, top[k].y - drop);
+    }
     g.poly(cap);
     g.fill(0xfffdf8);
   }
@@ -71,7 +89,7 @@ function addBell(pts, left, right, peak, power, skew) {
 // saddle[0] is where peaks stop. lead is a flat opening. A crown past the
 // middle of the tile is the peak on the left of the title. One before that
 // is the peak on the right. The sun sits in the opening, not on a crest.
-function peakSamples(span, height, seed, grand, saddle, crown, lead) {
+function peakSamples(span, height, seed, grand, saddle, crown, lead, spread = 1) {
   const rng = mulberry32(seed);
   const pts = [{ x: 0, y: 0 }];
   const stop = saddle ? saddle[0] : span;
@@ -85,11 +103,11 @@ function peakSamples(span, height, seed, grand, saddle, crown, lead) {
   }
   const peakStop = crownAtEnd ? Math.min(stop, crown.at - crown.width * 0.5) : stop;
   while (x < peakStop - 80) {
-    const gap = (grand ? 90 : 40) + rng() * (grand ? 140 : 120);
-    const width = (grand ? 720 : 260) + rng() * (grand ? 520 : 280);
+    const gap = ((grand ? 90 : 40) + rng() * (grand ? 140 : 120)) * spread;
+    const width = ((grand ? 720 : 260) + rng() * (grand ? 520 : 280)) * spread;
     const left = x + gap;
     const right = Math.min(peakStop - 8, left + width);
-    if (right - left < (grand ? 420 : 180)) break;
+    if (right - left < (grand ? 420 : 180) * spread) break;
     const peak = height * (grand ? 0.9 + rng() * 0.1 : 0.58 + rng() * 0.36);
     const power = grand ? 1.2 + rng() * 0.35 : 1.35 + rng() * 0.45;
     const skew = (rng() - 0.42) * 0.18;
@@ -302,11 +320,11 @@ export function createScenery(world) {
 
   const ranges = [
     // Open on the right of the title, where the sun sits. The crown is the peak on the left.
-    { color: 0xc5d8ea, line: 0xa9c4da, height: 370, parallax: 0.12, seed: 0x51a3, span: 5200, snow: 0.55, grand: true, saddle: null, crown: { at: 4700, width: 1000 }, lead: 1200 },
+    { color: 0xc5d8ea, line: 0xa9c4da, height: 740, parallax: 0.12, seed: 0x51a3, span: 5200, snow: 0.55, grand: true, spread: 2, saddle: null, crown: { at: 4700, width: 1600 }, lead: 1200 },
     { color: 0x8aa4bc, line: 0x6d8eab, height: 268, parallax: 0.28, seed: 0x51a2, span: 3800, snow: 0.55, grand: true, saddle: [3280, 3800], crown: { at: 400, width: 800 } },
     { color: 0x6d9462, line: 0x4e7848, height: 168, parallax: 0.46, seed: 0x51a1, span: 2400, snow: 0, grand: false, saddle: null, crown: null },
   ].map((spec) => {
-    const pts = peakSamples(spec.span, spec.height, spec.seed, spec.grand, spec.saddle, spec.crown, spec.lead);
+    const pts = peakSamples(spec.span, spec.height, spec.seed, spec.grand, spec.saddle, spec.crown, spec.lead, spec.spread || 1);
     return tiledLayer(world, spec.span, (g, x0) => {
       fillRidge(g, pts, x0, spec.color, spec.line, false);
       if (spec.snow) fillSnow(g, pts, x0, spec.height * spec.snow);
