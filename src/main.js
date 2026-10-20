@@ -471,7 +471,12 @@ function ensureBadgeTip() {
   return badgeTipEl;
 }
 
+function badgeTipOpen() {
+  return !!(badgeTipFor || document.querySelector('.ride-badge.is-open') || (badgeTipEl && !badgeTipEl.hidden));
+}
+
 function closeBadgeTips() {
+  const wasOpen = badgeTipOpen();
   document.querySelectorAll('.ride-badge.is-open').forEach((badge) => {
     badge.classList.remove('is-open');
     badge.setAttribute('aria-expanded', 'false');
@@ -482,6 +487,7 @@ function closeBadgeTips() {
     badgeTipEl.replaceChildren();
   }
   badgeTipFor = null;
+  return wasOpen;
 }
 
 function placeBadgeTip(badge) {
@@ -1488,7 +1494,9 @@ app.addEventListener('selectstart', (event) => {
 });
 
 app.addEventListener('pointerdown', (e) => {
-  if (!(e.target && e.target.closest && e.target.closest('.ride-badge'))) closeBadgeTips();
+  const onBadge = !!(e.target && e.target.closest && e.target.closest('.ride-badge'));
+  // Dismissing a tip by tapping elsewhere must not also Start / Fire.
+  const closedTip = onBadge ? false : closeBadgeTips();
   if (wipeOpen() || !fieldTarget(e.target)) return;
   if (e.pointerType !== 'mouse') safeAudio(() => audio.unlock());
   touchAim = {
@@ -1499,6 +1507,7 @@ app.addEventListener('pointerdown', (e) => {
     lastY: e.clientY,
     moved: false,
     mouse: e.pointerType === 'mouse',
+    suppressAction: closedTip,
   };
 });
 app.addEventListener('pointermove', (e) => {
@@ -1522,7 +1531,10 @@ app.addEventListener('pointermove', (e) => {
 });
 function endTouchAim(e) {
   if (!touchAim || e.pointerId !== touchAim.id) return;
-  const tap = !wipeOpen() && !touchAim.moved && fieldTarget(e.target);
+  // Mouse field clicks never Start / Fire / Again — use keyboard or the buttons.
+  // A tap that only closed a badge tip also stays quiet (desktop and mobile).
+  const tap = !wipeOpen() && !touchAim.moved && !touchAim.mouse && !touchAim.suppressAction
+    && fieldTarget(e.target);
   touchAim = null;
   if (tap) onAction();
 }
