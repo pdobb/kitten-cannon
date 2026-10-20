@@ -434,20 +434,85 @@ const BADGE_TIP = {
   mars: 'Climbed to 1,000 ft — high enough to see Mars.',
 };
 
+const BADGE_KINDS = ['terminal', 'power', 'mars'];
+
+let badgeTipEl = null;
+let badgeTipFor = null;
+
 function rideBadgeIcon(kind) {
   if (kind === 'mars') return marsDiscSvg();
   if (kind === 'power') return fullPowerDiscSvg();
   return terminalDiscSvg();
 }
 
-function closeBadgeTips(except = null) {
+function badgeKindOf(badge) {
+  return BADGE_KINDS.find((kind) => badge.classList.contains(kind));
+}
+
+function ensureBadgeTip() {
+  if (badgeTipEl) return badgeTipEl;
+  badgeTipEl = document.createElement('div');
+  badgeTipEl.className = 'ride-badge-tip';
+  badgeTipEl.hidden = true;
+  badgeTipEl.setAttribute('role', 'tooltip');
+  badgeTipEl.id = 'ride-badge-tip';
+  app.appendChild(badgeTipEl);
+  return badgeTipEl;
+}
+
+function closeBadgeTips() {
   document.querySelectorAll('.ride-badge.is-open').forEach((badge) => {
-    if (badge === except) return;
     badge.classList.remove('is-open');
     badge.setAttribute('aria-expanded', 'false');
-    const tip = badge.querySelector('.ride-badge-tip');
-    if (tip) tip.hidden = true;
+    badge.removeAttribute('aria-describedby');
   });
+  if (badgeTipEl) {
+    badgeTipEl.hidden = true;
+    badgeTipEl.replaceChildren();
+  }
+  badgeTipFor = null;
+}
+
+function placeBadgeTip(badge) {
+  const tip = ensureBadgeTip();
+  const kind = badgeKindOf(badge);
+  if (!kind) return;
+  tip.replaceChildren();
+  const title = document.createElement('strong');
+  title.textContent = BADGE_LABEL[kind];
+  const body = document.createElement('span');
+  body.textContent = BADGE_TIP[kind];
+  tip.append(title, body);
+  tip.hidden = false;
+  tip.style.left = '0px';
+  tip.style.top = '0px';
+  // Lay out off-screen first so width/height are real, then pick a side that fits.
+  const br = badge.getBoundingClientRect();
+  const tr = tip.getBoundingClientRect();
+  const pad = 8;
+  const gap = 10;
+  let left = br.left - tr.width - gap;
+  let top = br.top + (br.height - tr.height) / 2;
+  let placed = 'left';
+  if (left < pad) {
+    left = br.right + gap;
+    placed = 'right';
+    if (left + tr.width > window.innerWidth - pad) {
+      left = Math.min(br.right, window.innerWidth - pad) - tr.width;
+      left = Math.max(pad, left);
+      top = br.bottom + gap;
+      placed = 'below';
+      if (top + tr.height > window.innerHeight - pad) {
+        top = br.top - tr.height - gap;
+        placed = 'above';
+      }
+    }
+  }
+  top = Math.max(pad, Math.min(top, window.innerHeight - tr.height - pad));
+  left = Math.max(pad, Math.min(left, window.innerWidth - tr.width - pad));
+  tip.style.left = `${Math.round(left)}px`;
+  tip.style.top = `${Math.round(top)}px`;
+  tip.dataset.place = placed;
 }
 
 function toggleBadgeTip(badge) {
@@ -456,8 +521,9 @@ function toggleBadgeTip(badge) {
   if (open) return;
   badge.classList.add('is-open');
   badge.setAttribute('aria-expanded', 'true');
-  const tip = badge.querySelector('.ride-badge-tip');
-  if (tip) tip.hidden = false;
+  badge.setAttribute('aria-describedby', 'ride-badge-tip');
+  badgeTipFor = badge;
+  placeBadgeTip(badge);
 }
 
 function rideBadgeEl(kind, count, { pop = false } = {}) {
@@ -470,16 +536,6 @@ function rideBadgeEl(kind, count, { pop = false } = {}) {
   const mark = document.createElement('b');
   mark.textContent = `×${count}`;
   badge.append(mark);
-  const tip = document.createElement('span');
-  tip.className = 'ride-badge-tip';
-  tip.hidden = true;
-  tip.setAttribute('role', 'tooltip');
-  const title = document.createElement('strong');
-  title.textContent = BADGE_LABEL[kind];
-  const body = document.createElement('span');
-  body.textContent = BADGE_TIP[kind];
-  tip.append(title, body);
-  badge.append(tip);
   badge.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -507,7 +563,8 @@ function paintRideBadges(host, { marsPop = false, termPop = false, powerPop = fa
 }
 
 function paintTitleRideBadges(opts) {
-  paintRideBadges(titleBestEl, opts);
+  // Same corner as the score card: top-right of the title panel, clear of the list.
+  paintRideBadges(document.querySelector('#title .panel'), opts);
 }
 
 function paintCardRideBadges(opts) {
@@ -1500,6 +1557,10 @@ function placeShell() {
 
 function resize() {
   placeShell();
+  if (badgeTipFor) {
+    if (badgeTipFor.isConnected) placeBadgeTip(badgeTipFor);
+    else closeBadgeTips();
+  }
   if (!pixi.renderer) return;
   const w = canvas.clientWidth || window.innerWidth;
   const h = canvas.clientHeight || window.innerHeight;
@@ -1525,6 +1586,10 @@ window.addEventListener('resize', queueResize);
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', queueResize);
   window.visualViewport.addEventListener('scroll', queueResize);
+}
+// Overlay cards scroll inside themselves; a fixed tip would drift, so tuck it away.
+for (const scroller of [document.querySelector('#title'), cardEl, pauseEl]) {
+  if (scroller) scroller.addEventListener('scroll', closeBadgeTips, { passive: true });
 }
 placeShell();
 function seatKitten() {

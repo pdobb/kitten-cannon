@@ -341,15 +341,15 @@ button.ride-badge:active {
   color: #8d1d1d;
 }
 
+/* Floated onto #app (position:fixed) so panel overflow:auto cannot clip it. */
 .ride-badge-tip {
-  position: absolute;
-  right: calc(100% + 10px);
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 6;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 8;
   box-sizing: border-box;
   width: max-content;
-  max-width: min(200px, 56vw);
+  max-width: min(220px, calc(100vw - 24px));
   padding: 8px 10px;
   background: #fff6e4;
   border: 3px solid #2b2118;
@@ -390,18 +390,15 @@ button.ride-badge:active {
   z-index: 4;
 }
 
+#title .ride-badges,
 #card .ride-badges {
   top: 12px;
   right: 14px;
 }
 
-.bestline .ride-badges {
-  top: 8px;
-  right: 0;
-}
-
-.bestline:has(.ride-badges) p.kicker {
-  padding-right: 56px;
+/* Keep the long title eyebrow clear of the badge rail. */
+#title .panel:has(.ride-badges) .eyebrow {
+  padding-right: 64px;
 }
 
 @keyframes ride-badge-pop {
@@ -1207,11 +1204,11 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   .sheet p.endings-kicker { font-size: 13px; letter-spacing: 0.1em; }
   .ride-badge svg { width: 22px; height: 22px; }
   .ride-badge b { font-size: 13px; }
-  .ride-badge-tip { max-width: min(180px, 52vw); padding: 6px 8px; border-radius: 10px; }
+  .ride-badge-tip { max-width: min(200px, calc(100vw - 20px)); padding: 6px 8px; border-radius: 10px; }
   .ride-badge-tip strong, .ride-badge-tip span { font-size: 12px; }
+  #title .ride-badges,
   #card .ride-badges { top: 8px; right: 10px; }
-  .bestline .ride-badges { top: 4px; }
-  .bestline:has(.ride-badges) p.kicker { padding-right: 48px; }
+  #title .panel:has(.ride-badges) .eyebrow { padding-right: 56px; }
   .sheet p.endings-kicker { margin: 6px 0 0; }
   .sheet p.total { margin-top: 3px; padding-top: 2px; }
   #card .actions, #pause .actions { margin-top: 2px; }
