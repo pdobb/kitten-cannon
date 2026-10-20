@@ -6,16 +6,16 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 
 const root = dirname(fileURLToPath(import.meta.url));
 
-// 0.<n> where n is commits on HEAD. Stamped at dev/build so the title chip
-// tracks each publish without a hand edit.
+// 0.<n> tracks publish history. Build runs before the signed commit, so n is
+// commit count + 1 and matches HEAD after that publish lands.
 function buildVersion() {
   try {
-    const n = execSync('git rev-list --count HEAD', {
+    const raw = execSync('git rev-list --count HEAD', {
       cwd: root,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
-    if (/^\d+$/.test(n)) return `0.${n}`;
+    if (/^\d+$/.test(raw)) return `0.${Number(raw) + 1}`;
   } catch {
     // Outside a git checkout (rare). Keep a stable fallback.
   }
