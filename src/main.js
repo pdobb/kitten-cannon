@@ -287,6 +287,8 @@ const game = {
   peakY: 0,
   peakSpeed: 0,
   was: { furthest: 0, highest: 0, fastest: 0, longest: 0 },
+  // One award per badge kind per ride. Reset in beginShot.
+  badgeArmed: { mars: false, terminal: false, power: false },
   hold: 0,
   squash: 0,
   sink: 0,
@@ -347,38 +349,47 @@ function saveVisitCount(key, n) {
   }
 }
 
-// Ride badges only count when finish() runs after the kitten dies.
-// Reload, retry, or a new field mid-flight aborts without a tally.
-// Packed balloon lanes stay quiet for these, same as landings.
-function flightConcluded() {
-  return !!(game.kitten && game.kitten.dead);
+// Ride badges award as soon as each goal is hit (launch / mid-flight).
+// Quiet balloon lanes skip them, same as landings. One tally per kind per ride.
+function quietRide() {
+  return balloonCrowd() > 1;
 }
 
 function tallyMars() {
-  if (!flightConcluded()) return false;
-  if (balloonCrowd() > 1) return false;
+  if (game.badgeArmed.mars || quietRide()) return false;
   if (!reachedMars(feetFromAltitude(game.peakY))) return false;
+  game.badgeArmed.mars = true;
   game.marsVisits += 1;
   saveVisitCount(MARS_KEY, game.marsVisits);
   return true;
 }
 
 function tallyTerminal() {
-  if (!flightConcluded()) return false;
-  if (balloonCrowd() > 1) return false;
+  if (game.badgeArmed.terminal || quietRide()) return false;
   if (!reachedTerminal(game.peakSpeed)) return false;
+  game.badgeArmed.terminal = true;
   game.terminalVisits += 1;
   saveVisitCount(TERM_KEY, game.terminalVisits);
   return true;
 }
 
 function tallyFullPower() {
-  if (!flightConcluded()) return false;
-  if (balloonCrowd() > 1) return false;
+  if (game.badgeArmed.power || quietRide()) return false;
   if (!reachedFullPower(game.power)) return false;
+  game.badgeArmed.power = true;
   game.fullPowerVisits += 1;
   saveVisitCount(POWER_KEY, game.fullPowerVisits);
   return true;
+}
+
+// Check thresholds and refresh the HUD rail when something new lands.
+function noteRideBadges() {
+  const marsPop = tallyMars();
+  const termPop = tallyTerminal();
+  const powerPop = tallyFullPower();
+  if (marsPop || termPop || powerPop) {
+    paintHudRideBadges({ marsPop, termPop, powerPop });
+  }
 }
 
 function marsDiscSvg() {
@@ -486,26 +497,29 @@ function placeBadgeTip(badge) {
   tip.hidden = false;
   tip.style.left = '0px';
   tip.style.top = '0px';
-  // Lay out off-screen first so width/height are real, then pick a side that fits.
+  // Lay out at 0,0 first so width/height are real, then pick a side that fits.
+  // Badges live top-left, so prefer opening to the right.
   const br = badge.getBoundingClientRect();
   const tr = tip.getBoundingClientRect();
   const pad = 8;
   const gap = 10;
-  let left = br.left - tr.width - gap;
+  const preferRight = br.left < window.innerWidth * 0.45;
+  let left = preferRight ? br.right + gap : br.left - tr.width - gap;
   let top = br.top + (br.height - tr.height) / 2;
-  let placed = 'left';
-  if (left < pad) {
-    left = br.right + gap;
-    placed = 'right';
-    if (left + tr.width > window.innerWidth - pad) {
-      left = Math.min(br.right, window.innerWidth - pad) - tr.width;
-      left = Math.max(pad, left);
-      top = br.bottom + gap;
-      placed = 'below';
-      if (top + tr.height > window.innerHeight - pad) {
-        top = br.top - tr.height - gap;
-        placed = 'above';
-      }
+  let placed = preferRight ? 'right' : 'left';
+  const overflowsX = left < pad || left + tr.width > window.innerWidth - pad;
+  if (overflowsX) {
+    left = preferRight ? br.left - tr.width - gap : br.right + gap;
+    placed = preferRight ? 'left' : 'right';
+  }
+  if (left < pad || left + tr.width > window.innerWidth - pad) {
+    left = Math.min(br.right, window.innerWidth - pad) - tr.width;
+    left = Math.max(pad, left);
+    top = br.bottom + gap;
+    placed = 'below';
+    if (top + tr.height > window.innerHeight - pad) {
+      top = br.top - tr.height - gap;
+      placed = 'above';
     }
   }
   top = Math.max(pad, Math.min(top, window.innerHeight - tr.height - pad));
@@ -544,12 +558,12 @@ function rideBadgeEl(kind, count, { pop = false } = {}) {
   return badge;
 }
 
-function paintRideBadges(host, { marsPop = false, termPop = false, powerPop = false } = {}) {
-  if (!host) return;
+const badgesEl = document.querySelector('#badges');
+
+function paintHudRideBadges({ marsPop = false, termPop = false, powerPop = false } = {}) {
+  if (!badgesEl) return;
   closeBadgeTips();
-  host.querySelectorAll('.ride-badges').forEach((node) => node.remove());
-  // Legacy class from the first Mars-only badge.
-  host.querySelectorAll('.mars-badge').forEach((node) => node.remove());
+  badgesEl.replaceChildren();
   const hasMars = game.marsVisits > 0;
   const hasTerm = game.terminalVisits > 0;
   const hasPower = game.fullPowerVisits > 0;
@@ -559,16 +573,7 @@ function paintRideBadges(host, { marsPop = false, termPop = false, powerPop = fa
   if (hasTerm) rail.append(rideBadgeEl('terminal', game.terminalVisits, { pop: termPop }));
   if (hasPower) rail.append(rideBadgeEl('power', game.fullPowerVisits, { pop: powerPop }));
   if (hasMars) rail.append(rideBadgeEl('mars', game.marsVisits, { pop: marsPop }));
-  host.append(rail);
-}
-
-function paintTitleRideBadges(opts) {
-  // Same corner as the score card: top-right of the title panel, clear of the list.
-  paintRideBadges(document.querySelector('#title .panel'), opts);
-}
-
-function paintCardRideBadges(opts) {
-  paintRideBadges(cardEl.querySelector('.panel'), opts);
+  badgesEl.append(rail);
 }
 
 function endingTotal() {
@@ -652,11 +657,10 @@ function clearBests() {
     poles.pop();
   }
   paintRecords();
-  paintCardRideBadges();
+  paintHudRideBadges();
   if (game.phase === 'result' && game.kitten) {
     cardBestEl.replaceChildren();
     appendPersonalStats(cardBestEl, null, game.kitten.cause);
-    paintCardRideBadges();
   }
   if (game.paused) fillPauseCard();
 }
@@ -848,14 +852,11 @@ function paintRecords() {
     || game.highest > 0
     || game.fastest > 0
     || game.longest > 0
-    || game.marsVisits > 0
-    || game.terminalVisits > 0
-    || game.fullPowerVisits > 0
   ) {
     appendBestsKicker(titleBestEl);
     appendRecordRows(titleBestEl, null);
-    paintTitleRideBadges();
   }
+  paintHudRideBadges();
 }
 
 function clampAngle() {
@@ -947,6 +948,7 @@ function beginShot(forcedPower) {
     fastest: game.fastest,
     longest: game.longest,
   };
+  game.badgeArmed = { mars: false, terminal: false, power: false };
   game.kitten = makeState(game.angle, power);
   game.feet = 0;
   game.peakY = game.kitten.y;
@@ -969,6 +971,8 @@ function beginShot(forcedPower) {
   audio.meow();
   setPhase('flight');
   celebratePower(power);
+  // Full-power badge lands at launch; Mars/terminal wait for afterStep.
+  noteRideBadges();
 }
 
 function afterStep() {
@@ -977,6 +981,7 @@ function afterStep() {
   if (k.y > game.peakY) game.peakY = k.y;
   const speed = rightwardSpeed(k.vx);
   if (speed > game.peakSpeed) game.peakSpeed = speed;
+  noteRideBadges();
 }
 
 function commitRecords() {
@@ -1034,13 +1039,10 @@ function finish() {
   cardFeetEl.textContent = formatFt(game.feet);
   fillShotLine(cardNoteEl, k.cause);
   tallyEnding(k.cause);
-  const marsHit = tallyMars();
-  const termHit = tallyTerminal();
-  const powerHit = tallyFullPower();
   cardBestEl.replaceChildren();
   appendPersonalStats(cardBestEl, marks, k.cause);
-  paintCardRideBadges({ marsPop: marsHit, termPop: termHit, powerPop: powerHit });
-  paintTitleRideBadges();
+  // Badges already awarded mid-flight / at launch on the HUD rail.
+  paintHudRideBadges();
   if (game.furthest > game.was.furthest) plantPole(game.furthestX, game.furthest);
   // The landing stake hides on the next shot. This pole stays for the visit,
   // including a landing that did not set a new furthest.
@@ -1983,6 +1985,7 @@ function applyQuery() {
     game.peakSpeed = Math.max(game.peakSpeed, SPEED_MAX);
   }
   commitRecords();
+  noteRideBadges();
   if (frames > 0 && game.kitten && game.kitten.dead) game.hold = 0;
 }
 

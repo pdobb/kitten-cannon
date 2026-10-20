@@ -211,15 +211,27 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   100% { transform: scale(1) rotate(0deg); }
 }
 
-#records {
+/* Bests chip + ride badges share one top-left column. */
+#left-hud {
   position: absolute;
   top: calc(16px + var(--safe-top));
   left: calc(16px + var(--safe-left));
   right: auto;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: calc(100% - 32px - var(--safe-left) - var(--safe-right));
+  pointer-events: none;
+}
+
+#records {
+  position: relative;
   /* Floor for empty/short bests. Grow when a longer value needs room. */
   min-width: 188px;
   width: max-content;
-  max-width: calc(100% - 32px - var(--safe-left) - var(--safe-right));
+  max-width: 100%;
   box-sizing: border-box;
   padding: 10px 14px 11px;
   background: #fff6e4;
@@ -228,6 +240,12 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   box-shadow: 3px 3px 0 #2b2118;
   font-family: Nunito, sans-serif;
   font-weight: 800;
+  pointer-events: auto;
+}
+
+#badges {
+  position: relative;
+  pointer-events: none;
 }
 
 #records p, .bestline p, .sheet p {
@@ -280,13 +298,11 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
 }
 
 .ride-badges {
-  position: absolute;
-  top: 0;
-  right: 0;
+  position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 4px;
   pointer-events: none;
 }
@@ -388,17 +404,6 @@ button.ride-badge:active {
 
 .ride-badges:has(.ride-badge.is-open) {
   z-index: 4;
-}
-
-#title .ride-badges,
-#card .ride-badges {
-  top: 12px;
-  right: 14px;
-}
-
-/* Keep the long title eyebrow clear of the badge rail. */
-#title .panel:has(.ride-badges) .eyebrow {
-  padding-right: 64px;
 }
 
 @keyframes ride-badge-pop {
@@ -560,6 +565,7 @@ button.ride-badge:active {
 #app.is-paused #card { visibility: hidden; }
 #app.is-paused #scoreblock,
 #app.is-paused #records,
+#app.is-paused #badges,
 #app.is-paused #meter,
 #app.is-paused #hint,
 #app.is-paused #pad { visibility: hidden; }
@@ -1070,12 +1076,14 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #altitude[data-tier="2"] { font-size: 21px; }
   #altitude[data-tier="3"] { font-size: 24px; }
   #altitude[data-tier="4"] { font-size: 26px; }
-  #records {
+  #left-hud {
     top: calc(10px + var(--safe-top));
     left: calc(10px + var(--safe-left));
-    right: auto;
-    min-width: 164px;
     max-width: calc(100% - 78px - var(--safe-left) - var(--safe-right));
+    gap: 6px;
+  }
+  #records {
+    min-width: 164px;
     padding: 8px 10px 9px;
   }
   #fullscreen {
@@ -1152,11 +1160,14 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
 @media (max-height: 500px) and (pointer: coarse),
   (max-height: 500px) and (hover: none),
   (max-height: 500px) and (min-aspect-ratio: 6 / 5) {
-  #records {
+  #left-hud {
     top: calc(8px + var(--safe-top));
     left: 16px;
-    min-width: 164px;
     max-width: calc(100% - 80px - var(--safe-right));
+    gap: 6px;
+  }
+  #records {
+    min-width: 164px;
     padding: 8px 10px 9px;
   }
   #records span { font-size: 12px; }
@@ -1206,9 +1217,6 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   .ride-badge b { font-size: 13px; }
   .ride-badge-tip { max-width: min(200px, calc(100vw - 20px)); padding: 6px 8px; border-radius: 10px; }
   .ride-badge-tip strong, .ride-badge-tip span { font-size: 12px; }
-  #title .ride-badges,
-  #card .ride-badges { top: 8px; right: 10px; }
-  #title .panel:has(.ride-badges) .eyebrow { padding-right: 56px; }
   .sheet p.endings-kicker { margin: 6px 0 0; }
   .sheet p.total { margin-top: 3px; padding-top: 2px; }
   #card .actions, #pause .actions { margin-top: 2px; }
