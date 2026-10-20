@@ -843,6 +843,11 @@ kbd {
   border-radius: 999px;
   box-shadow: 1px 1px 0 #2b2118;
   line-height: 1.2;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  cursor: default;
 }
 
 h1, h2 {

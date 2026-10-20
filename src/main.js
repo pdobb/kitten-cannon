@@ -54,6 +54,41 @@ if (buildEl) {
   buildEl.hidden = false;
 }
 
+// Phones have no Shift+R. A long-press on the quiet version chip opens the
+// same wipe dialog. Short taps do nothing.
+function bindVersionWipe(el) {
+  if (!el) return;
+  let hold = 0;
+  const ms = 550;
+  const arm = (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    window.clearTimeout(hold);
+    try {
+      el.setPointerCapture(event.pointerId);
+    } catch {
+      // Capture is best-effort; the hold still runs without it.
+    }
+    hold = window.setTimeout(() => {
+      hold = 0;
+      confirmClearBests();
+    }, ms);
+  };
+  const cancel = () => {
+    if (!hold) return;
+    window.clearTimeout(hold);
+    hold = 0;
+  };
+  el.addEventListener('pointerdown', arm);
+  el.addEventListener('pointerup', cancel);
+  el.addEventListener('pointercancel', cancel);
+  // Touch keeps capture through small finger drift. Mouse still cancels on leave.
+  el.addEventListener('pointerleave', (event) => {
+    if (event.pointerType === 'touch') return;
+    cancel();
+  });
+  el.addEventListener('contextmenu', (event) => event.preventDefault());
+}
+
 // The published page is one file. Register only that build, so the dev server
 // does not keep a worker around. updateViaCache skips a stale sw.js.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
@@ -537,6 +572,8 @@ function setWipeOpen(on) {
 function confirmClearBests() {
   setWipeOpen(true);
 }
+
+bindVersionWipe(buildEl);
 
 function acceptWipe() {
   if (!wipeOpen()) return;
