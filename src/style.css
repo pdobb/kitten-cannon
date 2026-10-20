@@ -494,6 +494,11 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
 #app.is-paused #pad { visibility: hidden; }
 #app.is-paused #mute,
 #app.is-paused #pause-btn { z-index: 7; }
+/* Wipe is the modal. Keep the pause card tucked away under it. */
+#app.is-wiping #pause { visibility: hidden; pointer-events: none; }
+#app.is-wiping #mute,
+#app.is-wiping #pause-btn,
+#app.is-wiping #pad { pointer-events: none; }
 #app.is-paused #banner,
 #app.is-paused #power-cheer { visibility: hidden; }
 

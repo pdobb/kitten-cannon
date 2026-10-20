@@ -62,6 +62,10 @@ function bindVersionWipe(el) {
   const ms = 550;
   const arm = (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    // Keep the field tap handler from treating this hold as Start.
+    event.stopPropagation();
+    if (event.cancelable) event.preventDefault();
+    touchAim = null;
     window.clearTimeout(hold);
     try {
       el.setPointerCapture(event.pointerId);
@@ -73,7 +77,8 @@ function bindVersionWipe(el) {
       confirmClearBests();
     }, ms);
   };
-  const cancel = () => {
+  const cancel = (event) => {
+    if (event) event.stopPropagation();
     if (!hold) return;
     window.clearTimeout(hold);
     hold = 0;
@@ -84,7 +89,7 @@ function bindVersionWipe(el) {
   // Touch keeps capture through small finger drift. Mouse still cancels on leave.
   el.addEventListener('pointerleave', (event) => {
     if (event.pointerType === 'touch') return;
-    cancel();
+    cancel(event);
   });
   el.addEventListener('contextmenu', (event) => event.preventDefault());
 }
@@ -560,13 +565,34 @@ function wipeOpen() {
   return !wipeEl.classList.contains('hidden');
 }
 
+// True when wipe froze play itself. Closing wipe resumes only in that case.
+let wipeHeldPause = false;
+
 function setWipeOpen(on) {
   const open = !!on;
   if (open === wipeOpen()) return;
   wipeEl.classList.toggle('hidden', !open);
   app.classList.toggle('is-wiping', open);
-  if (open) wipeCancelEl.focus();
-  else if (game.paused) resumeEl.focus();
+  if (open) {
+    touchAim = null;
+    // Freeze an active aim or flight under the modal. Title/result stay put.
+    if (!game.paused && (game.phase === 'flight' || game.phase === 'aim')) {
+      wipeHeldPause = true;
+      setPaused(true);
+    }
+    // Pause card stays hidden while wiping; wipe is the only modal.
+    pauseEl.classList.add('hidden');
+    wipeCancelEl.focus();
+    return;
+  }
+  if (wipeHeldPause) {
+    wipeHeldPause = false;
+    setPaused(false);
+  } else if (game.paused) {
+    pauseEl.classList.remove('hidden');
+    fillPauseCard();
+    resumeEl.focus();
+  }
 }
 
 function confirmClearBests() {
@@ -1071,7 +1097,7 @@ function release(code) {
 }
 
 function onAction() {
-  if (!kitten) return;
+  if (wipeOpen() || !kitten) return;
   if (game.phase === 'title') startAim();
   else if (game.phase === 'aim') beginShot(null);
   else if (game.phase === 'flight' || game.phase === 'result') retry();
@@ -1302,7 +1328,7 @@ wipeEl.addEventListener('pointerdown', (e) => {
 // Buttons keep their own taps.
 let touchAim = null;
 function fieldTarget(target) {
-  return !(target && target.closest && target.closest('button, a'));
+  return !(target && target.closest && target.closest('button, a, #build, #wipe'));
 }
 // A long press on the field must not start a selection. The stats cards
 // and the pause card are the only text a player can select.
@@ -1313,7 +1339,7 @@ app.addEventListener('selectstart', (event) => {
 });
 
 app.addEventListener('pointerdown', (e) => {
-  if (!fieldTarget(e.target)) return;
+  if (wipeOpen() || !fieldTarget(e.target)) return;
   if (e.pointerType !== 'mouse') safeAudio(() => audio.unlock());
   touchAim = {
     id: e.pointerId,
@@ -1326,7 +1352,7 @@ app.addEventListener('pointerdown', (e) => {
   };
 });
 app.addEventListener('pointermove', (e) => {
-  if (!touchAim || e.pointerId !== touchAim.id) return;
+  if (wipeOpen() || !touchAim || e.pointerId !== touchAim.id) return;
   const dx = e.clientX - touchAim.lastX;
   const dy = e.clientY - touchAim.lastY;
   const adx = Math.abs(e.clientX - touchAim.x);
@@ -1346,7 +1372,7 @@ app.addEventListener('pointermove', (e) => {
 });
 function endTouchAim(e) {
   if (!touchAim || e.pointerId !== touchAim.id) return;
-  const tap = !touchAim.moved && fieldTarget(e.target);
+  const tap = !wipeOpen() && !touchAim.moved && fieldTarget(e.target);
   touchAim = null;
   if (tap) onAction();
 }
