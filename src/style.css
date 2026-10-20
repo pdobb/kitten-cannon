@@ -301,6 +301,10 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
   color: #8a5a00;
 }
 
+.ride-badge.power b {
+  color: #8d1d1d;
+}
+
 #card .ride-badges {
   top: 12px;
   right: 14px;

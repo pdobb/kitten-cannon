@@ -38,6 +38,7 @@ import {
   formatSpeed,
   launchPoint,
   mphFromSpeed,
+  reachedFullPower,
   reachedTerminal,
   rightwardSpeed,
   powerFromClock,
@@ -96,6 +97,7 @@ const FAST_KEY = 'kitten-cannon-fastest-x';
 const LONG_KEY = 'kitten-cannon-longest-frames';
 const MARS_KEY = 'kitten-cannon-mars-visits';
 const TERM_KEY = 'kitten-cannon-terminal-visits';
+const POWER_KEY = 'kitten-cannon-fullpower-visits';
 const END_KEY = 'kitten-cannon-endings';
 const ENDINGS = [
   ['landed', 'Soft landing'],
@@ -232,6 +234,7 @@ const game = {
   longest: loadNumber(LONG_KEY),
   marsVisits: loadNumber(MARS_KEY),
   terminalVisits: loadNumber(TERM_KEY),
+  fullPowerVisits: loadNumber(POWER_KEY),
   peakY: 0,
   peakSpeed: 0,
   was: { furthest: 0, highest: 0, fastest: 0, longest: 0 },
@@ -295,8 +298,15 @@ function saveVisitCount(key, n) {
   }
 }
 
-// Packed balloon lanes stay quiet for these tallies, same as landings.
+// Ride badges only count when finish() runs after the kitten dies.
+// Reload, retry, or a new field mid-flight aborts without a tally.
+// Packed balloon lanes stay quiet for these, same as landings.
+function flightConcluded() {
+  return !!(game.kitten && game.kitten.dead);
+}
+
 function tallyMars() {
+  if (!flightConcluded()) return false;
   if (balloonCrowd() > 1) return false;
   if (!reachedMars(feetFromAltitude(game.peakY))) return false;
   game.marsVisits += 1;
@@ -305,10 +315,20 @@ function tallyMars() {
 }
 
 function tallyTerminal() {
+  if (!flightConcluded()) return false;
   if (balloonCrowd() > 1) return false;
   if (!reachedTerminal(game.peakSpeed)) return false;
   game.terminalVisits += 1;
   saveVisitCount(TERM_KEY, game.terminalVisits);
+  return true;
+}
+
+function tallyFullPower() {
+  if (!flightConcluded()) return false;
+  if (balloonCrowd() > 1) return false;
+  if (!reachedFullPower(game.power)) return false;
+  game.fullPowerVisits += 1;
+  saveVisitCount(POWER_KEY, game.fullPowerVisits);
   return true;
 }
 
@@ -341,30 +361,55 @@ function terminalDiscSvg() {
   return svg;
 }
 
+function fullPowerDiscSvg() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  // Red star disc — matches the Full power! cheer.
+  svg.innerHTML = [
+    '<circle cx="12" cy="12" r="11" fill="#d23b2e"/>',
+    '<path d="M12 4.2l2.1 5.1 5.5.4-4.2 3.6 1.4 5.3L12 15.8 7.2 18.6l1.4-5.3-4.2-3.6 5.5-.4z" fill="#fff6e4"/>',
+  ].join('');
+  return svg;
+}
+
+const BADGE_LABEL = {
+  terminal: 'Terminal',
+  power: 'Full power',
+  mars: 'Mars',
+};
+
+function rideBadgeIcon(kind) {
+  if (kind === 'mars') return marsDiscSvg();
+  if (kind === 'power') return fullPowerDiscSvg();
+  return terminalDiscSvg();
+}
+
 function rideBadgeEl(kind, count, { pop = false } = {}) {
   const badge = document.createElement('div');
   badge.className = pop ? `ride-badge ${kind} pop` : `ride-badge ${kind}`;
   badge.setAttribute('role', 'img');
-  const label = kind === 'mars' ? 'Mars' : 'Terminal';
-  badge.setAttribute('aria-label', `${label} ×${count}`);
-  badge.append(kind === 'mars' ? marsDiscSvg() : terminalDiscSvg());
+  badge.setAttribute('aria-label', `${BADGE_LABEL[kind]} ×${count}`);
+  badge.append(rideBadgeIcon(kind));
   const mark = document.createElement('b');
   mark.textContent = `×${count}`;
   badge.append(mark);
   return badge;
 }
 
-function paintRideBadges(host, { marsPop = false, termPop = false } = {}) {
+function paintRideBadges(host, { marsPop = false, termPop = false, powerPop = false } = {}) {
   if (!host) return;
   host.querySelectorAll('.ride-badges').forEach((node) => node.remove());
   // Legacy class from the first Mars-only badge.
   host.querySelectorAll('.mars-badge').forEach((node) => node.remove());
   const hasMars = game.marsVisits > 0;
   const hasTerm = game.terminalVisits > 0;
-  if (!hasMars && !hasTerm) return;
+  const hasPower = game.fullPowerVisits > 0;
+  if (!hasMars && !hasTerm && !hasPower) return;
   const rail = document.createElement('div');
   rail.className = 'ride-badges';
   if (hasTerm) rail.append(rideBadgeEl('terminal', game.terminalVisits, { pop: termPop }));
+  if (hasPower) rail.append(rideBadgeEl('power', game.fullPowerVisits, { pop: powerPop }));
   if (hasMars) rail.append(rideBadgeEl('mars', game.marsVisits, { pop: marsPop }));
   host.append(rail);
 }
@@ -435,7 +480,7 @@ function saveRecords() {
   }
 }
 
-const BEST_KEYS = [FAR_KEY, HIGH_KEY, FAST_KEY, LONG_KEY, MARS_KEY, TERM_KEY, END_KEY];
+const BEST_KEYS = [FAR_KEY, HIGH_KEY, FAST_KEY, LONG_KEY, MARS_KEY, TERM_KEY, POWER_KEY, END_KEY];
 
 function clearBests() {
   game.furthest = 0;
@@ -445,6 +490,7 @@ function clearBests() {
   game.longest = 0;
   game.marsVisits = 0;
   game.terminalVisits = 0;
+  game.fullPowerVisits = 0;
   game.endings = emptyEndings();
   game.was = { furthest: 0, highest: 0, fastest: 0, longest: 0 };
   try {
@@ -470,7 +516,7 @@ function confirmClearBests() {
   const ok = window.confirm(
     'Clear all personal bests on this device?\n\n'
     + 'This removes furthest, highest, fastest, longest, landing counts, '
-    + 'and the Mars and terminal badges. You cannot undo this.',
+    + 'and the Mars, terminal, and full-power badges. You cannot undo this.',
   );
   if (ok) clearBests();
 }
@@ -613,6 +659,7 @@ function paintRecords() {
     || game.longest > 0
     || game.marsVisits > 0
     || game.terminalVisits > 0
+    || game.fullPowerVisits > 0
   ) {
     appendBestsKicker(titleBestEl);
     appendRecordRows(titleBestEl, null);
@@ -798,9 +845,10 @@ function finish() {
   tallyEnding(k.cause);
   const marsHit = tallyMars();
   const termHit = tallyTerminal();
+  const powerHit = tallyFullPower();
   cardBestEl.replaceChildren();
   appendPersonalStats(cardBestEl, marks, k.cause);
-  paintCardRideBadges({ marsPop: marsHit, termPop: termHit });
+  paintCardRideBadges({ marsPop: marsHit, termPop: termHit, powerPop: powerHit });
   paintTitleRideBadges();
   if (game.furthest > game.was.furthest) plantPole(game.furthestX, game.furthest);
   // The landing stake hides on the next shot. This pole stays for the visit,
@@ -1731,6 +1779,7 @@ window.__kitten = {
       longest: game.longest,
       marsVisits: game.marsVisits,
       terminalVisits: game.terminalVisits,
+      fullPowerVisits: game.fullPowerVisits,
     };
   },
   get poles() {

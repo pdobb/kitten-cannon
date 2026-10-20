@@ -105,6 +105,11 @@ export function reachedTerminal(vx) {
   return atTerminalSpeed(vx);
 }
 
+// Launch power that filled the meter (100%).
+export function reachedFullPower(power) {
+  return powerPercent(power) >= 100;
+}
+
 export function formatSpeed(vx) {
   const label = `→ ${formatMph(mphFromSpeed(vx))}`;
   return atTerminalSpeed(vx) ? `${label} MAX` : label;

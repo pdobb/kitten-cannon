@@ -16,6 +16,7 @@ import {
   launchPoint,
   mphFromSpeed,
   powerPercent,
+  reachedFullPower,
   reachedTerminal,
   rightwardSpeed,
   POWER_MAX,
@@ -78,6 +79,9 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(powerPercent(POWER_MIN), 0);
   assert.equal(powerPercent(POWER_MAX), 100);
   assert.equal(powerPercent((POWER_MIN + POWER_MAX) / 2), 50);
+  assert.equal(reachedFullPower(POWER_MAX), true);
+  assert.equal(reachedFullPower(POWER_MIN), false);
+  assert.equal(reachedFullPower((POWER_MIN + POWER_MAX) / 2), false);
 }
 
 // Daytime colors stay put. Above 1000 ft the sample is night, and it stays night.
