@@ -90,6 +90,7 @@ const HIGH_KEY = 'kitten-cannon-highest-ft';
 // The old key stored the kitten's full speed, dive included. It is not a
 // rightward record, so it does not carry over.
 const FAST_KEY = 'kitten-cannon-fastest-x';
+const LONG_KEY = 'kitten-cannon-longest-frames';
 const END_KEY = 'kitten-cannon-endings';
 const ENDINGS = [
   ['landed', 'Soft landing'],
@@ -223,9 +224,10 @@ const game = {
   furthestX: 0,
   highest: loadNumber(HIGH_KEY),
   fastest: loadNumber(FAST_KEY),
+  longest: loadNumber(LONG_KEY),
   peakY: 0,
   peakSpeed: 0,
-  was: { furthest: 0, highest: 0, fastest: 0 },
+  was: { furthest: 0, highest: 0, fastest: 0, longest: 0 },
   hold: 0,
   squash: 0,
   sink: 0,
@@ -330,6 +332,7 @@ function saveRecords() {
     localStorage.setItem(FAR_KEY, String(game.furthest));
     localStorage.setItem(HIGH_KEY, String(game.highest));
     localStorage.setItem(FAST_KEY, String(game.fastest));
+    localStorage.setItem(LONG_KEY, String(game.longest));
   } catch {
     // Private mode can refuse storage. The score still shows for this run.
   }
@@ -389,6 +392,7 @@ function recordRows() {
     ['Furthest', game.furthest > 0 ? formatFt(game.furthest) : '—', 'far'],
     ['Highest', game.highest > 0 ? formatFt(game.highest) : '—', 'high'],
     ['Fastest', game.fastest > 0 ? formatMph(mphFromSpeed(game.fastest)) : '—', 'fast'],
+    ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long'],
   ];
 }
 
@@ -465,7 +469,7 @@ function paintRecords() {
   recordsEl.replaceChildren();
   appendRecordRows(recordsEl, null);
   titleBestEl.replaceChildren();
-  if (game.furthest > 0 || game.highest > 0 || game.fastest > 0) {
+  if (game.furthest > 0 || game.highest > 0 || game.fastest > 0 || game.longest > 0) {
     appendBestsKicker(titleBestEl);
     appendRecordRows(titleBestEl, null);
   }
@@ -554,7 +558,12 @@ function beginShot(forcedPower) {
   safeAudio(() => audio.unlock());
   const power = forcedPower == null ? powerFromClock(playSeconds()) : forcedPower;
   game.power = power;
-  game.was = { furthest: game.furthest, highest: game.highest, fastest: game.fastest };
+  game.was = {
+    furthest: game.furthest,
+    highest: game.highest,
+    fastest: game.fastest,
+    longest: game.longest,
+  };
   game.kitten = makeState(game.angle, power);
   game.feet = 0;
   game.peakY = game.kitten.y;
@@ -593,6 +602,7 @@ function commitRecords() {
   const far = feetFromTravel(k.startX, k.x);
   const high = feetFromAltitude(game.peakY);
   const fast = game.peakSpeed;
+  const long = k.frame;
   let dirty = false;
   if (far > game.furthest) {
     game.furthest = far;
@@ -607,6 +617,10 @@ function commitRecords() {
     game.fastest = fast;
     dirty = true;
   }
+  if (long > game.longest) {
+    game.longest = long;
+    dirty = true;
+  }
   if (dirty) {
     saveRecords();
     paintRecords();
@@ -619,15 +633,17 @@ function finish() {
   commitRecords();
   game.feet = feetFromTravel(k.startX, k.x);
   const quiet = balloonCrowd() > 1;
-  const marks = quiet ? { far: false, high: false, fast: false } : {
+  const marks = quiet ? { far: false, high: false, fast: false, long: false } : {
     far: game.feet > game.was.furthest,
     high: feetFromAltitude(game.peakY) > game.was.highest,
     fast: game.peakSpeed > game.was.fastest,
+    long: k.frame > game.was.longest,
   };
   const fresh = [];
   if (marks.far) fresh.push('furthest');
   if (marks.high) fresh.push('highest');
   if (marks.fast) fresh.push('fastest');
+  if (marks.long) fresh.push('longest');
   cardKickerEl.textContent = fresh.length === 0 ? 'Score' : fresh.length === 1 ? `New ${fresh[0]}` : 'New records';
   cardFeetEl.textContent = formatFt(game.feet);
   fillShotLine(cardNoteEl, k.cause);
@@ -1546,7 +1562,12 @@ window.__kitten = {
   get angle() { return game.angle; },
   get feet() { return game.feet; },
   get records() {
-    return { furthest: game.furthest, highest: game.highest, fastest: game.fastest };
+    return {
+      furthest: game.furthest,
+      highest: game.highest,
+      fastest: game.fastest,
+      longest: game.longest,
+    };
   },
   get poles() {
     return poles.map((pole) => ({ x: pole.x, feet: pole.feet, rank: pole.rank }));
