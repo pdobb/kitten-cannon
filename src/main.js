@@ -48,6 +48,12 @@ import {
 
 document.getElementById('need-js')?.remove();
 
+const buildEl = document.getElementById('build');
+if (buildEl) {
+  buildEl.textContent = __KC_VERSION__;
+  buildEl.hidden = false;
+}
+
 // The published page is one file. Register only that build, so the dev server
 // does not keep a worker around. updateViaCache skips a stale sw.js.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

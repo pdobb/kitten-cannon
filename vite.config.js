@@ -1,9 +1,28 @@
+import { execSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 
 const root = dirname(fileURLToPath(import.meta.url));
+
+// 0.<n> where n is commits on HEAD. Stamped at dev/build so the title chip
+// tracks each publish without a hand edit.
+function buildVersion() {
+  try {
+    const n = execSync('git rev-list --count HEAD', {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (/^\d+$/.test(n)) return `0.${n}`;
+  } catch {
+    // Outside a git checkout (rare). Keep a stable fallback.
+  }
+  return '0.0';
+}
+
+const KC_VERSION = buildVersion();
 
 // iOS will not run a type="module" script opened from a file. The bundle is
 // one inlined script with no imports, so a plain script tag runs it.
@@ -36,6 +55,9 @@ function classicInlineScript() {
 
 export default defineConfig({
   base: './',
+  define: {
+    __KC_VERSION__: JSON.stringify(KC_VERSION),
+  },
   plugins: [viteSingleFile(), classicInlineScript()],
   build: {
     // The four latin faces are small. Inlining them keeps the published page
