@@ -290,8 +290,8 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
 }
 
 #title .bestline {
-  margin-top: 10px;
-  width: min(340px, 100%);
+  margin-top: 12px;
+  width: min(380px, 100%);
 }
 
 .sheet {
@@ -433,12 +433,18 @@ button.ride-badge:active {
 
 .bestline p.kicker {
   position: relative;
-  margin-top: 12px;
-  margin-bottom: 6px;
+  margin-top: 14px;
+  margin-bottom: 8px;
   padding-top: 16px;
   border-top: 3px solid #2b2118;
   justify-content: center;
   text-align: center;
+}
+
+/* Symmetric side padding keeps “Personal bests” centered while Clear sits in the right lane. */
+.bestline p.kicker.has-clear {
+  padding-left: 5.5rem;
+  padding-right: 5.5rem;
 }
 
 .bestline p.kicker span,
@@ -455,10 +461,10 @@ button.ride-badge:active {
 .bestline .bests-clear {
   position: absolute;
   right: 0;
-  top: calc(50% + 5px);
+  top: calc(50% + 6px);
   transform: translateY(-50%);
   margin: 0;
-  padding: 3px 10px 4px;
+  padding: 4px 11px 5px;
   border: 2px solid #2b2118;
   border-radius: 999px;
   background: #fff6e4;
@@ -481,7 +487,7 @@ button.ride-badge:active {
 }
 
 #title .bestline p:not(.kicker) {
-  padding: 4px 0;
+  padding: 5px 0;
 }
 
 .sheet .fresh b {
@@ -1003,10 +1009,15 @@ kbd {
   gap: 8px;
 }
 
+/* Corner padding parks the chip outside the letters; matching negative margin
+   keeps the mark from pushing the lede/start row down. */
 #title .title-mark {
   position: relative;
   display: inline-block;
   max-width: 100%;
+  padding: 0 56px 22px 0;
+  margin: 0 -56px -22px 0;
+  box-sizing: content-box;
 }
 
 #title .title-mark h1 {
@@ -1017,7 +1028,6 @@ kbd {
   position: absolute;
   right: 0;
   bottom: 0;
-  transform: translate(28%, 42%);
   display: inline-block;
   padding: 1px 7px 2px;
   font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -1308,13 +1318,18 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   .sheet p { line-height: 1.15; }
   .sheet p.kicker,
   .bestline p.kicker { margin-top: 8px; }
-  .bestline p.kicker { padding-top: 12px; margin-bottom: 4px; }
+  .bestline p.kicker { padding-top: 12px; margin-bottom: 6px; }
+  .bestline p.kicker.has-clear { padding-left: 3.75rem; padding-right: 3.75rem; }
   .bestline p.kicker span,
   .sheet p.kicker span,
   .sheet p.endings-kicker { font-size: 13px; letter-spacing: 0.1em; }
-  .bestline .bests-clear { font-size: 11px; padding: 2px 8px 3px; }
+  .bestline .bests-clear { font-size: 11px; padding: 3px 9px 4px; }
   #title .panel { gap: 6px; }
-  #title .bestline { margin-top: 4px; }
+  #title .bestline { margin-top: 6px; }
+  #title .title-mark {
+    padding: 0 50px 20px 0;
+    margin: 0 -50px -20px 0;
+  }
   .ride-badge svg { width: 22px; height: 22px; }
   .ride-badge b { font-size: 13px; }
   .ride-badge-tip { max-width: min(200px, calc(100vw - 20px)); padding: 6px 8px; border-radius: 10px; }
