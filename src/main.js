@@ -1362,6 +1362,7 @@ document.addEventListener('webkitfullscreenchange', paintFullscreen);
 bindTap(document.querySelector('#start'), startAim);
 bindTap(document.querySelector('#again'), retry);
 bindTap(document.querySelector('#card-back'), goTitle);
+bindTap(document.querySelector('#pause-back'), goTitle);
 bindTap(document.querySelector('#reload'), reloadField);
 
 function paintMute(muted) {
