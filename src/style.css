@@ -1081,17 +1081,18 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
 }
 
 /* Landscape phones are wider than 720px, so the portrait left insets never
-   fire. Pin the left HUD to the physical screen edge (skip safe-left — the
-   canvas is already full-bleed under the notch). Keep top/bottom on safe-area.
-   Aspect clause covers short-wide layouts when pointer:coarse is unavailable. */
+   fire. Sit near the physical left edge (skip full safe-left — the canvas is
+   full-bleed under the notch) but inset enough to clear the rounded bezel.
+   Keep top/bottom on safe-area. Aspect clause covers short-wide layouts when
+   pointer:coarse is unavailable. */
 @media (max-height: 500px) and (pointer: coarse),
   (max-height: 500px) and (hover: none),
   (max-height: 500px) and (min-aspect-ratio: 6 / 5) {
   #records {
     top: calc(8px + var(--safe-top));
-    left: 8px;
+    left: 16px;
     min-width: 164px;
-    max-width: calc(100% - 72px - var(--safe-right));
+    max-width: calc(100% - 80px - var(--safe-right));
     padding: 8px 10px 9px;
   }
   #records span { font-size: 12px; }
@@ -1101,8 +1102,8 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     right: auto;
     bottom: calc(8px + var(--safe-bottom));
   }
-  #mute { left: 8px; }
-  #pause-btn { left: 64px; }
+  #mute { left: 16px; }
+  #pause-btn { left: 72px; }
 }
 
 @media (max-height: 520px) {
