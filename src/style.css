@@ -143,7 +143,7 @@ html.installed #app {
   box-shadow: inset 0 0 140px rgba(40, 36, 20, 0.22);
 }
 
-button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
+button, .panel, h1, h2, #distance, #banner, #power-cheer {
   font-family: "Lilita One", "Trebuchet MS", sans-serif;
   font-weight: 400;
 }
@@ -216,7 +216,8 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
   top: calc(16px + var(--safe-top));
   left: calc(16px + var(--safe-left));
   right: auto;
-  min-width: 188px;
+  width: 204px;
+  box-sizing: border-box;
   padding: 10px 14px 11px;
   background: #fff6e4;
   border: 3px solid #2b2118;
@@ -244,6 +245,16 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
 #records b, .bestline b, .sheet b {
   font-size: 18px;
   font-variant-numeric: tabular-nums;
+}
+
+/* Live bests recount during flight. Fixed value width + Nunito tabular
+   figures keep the chip from growing and shrinking with each digit. */
+#records b {
+  flex: 0 0 9.5ch;
+  width: 9.5ch;
+  text-align: right;
+  font-family: Nunito, sans-serif;
+  font-weight: 800;
 }
 
 .bestline, .sheet {
@@ -986,9 +997,13 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     top: calc(10px + var(--safe-top));
     left: calc(10px + var(--safe-left));
     right: auto;
-    min-width: 164px;
+    width: 180px;
     max-width: calc(100% - 78px - var(--safe-left) - var(--safe-right));
     padding: 8px 10px 9px;
+  }
+  #records b {
+    flex-basis: 8.5ch;
+    width: 8.5ch;
   }
   #fullscreen {
     top: calc(10px + var(--safe-top));
