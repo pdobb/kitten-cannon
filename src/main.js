@@ -1133,6 +1133,44 @@ function retry() {
   startAim();
 }
 
+// Leave the score card for the start screen. Same field, kitten back on the barrel.
+function goTitle() {
+  if (wipeOpen()) return;
+  if (game.paused) setPaused(false);
+  if (game.phase === 'title') return;
+  closeBadgeTips();
+  bannerEl.classList.remove('show');
+  bannerEl.textContent = '';
+  powerCheerEl.className = '';
+  powerCheerEl.replaceChildren();
+  distanceEl.textContent = formatFt(0);
+  altitudeEl.textContent = `↑ ${formatFt(0)}`;
+  altitudeEl.dataset.tier = '0';
+  altitudeEl.classList.remove('pop');
+  speedEl.textContent = formatSpeed(0);
+  speedEl.classList.remove('terminal');
+  timeEl.textContent = formatFlight(0);
+  game.kitten = null;
+  game.feet = 0;
+  game.peakY = 0;
+  game.peakSpeed = 0;
+  game.hold = 0;
+  game.squash = 0;
+  game.sink = 0;
+  game.recoil = 0;
+  game.snap = true;
+  cam.shake = 0;
+  hold.ArrowUp = 0;
+  hold.ArrowDown = 0;
+  kitten.mesh.visible = true;
+  stake.visible = false;
+  seatKitten();
+  const home = aimFocus();
+  cam.x = home.x;
+  cam.y = home.y;
+  setPhase('title');
+}
+
 function onEvent(event) {
   const k = game.kitten;
   if (!event) return;
@@ -1363,6 +1401,7 @@ document.addEventListener('webkitfullscreenchange', paintFullscreen);
 
 bindTap(document.querySelector('#start'), startAim);
 bindTap(document.querySelector('#again'), retry);
+bindTap(document.querySelector('#card-back'), goTitle);
 bindTap(document.querySelector('#reload'), reloadField);
 
 function paintMute(muted) {
@@ -1435,12 +1474,15 @@ wipeEl.addEventListener('pointerdown', (e) => {
 // Buttons keep their own taps.
 let touchAim = null;
 function fieldTarget(target) {
-  return !(target && target.closest && target.closest('button, a, #build, #wipe'));
+  // Cream dialog panels absorb taps so they do not Start / Fire again.
+  return !(target && target.closest && target.closest(
+    'button, a, #build, #wipe, #title .panel, #card .panel, #pause .panel',
+  ));
 }
 // A long press on the field must not start a selection. The stats cards
 // and the pause card are the only text a player can select.
 app.addEventListener('selectstart', (event) => {
-  const panel = event.target.closest && event.target.closest('#card .panel, #pause .panel, #wipe .panel');
+  const panel = event.target.closest && event.target.closest('#title .panel, #card .panel, #pause .panel, #wipe .panel');
   if (panel && !(event.target.closest && event.target.closest('button'))) return;
   event.preventDefault();
 });

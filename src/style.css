@@ -458,6 +458,41 @@ button.ride-badge:active {
   -webkit-touch-callout: default;
 }
 
+#card-back {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 3px solid #2b2118;
+  background: #fff6e4;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 #2b2118;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#card-back svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+#card-back:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+#card .panel:has(#card-back) .eyebrow {
+  padding-left: 44px;
+  padding-right: 44px;
+}
+
 #wipe .panel {
   width: min(360px, 100%);
 }
@@ -1203,6 +1238,9 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     padding: 4px 14px;
   }
   #card .panel, #pause .panel { padding: 8px 14px; gap: 4px; }
+  #card-back { top: 8px; left: 8px; width: 36px; height: 36px; border-radius: 10px; }
+  #card-back svg { width: 20px; height: 20px; }
+  #card .panel:has(#card-back) .eyebrow { padding-left: 40px; padding-right: 40px; }
   #card h2, #pause h2 { font-size: 26px; }
   #card-note, #pause-note { font-size: 13px; line-height: 1.2; }
   .sheet { gap: 0; }
