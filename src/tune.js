@@ -100,6 +100,11 @@ export function atTerminalSpeed(vx) {
   return mphFromSpeed(vx) >= SPEED_MAX_MPH;
 }
 
+// Peak rightward speed that hits the 256 mph cap.
+export function reachedTerminal(vx) {
+  return atTerminalSpeed(vx);
+}
+
 export function formatSpeed(vx) {
   const label = `→ ${formatMph(mphFromSpeed(vx))}`;
   return atTerminalSpeed(vx) ? `${label} MAX` : label;

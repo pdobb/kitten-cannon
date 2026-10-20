@@ -16,6 +16,7 @@ import {
   launchPoint,
   mphFromSpeed,
   powerPercent,
+  reachedTerminal,
   rightwardSpeed,
   POWER_MAX,
   POWER_MIN,
@@ -55,6 +56,8 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(formatMph(20), '20 mph');
   assert.equal(mphFromSpeed(SPEED_MAX), SPEED_MAX_MPH);
   assert.ok(atTerminalSpeed(SPEED_MAX));
+  assert.equal(reachedTerminal(SPEED_MAX), true);
+  assert.equal(reachedTerminal(SPEED_MAX * 0.5), false);
   assert.equal(formatSpeed(30), '→ 20 mph');
   assert.equal(formatSpeed(SPEED_MAX), `→ ${SPEED_MAX_MPH} mph MAX`);
   assert.equal(flightSeconds(0), 0);
