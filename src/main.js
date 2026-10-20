@@ -1122,42 +1122,13 @@ function retry() {
   startAim();
 }
 
-// Leave the score card for the start screen. Same field, kitten back on the barrel.
+// Leave the score card for the start screen and roll a fresh field (same as New field).
 function goTitle() {
   if (wipeOpen()) return;
-  if (game.paused) setPaused(false);
-  if (game.phase === 'title') return;
   closeBadgeTips();
-  bannerEl.classList.remove('show');
-  bannerEl.textContent = '';
-  powerCheerEl.className = '';
-  powerCheerEl.replaceChildren();
-  distanceEl.textContent = formatFt(0);
-  altitudeEl.textContent = `↑ ${formatFt(0)}`;
-  altitudeEl.dataset.tier = '0';
-  altitudeEl.classList.remove('pop');
-  speedEl.textContent = formatSpeed(0);
-  speedEl.classList.remove('terminal');
-  timeEl.textContent = formatFlight(0);
-  game.kitten = null;
-  game.feet = 0;
-  game.peakY = 0;
-  game.peakSpeed = 0;
-  game.hold = 0;
-  game.squash = 0;
-  game.sink = 0;
-  game.recoil = 0;
-  game.snap = true;
-  cam.shake = 0;
-  hold.ArrowUp = 0;
-  hold.ArrowDown = 0;
-  kitten.mesh.visible = true;
-  stake.visible = false;
-  seatKitten();
-  const home = aimFocus();
-  cam.x = home.x;
-  cam.y = home.y;
-  setPhase('title');
+  // reloadField keeps the title card when phase is already title.
+  game.phase = 'title';
+  reloadField();
 }
 
 function onEvent(event) {

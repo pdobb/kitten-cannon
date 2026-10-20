@@ -430,6 +430,8 @@ button.ride-badge:active {
   margin-top: 4px;
   padding-top: 10px;
   border-top: 3px solid #2b2118;
+  justify-content: center;
+  text-align: center;
 }
 
 .bestline p.kicker span,
