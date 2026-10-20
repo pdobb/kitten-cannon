@@ -216,7 +216,10 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   top: calc(16px + var(--safe-top));
   left: calc(16px + var(--safe-left));
   right: auto;
-  width: 204px;
+  /* Floor for empty/short bests. Grow when a longer value needs room. */
+  min-width: 188px;
+  width: max-content;
+  max-width: calc(100% - 32px - var(--safe-left) - var(--safe-right));
   box-sizing: border-box;
   padding: 10px 14px 11px;
   background: #fff6e4;
@@ -235,6 +238,10 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   line-height: 1.35;
 }
 
+#records p {
+  white-space: nowrap;
+}
+
 #records span, .bestline span, .sheet span {
   color: #4a3018;
   font-size: 13px;
@@ -247,14 +254,14 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   font-variant-numeric: tabular-nums;
 }
 
-/* Live bests recount during flight. Fixed value width + Nunito tabular
-   figures keep the chip from growing and shrinking with each digit. */
+/* Live bests grow with the value. Nunito + tabular nums keep digits steady
+   while the chip width follows the longest row. */
 #records b {
-  flex: 0 0 9.5ch;
-  width: 9.5ch;
+  flex: 0 0 auto;
   text-align: right;
   font-family: Nunito, sans-serif;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .bestline, .sheet {
@@ -1002,13 +1009,9 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     top: calc(10px + var(--safe-top));
     left: calc(10px + var(--safe-left));
     right: auto;
-    width: 180px;
+    min-width: 164px;
     max-width: calc(100% - 78px - var(--safe-left) - var(--safe-right));
     padding: 8px 10px 9px;
-  }
-  #records b {
-    flex-basis: 8.5ch;
-    width: 8.5ch;
   }
   #fullscreen {
     top: calc(10px + var(--safe-top));
