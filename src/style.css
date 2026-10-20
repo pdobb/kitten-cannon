@@ -999,7 +999,8 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     justify-content: center;
   }
   #meter .barwrap { width: auto; flex: 1; max-width: 280px; }
-  #scoreblock { top: calc(118px + var(--safe-top)); }
+  /* Clear a 4-row bests chip (top ~10px + ~120px tall) so distance does not sit on it. */
+  #scoreblock { top: calc(148px + var(--safe-top)); }
   #vectors { gap: 14px; font-size: 16px; white-space: normal; flex-wrap: wrap; }
   #altitude[data-tier="1"] { font-size: 18px; }
   #altitude[data-tier="2"] { font-size: 21px; }
@@ -1080,16 +1081,17 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
 }
 
 /* Landscape phones are wider than 720px, so the portrait left insets never
-   fire. Pull the left HUD flush to the safe edge. Aspect clause covers
-   short-wide layouts when pointer:coarse is unavailable (desktop shrink). */
+   fire. Pin the left HUD to the physical screen edge (skip safe-left — the
+   canvas is already full-bleed under the notch). Keep top/bottom on safe-area.
+   Aspect clause covers short-wide layouts when pointer:coarse is unavailable. */
 @media (max-height: 500px) and (pointer: coarse),
   (max-height: 500px) and (hover: none),
   (max-height: 500px) and (min-aspect-ratio: 6 / 5) {
   #records {
     top: calc(8px + var(--safe-top));
-    left: calc(8px + var(--safe-left));
+    left: 8px;
     min-width: 164px;
-    max-width: calc(100% - 72px - var(--safe-left) - var(--safe-right));
+    max-width: calc(100% - 72px - var(--safe-right));
     padding: 8px 10px 9px;
   }
   #records span { font-size: 12px; }
@@ -1099,8 +1101,8 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     right: auto;
     bottom: calc(8px + var(--safe-bottom));
   }
-  #mute { left: calc(8px + var(--safe-left)); }
-  #pause-btn { left: calc(64px + var(--safe-left)); }
+  #mute { left: 8px; }
+  #pause-btn { left: 64px; }
 }
 
 @media (max-height: 520px) {
