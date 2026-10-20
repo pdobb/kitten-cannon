@@ -29,10 +29,12 @@ import {
   barrelMuzzle,
   feetFromAltitude,
   feetFromTravel,
+  atTerminalSpeed,
   flightSeconds,
   formatFlight,
   formatFt,
   formatMph,
+  formatSpeed,
   launchPoint,
   mphFromSpeed,
   rightwardSpeed,
@@ -405,7 +407,7 @@ function fillLiveLine(el, k) {
   ending.textContent = 'So far';
   const stats = document.createElement('span');
   stats.className = 'stats';
-  stats.textContent = `↑ ${formatFt(feetFromAltitude(k.y))} · → ${formatMph(mphFromSpeed(k.vx))} · ${Math.round(game.angle)}° · ${formatFlight(flightSeconds(k.frame))}`;
+  stats.textContent = `↑ ${formatFt(feetFromAltitude(k.y))} · ${formatSpeed(k.vx)} · ${Math.round(game.angle)}° · ${formatFlight(flightSeconds(k.frame))}`;
   el.replaceChildren(ending, stats);
 }
 
@@ -414,7 +416,7 @@ function fillShotLine(el, cause) {
   const parts = [];
   const peakFt = feetFromAltitude(game.peakY);
   parts.push(`↑ ${formatFt(peakFt)}`);
-  parts.push(`→ ${formatMph(mphFromSpeed(game.peakSpeed))}`);
+  parts.push(formatSpeed(game.peakSpeed));
   parts.push(`${Math.round(game.angle)}°`);
   const ending = document.createElement('span');
   ending.className = 'cause';
@@ -564,6 +566,7 @@ function beginShot(forcedPower) {
   game.recoil = 26;
   altitudeEl.dataset.tier = '0';
   altitudeEl.classList.remove('pop');
+  speedEl.classList.remove('terminal');
   timeEl.textContent = formatFlight(0);
   stake.visible = false;
   kitten.mesh.visible = true;
@@ -670,7 +673,8 @@ function reloadField() {
   altitudeEl.textContent = `↑ ${formatFt(0)}`;
   altitudeEl.dataset.tier = '0';
   altitudeEl.classList.remove('pop');
-  speedEl.textContent = `→ ${formatMph(0)}`;
+  speedEl.textContent = formatSpeed(0);
+  speedEl.classList.remove('terminal');
   timeEl.textContent = formatFlight(0);
   game.kitten = null;
   game.feet = 0;
@@ -1310,7 +1314,6 @@ function updateHud() {
     game.feet = feet;
     distanceEl.textContent = formatFt(feet);
     const alt = feetFromAltitude(game.kitten.y);
-    const mph = mphFromSpeed(game.kitten.vx);
     const tier = heightTier(alt);
     const prev = Number(altitudeEl.dataset.tier || 0);
     altitudeEl.dataset.tier = String(tier);
@@ -1320,7 +1323,8 @@ function updateHud() {
       altitudeEl.classList.add('pop');
     }
     altitudeEl.textContent = `↑ ${formatFt(alt)}`;
-    speedEl.textContent = `→ ${formatMph(mph)}`;
+    speedEl.textContent = formatSpeed(game.kitten.vx);
+    speedEl.classList.toggle('terminal', atTerminalSpeed(game.kitten.vx));
     timeEl.textContent = formatFlight(flightSeconds(game.kitten.frame));
   }
   cannon.ticks.visible = game.phase === 'aim' || game.phase === 'title';

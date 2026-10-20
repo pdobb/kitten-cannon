@@ -187,6 +187,10 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
   display: inline-block;
 }
 
+#speed.terminal {
+  color: #ffb703;
+}
+
 #altitude {
   transform-origin: center bottom;
   transition: font-size 0.25s ease, color 0.25s ease;

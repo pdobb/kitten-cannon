@@ -1,22 +1,26 @@
 import assert from 'node:assert/strict';
 import { buildCourse, resetCourse } from './course.js';
-import { createKitten, runUntilDone, step } from './physics.js';
+import { createKitten, resolveHit, runUntilDone, step } from './physics.js';
 import { HIT } from './propspec.js';
 import { skyRgb, spaceBlend, SPACE_FEET } from './sky.js';
 import {
   aimVector,
+  atTerminalSpeed,
   barrelMuzzle,
   feetFromAltitude,
   feetFromTravel,
   flightSeconds,
   formatFlight,
   formatMph,
+  formatSpeed,
   launchPoint,
   mphFromSpeed,
   powerPercent,
   rightwardSpeed,
   POWER_MAX,
   POWER_MIN,
+  SPEED_MAX,
+  SPEED_MAX_MPH,
   GROUND_Y,
   PIXELS_PER_FOOT,
 } from './tune.js';
@@ -49,6 +53,10 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(mphFromSpeed(30), 20);
   assert.equal(mphFromSpeed(-30), 0);
   assert.equal(formatMph(20), '20 mph');
+  assert.equal(mphFromSpeed(SPEED_MAX), SPEED_MAX_MPH);
+  assert.ok(atTerminalSpeed(SPEED_MAX));
+  assert.equal(formatSpeed(30), '→ 20 mph');
+  assert.equal(formatSpeed(SPEED_MAX), `→ ${SPEED_MAX_MPH} mph MAX`);
   assert.equal(flightSeconds(0), 0);
   assert.equal(flightSeconds(30), 1);
   assert.equal(flightSeconds(90), 3);
@@ -129,6 +137,19 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.ok(k.x < crate.x + 25, `the kitten should still be on the crate, x=${k.x}`);
 }
 
+// A long balloon chain stops at 256 mph instead of climbing without a ceiling.
+{
+  const k = createKitten(0, POWER_MAX);
+  k.frame = 20;
+  k.y = 200;
+  for (let i = 0; i < 30; i++) {
+    resolveHit(k, prop('balloon', k.x, 200));
+  }
+  assert.ok(k.vx <= SPEED_MAX + 1e-9, `vx ${k.vx} should stay at or under the cap`);
+  assert.equal(mphFromSpeed(k.vx), SPEED_MAX_MPH);
+  assert.ok(atTerminalSpeed(k.vx));
+}
+
 // Boosts match the Flash formulas. Falling is vy < 0.
 {
   const k = createKitten(10, 20);
@@ -145,7 +166,8 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(crate.spent, true);
 }
 
-// A crate can push past the old 240 px/frame ceiling, and a fast step still hits the wood.
+// A crate can push past the old 240 px/frame ceiling, and a fast step still
+// hits the wood. Speed then stops at the 256 mph cap.
 {
   const k = createKitten(10, 20);
   k.frame = 20;
@@ -166,7 +188,8 @@ function shot(angle, power, props, frames = 30 * 60) {
   fast.vy = 1;
   const far = prop('tnt', 100);
   assert.equal(step(fast, [far]), 'tnt');
-  assert.ok(fast.vx > 2000);
+  assert.equal(fast.vx, SPEED_MAX);
+  assert.ok(atTerminalSpeed(fast.vx));
 }
 
 // The nose on the side of the crate counts, even while the kitten is climbing.

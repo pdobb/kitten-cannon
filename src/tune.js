@@ -92,6 +92,19 @@ export function mphFromSpeed(pxPerFrame) {
   return Math.max(0, Math.round((rightwardSpeed(pxPerFrame) * 3600) / 5280));
 }
 
+// Balloon chains used to climb without a ceiling and stall the step sampler.
+export const SPEED_MAX_MPH = 256;
+export const SPEED_MAX = (SPEED_MAX_MPH * 5280) / 3600;
+
+export function atTerminalSpeed(vx) {
+  return mphFromSpeed(vx) >= SPEED_MAX_MPH;
+}
+
+export function formatSpeed(vx) {
+  const label = `→ ${formatMph(mphFromSpeed(vx))}`;
+  return atTerminalSpeed(vx) ? `${label} MAX` : label;
+}
+
 export function formatFt(n) {
   return `${Math.max(0, Math.round(n)).toLocaleString('en-US')} ft`;
 }

@@ -19,9 +19,15 @@ import {
   GRAVITY,
   GROUND_Y,
   SETTLE,
+  SPEED_MAX,
   aimVector,
   launchPoint,
 } from './tune.js';
+
+export function clampSpeed(k) {
+  if (k.vx > SPEED_MAX) k.vx = SPEED_MAX;
+  else if (k.vx < -SPEED_MAX) k.vx = -SPEED_MAX;
+}
 
 export function createKitten(angleDeg, power) {
   const p = launchPoint(angleDeg);
@@ -120,6 +126,7 @@ function land(k) {
   k.vx *= BOUNCE;
   k.vy = falling * BOUNCE;
   k.turn -= Math.min(14, falling * 0.35);
+  clampSpeed(k);
   return 'bounce';
 }
 
@@ -129,6 +136,7 @@ export function resolveHit(k, prop) {
     k.vx = 5 + k.vx * 1.2;
     prop.spent = true;
     k.turn -= 11;
+    clampSpeed(k);
     return 'tnt';
   }
   if (prop.type === 'balloon') {
@@ -136,6 +144,7 @@ export function resolveHit(k, prop) {
     k.vx = 7 + k.vx * 1.2;
     prop.spent = true;
     k.turn -= 13;
+    clampSpeed(k);
     return 'balloon';
   }
   if (prop.type === 'trampoline') {
@@ -185,8 +194,8 @@ export function step(k, props) {
   k.turn += (target - k.turn) * 0.25;
   k.spin += k.turn;
 
-  // One sample per 10px, with no ceiling. Speeds under the old 480px step match
-  // the capped sampler. Faster than that still walks the crate instead of skipping it.
+  // One sample per 10px. Horizontal speed tops out at SPEED_MAX, so the walk
+  // stays bounded while still catching a crate on a fast boost.
   const samples = Math.max(1, Math.ceil(Math.hypot(k.vx, k.vy) / 10));
   for (let i = 1; i <= samples; i++) {
     const t = i / samples;
