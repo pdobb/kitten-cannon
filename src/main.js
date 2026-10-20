@@ -435,6 +435,46 @@ function saveRecords() {
   }
 }
 
+const BEST_KEYS = [FAR_KEY, HIGH_KEY, FAST_KEY, LONG_KEY, MARS_KEY, TERM_KEY, END_KEY];
+
+function clearBests() {
+  game.furthest = 0;
+  game.furthestX = 0;
+  game.highest = 0;
+  game.fastest = 0;
+  game.longest = 0;
+  game.marsVisits = 0;
+  game.terminalVisits = 0;
+  game.endings = emptyEndings();
+  game.was = { furthest: 0, highest: 0, fastest: 0, longest: 0 };
+  try {
+    for (const key of BEST_KEYS) localStorage.removeItem(key);
+  } catch {
+    // Private mode can refuse storage. Memory still clears for this visit.
+  }
+  for (let i = poles.length - 1; i >= 0; i--) {
+    poles[i].mesh.destroy({ children: true });
+    poles.pop();
+  }
+  paintRecords();
+  paintCardRideBadges();
+  if (game.phase === 'result' && game.kitten) {
+    cardBestEl.replaceChildren();
+    appendPersonalStats(cardBestEl, null, game.kitten.cause);
+    paintCardRideBadges();
+  }
+  if (game.paused) fillPauseCard();
+}
+
+function confirmClearBests() {
+  const ok = window.confirm(
+    'Clear all personal bests on this device?\n\n'
+    + 'This removes furthest, highest, fastest, longest, landing counts, '
+    + 'and the Mars and terminal badges. You cannot undo this.',
+  );
+  if (ok) clearBests();
+}
+
 function xForFeet(feet) {
   return launchPoint(DEFAULT_ANGLE).x + feet * PIXELS_PER_FOOT;
 }
@@ -966,10 +1006,12 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   // Space and Enter start the same visit over. R rebuilds the field in place.
+  // Shift+R clears saved bests after a confirm. It is not listed in the hint.
   if (e.code === 'KeyR') {
     if (e.repeat) return;
     e.preventDefault();
-    reloadField();
+    if (e.shiftKey) confirmClearBests();
+    else reloadField();
     return;
   }
   const accept = e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter';
@@ -1707,4 +1749,5 @@ window.__kitten = {
   },
   retry,
   reload: reloadField,
+  clearBests,
 };
