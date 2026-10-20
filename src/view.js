@@ -8,8 +8,8 @@ export const CAM_Z = 980;
 export const CAM_FOV = 34;
 
 // Landscape phones map a short screenH onto the full frustum, so the kitten
-// reads tiny. Shrink the world half-height a bit (~18% closer).
-const LANDSCAPE_ZOOM = 0.85;
+// reads tiny. Shrink the world half-height (~23.5% closer than portrait).
+const LANDSCAPE_ZOOM = 0.765;
 
 export function viewHalfHeight(screenW = 0, screenH = 0) {
   let halfH = Math.tan((CAM_FOV * Math.PI) / 360) * CAM_Z;

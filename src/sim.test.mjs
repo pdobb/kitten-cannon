@@ -107,7 +107,7 @@ function shot(angle, power, props, frames = 30 * 60) {
 {
   const base = Math.tan((CAM_FOV * Math.PI) / 360) * CAM_Z;
   assert.equal(viewHalfHeight(390, 844), base);
-  assert.equal(viewHalfHeight(844, 390), base * 0.85);
+  assert.equal(viewHalfHeight(844, 390), base * 0.765);
   assert.equal(viewHalfHeight(1280, 720), base);
 }
 

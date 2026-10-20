@@ -1079,6 +1079,30 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #meter { right: calc(12px + var(--safe-right)); }
 }
 
+/* Landscape phones are wider than 720px, so the portrait left insets never
+   fire. Pull the left HUD flush to the safe edge. Aspect clause covers
+   short-wide layouts when pointer:coarse is unavailable (desktop shrink). */
+@media (max-height: 500px) and (pointer: coarse),
+  (max-height: 500px) and (hover: none),
+  (max-height: 500px) and (min-aspect-ratio: 6 / 5) {
+  #records {
+    top: calc(8px + var(--safe-top));
+    left: calc(8px + var(--safe-left));
+    min-width: 164px;
+    max-width: calc(100% - 72px - var(--safe-left) - var(--safe-right));
+    padding: 8px 10px 9px;
+  }
+  #records span { font-size: 12px; }
+  #records b { font-size: 16px; }
+  #mute, #pause-btn {
+    top: auto;
+    right: auto;
+    bottom: calc(8px + var(--safe-bottom));
+  }
+  #mute { left: calc(8px + var(--safe-left)); }
+  #pause-btn { left: calc(64px + var(--safe-left)); }
+}
+
 @media (max-height: 520px) {
   #app,
   #app[data-phase="title"],
