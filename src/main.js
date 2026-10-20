@@ -150,6 +150,9 @@ const cardFeetEl = document.querySelector('#card-feet');
 const cardNoteEl = document.querySelector('#card-note');
 const cardBestEl = document.querySelector('#card-best');
 const padFireEl = document.querySelector('#pad-fire');
+const wipeEl = document.querySelector('#wipe');
+const wipeCancelEl = document.querySelector('#wipe-cancel');
+const wipeConfirmEl = document.querySelector('#wipe-confirm');
 
 const audio = createAudio();
 // A page load rolls a field. Space keeps it. R rolls another. The canonical
@@ -512,13 +515,32 @@ function clearBests() {
   if (game.paused) fillPauseCard();
 }
 
+function wipeOpen() {
+  return !wipeEl.classList.contains('hidden');
+}
+
+function setWipeOpen(on) {
+  const open = !!on;
+  if (open === wipeOpen()) return;
+  wipeEl.classList.toggle('hidden', !open);
+  app.classList.toggle('is-wiping', open);
+  if (open) wipeCancelEl.focus();
+  else if (game.paused) resumeEl.focus();
+}
+
 function confirmClearBests() {
-  const ok = window.confirm(
-    'Clear all personal bests on this device?\n\n'
-    + 'This removes furthest, highest, fastest, longest, landing counts, '
-    + 'and the Mars, terminal, and full-power badges. You cannot undo this.',
-  );
-  if (ok) clearBests();
+  setWipeOpen(true);
+}
+
+function acceptWipe() {
+  if (!wipeOpen()) return;
+  setWipeOpen(false);
+  clearBests();
+}
+
+function cancelWipe() {
+  if (!wipeOpen()) return;
+  setWipeOpen(false);
 }
 
 function xForFeet(feet) {
@@ -1049,12 +1071,27 @@ function toggleBalloons() {
 }
 
 window.addEventListener('keydown', (e) => {
+  if (wipeOpen()) {
+    if (e.repeat) return;
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      cancelWipe();
+    } else if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') {
+      // Keep focus on Cancel by default; Enter activates the focused button.
+      e.preventDefault();
+      if (document.activeElement === wipeConfirmEl) acceptWipe();
+      else cancelWipe();
+    } else if (e.code === 'KeyR' || e.code === 'KeyP' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+      e.preventDefault();
+    }
+    return;
+  }
   if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && noteLane(e.code)) {
     e.preventDefault();
     return;
   }
   // Space and Enter start the same visit over. R rebuilds the field in place.
-  // Shift+R clears saved bests after a confirm. It is not listed in the hint.
+  // Shift+R opens an in-game wipe confirm. It is not listed in the hint.
   if (e.code === 'KeyR') {
     if (e.repeat) return;
     e.preventDefault();
@@ -1209,6 +1246,13 @@ pauseEl.addEventListener('pointerdown', (e) => {
   if (e.target === pauseEl) setPaused(false);
 });
 
+bindTap(wipeCancelEl, cancelWipe);
+bindTap(wipeConfirmEl, acceptWipe);
+wipeEl.addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  if (e.target === wipeEl) cancelWipe();
+});
+
 // A tap or a mouse click on the field is Enter. A touch drag aims.
 // Up and left raise the barrel. Down and right lower it. The barrel pivots,
 // so a diagonal or an arc has to count on both axes. A mouse drag does not aim.
@@ -1220,7 +1264,7 @@ function fieldTarget(target) {
 // A long press on the field must not start a selection. The stats cards
 // and the pause card are the only text a player can select.
 app.addEventListener('selectstart', (event) => {
-  const panel = event.target.closest && event.target.closest('#card .panel, #pause .panel');
+  const panel = event.target.closest && event.target.closest('#card .panel, #pause .panel, #wipe .panel');
   if (panel && !(event.target.closest && event.target.closest('button'))) return;
   event.preventDefault();
 });

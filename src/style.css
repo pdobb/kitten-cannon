@@ -360,7 +360,8 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
 }
 
 #card .panel,
-#pause .panel {
+#pause .panel,
+#wipe .panel {
   position: relative;
   width: min(400px, 100%);
   gap: 8px;
@@ -370,8 +371,13 @@ button, .panel, h1, h2, #distance, #records b, #banner, #power-cheer {
   -webkit-touch-callout: default;
 }
 
+#wipe .panel {
+  width: min(360px, 100%);
+}
+
 #card .panel button,
-#pause .panel button {
+#pause .panel button,
+#wipe .panel button {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
@@ -731,7 +737,7 @@ kbd {
   vertical-align: 1px;
 }
 
-#title, #card, #pause {
+#title, #card, #pause, #wipe {
   position: absolute;
   inset: 0;
   z-index: 3;
@@ -751,6 +757,33 @@ kbd {
   z-index: 6;
   pointer-events: auto;
   background: rgba(43, 33, 24, 0.35);
+}
+
+#wipe {
+  z-index: 8;
+  pointer-events: auto;
+  background: rgba(43, 33, 24, 0.45);
+}
+
+#wipe .panel {
+  width: min(360px, 100%);
+  gap: 10px;
+  padding: 18px 20px 16px;
+}
+
+#wipe-note {
+  margin: 0;
+  font-family: Nunito, sans-serif;
+  font-weight: 700;
+  font-size: clamp(14px, min(3.6vw, 3vh), 16px);
+  line-height: 1.35;
+  color: #3f2918;
+  text-wrap: balance;
+}
+
+#wipe h2 {
+  font-size: clamp(26px, min(7vw, 6vh), 36px);
+  line-height: 0.95;
 }
 
 .panel { pointer-events: auto; }
@@ -828,7 +861,8 @@ button, #mute, #pause-btn {
   touch-action: manipulation;
 }
 
-button#start, button#again, button#resume, button#reload, #pad button {
+button#start, button#again, button#resume, button#reload,
+button#wipe-cancel, button#wipe-confirm, #pad button {
   font-family: "Lilita One", "Trebuchet MS", sans-serif;
   border: 4px solid #2b2118;
   background: #e23b2e;
@@ -841,12 +875,14 @@ button#start, button#again, button#resume, button#reload, #pad button {
   box-shadow: 4px 4px 0 #2b2118;
 }
 
-button#reload {
+button#reload,
+button#wipe-cancel {
   background: #fff7e8;
   color: #2b2118;
 }
 
-button#start:active, button#again:active, button#resume:active, button#reload:active, #pad button:active {
+button#start:active, button#again:active, button#resume:active, button#reload:active,
+button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   transform: translate(3px, 3px);
   box-shadow: none;
 }
