@@ -3,6 +3,7 @@ import { buildCourse, resetCourse } from './course.js';
 import { createKitten, resolveHit, runUntilDone, step } from './physics.js';
 import { HIT } from './propspec.js';
 import { skyRgb, spaceBlend, reachedMars, SPACE_FEET } from './sky.js';
+import { CAM_FOV, CAM_Z, viewHalfHeight } from './view.js';
 import {
   aimVector,
   atTerminalSpeed,
@@ -100,6 +101,14 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(reachedMars(999), false);
   assert.equal(reachedMars(SPACE_FEET), true);
   assert.equal(reachedMars(2000), true);
+}
+
+// Landscape phones tighten the vertical frustum so the kitten stays readable.
+{
+  const base = Math.tan((CAM_FOV * Math.PI) / 360) * CAM_Z;
+  assert.equal(viewHalfHeight(390, 844), base);
+  assert.equal(viewHalfHeight(844, 390), base * 0.85);
+  assert.equal(viewHalfHeight(1280, 720), base);
 }
 
 // The aim vector is the only barrel direction. 0° is +X, 90° is +Y.

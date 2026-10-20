@@ -1597,7 +1597,7 @@ function updateProps(time, dt) {
 function aimFocus() {
   const w = canvas.clientWidth || window.innerWidth;
   const h = canvas.clientHeight || window.innerHeight;
-  const halfW = viewHalfWidth(w / Math.max(1, h));
+  const halfW = viewHalfWidth(w, h);
   // x=490 looks down the field. A narrow view then starts past the wheels.
   return { x: Math.min(490, CANNON_X + PIVOT_X - 84 + halfW), y: 120, halfW };
 }
