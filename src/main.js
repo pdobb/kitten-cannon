@@ -598,24 +598,27 @@ function afterStep() {
 
 function commitRecords() {
   const k = game.kitten;
-  if (!k || balloonCrowd() > 1) return;
+  if (!k) return;
+  const quiet = balloonCrowd() > 1;
   const far = feetFromTravel(k.startX, k.x);
   const high = feetFromAltitude(game.peakY);
   const fast = game.peakSpeed;
   const long = k.frame;
   let dirty = false;
-  if (far > game.furthest) {
-    game.furthest = far;
-    game.furthestX = k.x;
-    dirty = true;
-  }
-  if (high > game.highest) {
-    game.highest = high;
-    dirty = true;
-  }
-  if (fast > game.fastest) {
-    game.fastest = fast;
-    dirty = true;
+  if (!quiet) {
+    if (far > game.furthest) {
+      game.furthest = far;
+      game.furthestX = k.x;
+      dirty = true;
+    }
+    if (high > game.highest) {
+      game.highest = high;
+      dirty = true;
+    }
+    if (fast > game.fastest) {
+      game.fastest = fast;
+      dirty = true;
+    }
   }
   if (long > game.longest) {
     game.longest = long;
@@ -633,10 +636,10 @@ function finish() {
   commitRecords();
   game.feet = feetFromTravel(k.startX, k.x);
   const quiet = balloonCrowd() > 1;
-  const marks = quiet ? { far: false, high: false, fast: false, long: false } : {
-    far: game.feet > game.was.furthest,
-    high: feetFromAltitude(game.peakY) > game.was.highest,
-    fast: game.peakSpeed > game.was.fastest,
+  const marks = {
+    far: !quiet && game.feet > game.was.furthest,
+    high: !quiet && feetFromAltitude(game.peakY) > game.was.highest,
+    fast: !quiet && game.peakSpeed > game.was.fastest,
     long: k.frame > game.was.longest,
   };
   const fresh = [];
