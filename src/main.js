@@ -137,10 +137,8 @@ keepScreenAwake();
 
 const FAR_KEY = 'kitten-cannon-best-ft';
 const HIGH_KEY = 'kitten-cannon-highest-ft';
-// The old key stored the kitten's full speed, dive included. It is not a
-// rightward record, so it does not carry over.
-const FAST_KEY = 'kitten-cannon-fastest-x';
 const LONG_KEY = 'kitten-cannon-longest-frames';
+// Fastest used to be a personal-best row. The terminal badge covers speed now.
 const MARS_KEY = 'kitten-cannon-mars-visits';
 const TERM_KEY = 'kitten-cannon-terminal-visits';
 const POWER_KEY = 'kitten-cannon-fullpower-visits';
@@ -279,14 +277,13 @@ const game = {
   furthest: loadNumber(FAR_KEY),
   furthestX: 0,
   highest: loadNumber(HIGH_KEY),
-  fastest: loadNumber(FAST_KEY),
   longest: loadNumber(LONG_KEY),
   marsVisits: loadNumber(MARS_KEY),
   terminalVisits: loadNumber(TERM_KEY),
   fullPowerVisits: loadNumber(POWER_KEY),
   peakY: 0,
   peakSpeed: 0,
-  was: { furthest: 0, highest: 0, fastest: 0, longest: 0 },
+  was: { furthest: 0, highest: 0, longest: 0 },
   // One award per badge kind per ride. Reset in beginShot.
   badgeArmed: { mars: false, terminal: false, power: false },
   hold: 0,
@@ -624,7 +621,9 @@ function appendEndingRows(el, cause, kicker = true) {
 }
 
 try {
+  // Drop retired fastest personal-best keys so old installs do not keep stale data.
   localStorage.removeItem('kitten-cannon-fastest');
+  localStorage.removeItem('kitten-cannon-fastest-x');
 } catch {
   // Private mode can refuse storage.
 }
@@ -633,26 +632,24 @@ function saveRecords() {
   try {
     localStorage.setItem(FAR_KEY, String(game.furthest));
     localStorage.setItem(HIGH_KEY, String(game.highest));
-    localStorage.setItem(FAST_KEY, String(game.fastest));
     localStorage.setItem(LONG_KEY, String(game.longest));
   } catch {
     // Private mode can refuse storage. The score still shows for this run.
   }
 }
 
-const BEST_KEYS = [FAR_KEY, HIGH_KEY, FAST_KEY, LONG_KEY, MARS_KEY, TERM_KEY, POWER_KEY, END_KEY];
+const BEST_KEYS = [FAR_KEY, HIGH_KEY, LONG_KEY, MARS_KEY, TERM_KEY, POWER_KEY, END_KEY];
 
 function clearBests() {
   game.furthest = 0;
   game.furthestX = 0;
   game.highest = 0;
-  game.fastest = 0;
   game.longest = 0;
   game.marsVisits = 0;
   game.terminalVisits = 0;
   game.fullPowerVisits = 0;
   game.endings = emptyEndings();
-  game.was = { furthest: 0, highest: 0, fastest: 0, longest: 0 };
+  game.was = { furthest: 0, highest: 0, longest: 0 };
   try {
     for (const key of BEST_KEYS) localStorage.removeItem(key);
   } catch {
@@ -775,7 +772,6 @@ function recordRows() {
   return [
     ['Furthest', game.furthest > 0 ? formatFt(game.furthest) : '—', 'far'],
     ['Highest', game.highest > 0 ? formatFt(game.highest) : '—', 'high'],
-    ['Fastest', game.fastest > 0 ? formatMph(mphFromSpeed(game.fastest)) : '—', 'fast'],
     ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long'],
   ];
 }
@@ -853,12 +849,7 @@ function paintRecords() {
   recordsEl.replaceChildren();
   appendRecordRows(recordsEl, null);
   titleBestEl.replaceChildren();
-  if (
-    game.furthest > 0
-    || game.highest > 0
-    || game.fastest > 0
-    || game.longest > 0
-  ) {
+  if (game.furthest > 0 || game.highest > 0 || game.longest > 0) {
     appendBestsKicker(titleBestEl);
     appendRecordRows(titleBestEl, null);
   }
@@ -951,7 +942,6 @@ function beginShot(forcedPower) {
   game.was = {
     furthest: game.furthest,
     highest: game.highest,
-    fastest: game.fastest,
     longest: game.longest,
   };
   game.badgeArmed = { mars: false, terminal: false, power: false };
@@ -996,7 +986,6 @@ function commitRecords() {
   const quiet = balloonCrowd() > 1;
   const far = feetFromTravel(k.startX, k.x);
   const high = feetFromAltitude(game.peakY);
-  const fast = game.peakSpeed;
   const long = k.frame;
   let dirty = false;
   if (!quiet) {
@@ -1007,10 +996,6 @@ function commitRecords() {
     }
     if (high > game.highest) {
       game.highest = high;
-      dirty = true;
-    }
-    if (fast > game.fastest) {
-      game.fastest = fast;
       dirty = true;
     }
   }
@@ -1033,13 +1018,11 @@ function finish() {
   const marks = {
     far: !quiet && game.feet > game.was.furthest,
     high: !quiet && feetFromAltitude(game.peakY) > game.was.highest,
-    fast: !quiet && game.peakSpeed > game.was.fastest,
     long: k.frame > game.was.longest,
   };
   const fresh = [];
   if (marks.far) fresh.push('furthest');
   if (marks.high) fresh.push('highest');
-  if (marks.fast) fresh.push('fastest');
   if (marks.long) fresh.push('longest');
   cardKickerEl.textContent = fresh.length === 0 ? 'Score' : fresh.length === 1 ? `New ${fresh[0]}` : 'New records';
   cardFeetEl.textContent = formatFt(game.feet);
@@ -2059,7 +2042,6 @@ window.__kitten = {
     return {
       furthest: game.furthest,
       highest: game.highest,
-      fastest: game.fastest,
       longest: game.longest,
       marsVisits: game.marsVisits,
       terminalVisits: game.terminalVisits,
