@@ -428,26 +428,69 @@ const BADGE_LABEL = {
   mars: 'Mars',
 };
 
+const BADGE_TIP = {
+  terminal: 'Hit the 256 mph speed cap on a ride.',
+  power: 'Launched at 100% power.',
+  mars: 'Climbed to 1,000 ft — high enough to see Mars.',
+};
+
 function rideBadgeIcon(kind) {
   if (kind === 'mars') return marsDiscSvg();
   if (kind === 'power') return fullPowerDiscSvg();
   return terminalDiscSvg();
 }
 
+function closeBadgeTips(except = null) {
+  document.querySelectorAll('.ride-badge.is-open').forEach((badge) => {
+    if (badge === except) return;
+    badge.classList.remove('is-open');
+    badge.setAttribute('aria-expanded', 'false');
+    const tip = badge.querySelector('.ride-badge-tip');
+    if (tip) tip.hidden = true;
+  });
+}
+
+function toggleBadgeTip(badge) {
+  const open = badge.classList.contains('is-open');
+  closeBadgeTips();
+  if (open) return;
+  badge.classList.add('is-open');
+  badge.setAttribute('aria-expanded', 'true');
+  const tip = badge.querySelector('.ride-badge-tip');
+  if (tip) tip.hidden = false;
+}
+
 function rideBadgeEl(kind, count, { pop = false } = {}) {
-  const badge = document.createElement('div');
+  const badge = document.createElement('button');
+  badge.type = 'button';
   badge.className = pop ? `ride-badge ${kind} pop` : `ride-badge ${kind}`;
-  badge.setAttribute('role', 'img');
-  badge.setAttribute('aria-label', `${BADGE_LABEL[kind]} ×${count}`);
+  badge.setAttribute('aria-expanded', 'false');
+  badge.setAttribute('aria-label', `${BADGE_LABEL[kind]} ×${count}. Show what this badge means.`);
   badge.append(rideBadgeIcon(kind));
   const mark = document.createElement('b');
   mark.textContent = `×${count}`;
   badge.append(mark);
+  const tip = document.createElement('span');
+  tip.className = 'ride-badge-tip';
+  tip.hidden = true;
+  tip.setAttribute('role', 'tooltip');
+  const title = document.createElement('strong');
+  title.textContent = BADGE_LABEL[kind];
+  const body = document.createElement('span');
+  body.textContent = BADGE_TIP[kind];
+  tip.append(title, body);
+  badge.append(tip);
+  badge.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleBadgeTip(badge);
+  });
   return badge;
 }
 
 function paintRideBadges(host, { marsPop = false, termPop = false, powerPop = false } = {}) {
   if (!host) return;
+  closeBadgeTips();
   host.querySelectorAll('.ride-badges').forEach((node) => node.remove());
   // Legacy class from the first Mars-only badge.
   host.querySelectorAll('.mars-badge').forEach((node) => node.remove());
@@ -1155,6 +1198,11 @@ window.addEventListener('keydown', (e) => {
     }
     return;
   }
+  if (e.code === 'Escape' && document.querySelector('.ride-badge.is-open')) {
+    e.preventDefault();
+    closeBadgeTips();
+    return;
+  }
   if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && noteLane(e.code)) {
     e.preventDefault();
     return;
@@ -1339,6 +1387,7 @@ app.addEventListener('selectstart', (event) => {
 });
 
 app.addEventListener('pointerdown', (e) => {
+  if (!(e.target && e.target.closest && e.target.closest('.ride-badge'))) closeBadgeTips();
   if (wipeOpen() || !fieldTarget(e.target)) return;
   if (e.pointerType !== 'mouse') safeAudio(() => audio.unlock());
   touchAim = {

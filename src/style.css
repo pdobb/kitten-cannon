@@ -291,11 +291,29 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   pointer-events: none;
 }
 
-.ride-badge {
+button.ride-badge {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 5px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   line-height: 1;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+button.ride-badge:active {
+  transform: none;
+  box-shadow: none;
 }
 
 .ride-badge svg {
@@ -321,6 +339,55 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
 
 .ride-badge.power b {
   color: #8d1d1d;
+}
+
+.ride-badge-tip {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(200px, 56vw);
+  padding: 8px 10px;
+  background: #fff6e4;
+  border: 3px solid #2b2118;
+  border-radius: 12px;
+  box-shadow: 3px 3px 0 #2b2118;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  font-family: Nunito, sans-serif;
+  font-weight: 800;
+  color: #2b2118;
+}
+
+.ride-badge-tip strong {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #4a3018;
+  margin: 0 0 3px;
+}
+
+.ride-badge-tip span {
+  display: block;
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 800;
+  color: #2b2118;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ride-badge.is-open {
+  z-index: 2;
+}
+
+.ride-badges:has(.ride-badge.is-open) {
+  z-index: 4;
 }
 
 #card .ride-badges {
@@ -1140,6 +1207,8 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   .sheet p.endings-kicker { font-size: 13px; letter-spacing: 0.1em; }
   .ride-badge svg { width: 22px; height: 22px; }
   .ride-badge b { font-size: 13px; }
+  .ride-badge-tip { max-width: min(180px, 52vw); padding: 6px 8px; border-radius: 10px; }
+  .ride-badge-tip strong, .ride-badge-tip span { font-size: 12px; }
   #card .ride-badges { top: 8px; right: 10px; }
   .bestline .ride-badges { top: 4px; }
   .bestline:has(.ride-badges) p.kicker { padding-right: 48px; }
