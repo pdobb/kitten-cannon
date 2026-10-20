@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { buildCourse, resetCourse } from './course.js';
 import { createKitten, resolveHit, runUntilDone, step } from './physics.js';
 import { HIT } from './propspec.js';
-import { skyRgb, spaceBlend, SPACE_FEET } from './sky.js';
+import { skyRgb, spaceBlend, reachedMars, SPACE_FEET } from './sky.js';
 import {
   aimVector,
   atTerminalSpeed,
@@ -90,6 +90,9 @@ function shot(angle, power, props, frames = 30 * 60) {
   const night = skyRgb(GROUND_Y + SPACE_FEET * PIXELS_PER_FOOT);
   assert.deepEqual(night, [5, 7, 18]);
   assert.deepEqual(skyRgb(GROUND_Y + 4000 * PIXELS_PER_FOOT), night);
+  assert.equal(reachedMars(999), false);
+  assert.equal(reachedMars(SPACE_FEET), true);
+  assert.equal(reachedMars(2000), true);
 }
 
 // The aim vector is the only barrel direction. 0° is +X, 90° is +Y.

@@ -12,6 +12,7 @@ import { buildCourse, resetCourse } from './course.js';
 import { createKitten as makeState, step } from './physics.js';
 import { createFlybys } from './flyby.js';
 import { createScenery } from './scenery.js';
+import { reachedMars } from './sky.js';
 import { applyWorld, viewHalfWidth } from './view.js';
 import {
   ANGLE_MAX,
@@ -91,6 +92,7 @@ const HIGH_KEY = 'kitten-cannon-highest-ft';
 // rightward record, so it does not carry over.
 const FAST_KEY = 'kitten-cannon-fastest-x';
 const LONG_KEY = 'kitten-cannon-longest-frames';
+const MARS_KEY = 'kitten-cannon-mars-visits';
 const END_KEY = 'kitten-cannon-endings';
 const ENDINGS = [
   ['landed', 'Soft landing'],
@@ -225,6 +227,7 @@ const game = {
   highest: loadNumber(HIGH_KEY),
   fastest: loadNumber(FAST_KEY),
   longest: loadNumber(LONG_KEY),
+  marsVisits: loadNumber(MARS_KEY),
   peakY: 0,
   peakSpeed: 0,
   was: { furthest: 0, highest: 0, fastest: 0, longest: 0 },
@@ -278,6 +281,62 @@ function tallyEnding(cause) {
   if (!Object.prototype.hasOwnProperty.call(game.endings, cause)) return;
   game.endings[cause] += 1;
   saveEndings();
+}
+
+function saveMarsVisits() {
+  try {
+    localStorage.setItem(MARS_KEY, String(game.marsVisits));
+  } catch {
+    // Private mode can refuse storage. The count still shows for this visit.
+  }
+}
+
+// Packed balloon lanes stay quiet for this tally, same as landings.
+function tallyMars() {
+  if (balloonCrowd() > 1) return false;
+  if (!reachedMars(feetFromAltitude(game.peakY))) return false;
+  game.marsVisits += 1;
+  saveMarsVisits();
+  return true;
+}
+
+function marsDiscSvg() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = [
+    '<circle cx="12" cy="12" r="11" fill="#c24a28"/>',
+    '<ellipse cx="9" cy="13" rx="5" ry="3.2" fill="#8c2e14"/>',
+    '<ellipse cx="15.5" cy="8.5" rx="2.6" ry="1.8" fill="#9a3418"/>',
+    '<ellipse cx="17.2" cy="12" rx="2.4" ry="6.2" fill="#4a160c" fill-opacity="0.55"/>',
+    '<ellipse cx="12" cy="20.2" rx="3.4" ry="1.5" fill="#fff7f1"/>',
+    '<ellipse cx="11.7" cy="20.5" rx="1.9" ry="0.85" fill="#ffffff"/>',
+  ].join('');
+  return svg;
+}
+
+function marsBadgeEl(count, { pop = false } = {}) {
+  const badge = document.createElement('div');
+  badge.className = pop ? 'mars-badge pop' : 'mars-badge';
+  badge.setAttribute('role', 'img');
+  badge.setAttribute('aria-label', `Mars ×${count}`);
+  badge.append(marsDiscSvg());
+  const mark = document.createElement('b');
+  mark.textContent = `×${count}`;
+  badge.append(mark);
+  return badge;
+}
+
+function paintTitleMarsBadge() {
+  titleBestEl.querySelectorAll('.mars-badge').forEach((node) => node.remove());
+  if (game.marsVisits > 0) titleBestEl.append(marsBadgeEl(game.marsVisits));
+}
+
+function paintCardMarsBadge({ pop = false } = {}) {
+  const panel = cardEl.querySelector('.panel');
+  if (!panel) return;
+  panel.querySelectorAll('.mars-badge').forEach((node) => node.remove());
+  if (game.marsVisits > 0) panel.append(marsBadgeEl(game.marsVisits, { pop }));
 }
 
 function endingTotal() {
@@ -469,9 +528,10 @@ function paintRecords() {
   recordsEl.replaceChildren();
   appendRecordRows(recordsEl, null);
   titleBestEl.replaceChildren();
-  if (game.furthest > 0 || game.highest > 0 || game.fastest > 0 || game.longest > 0) {
+  if (game.furthest > 0 || game.highest > 0 || game.fastest > 0 || game.longest > 0 || game.marsVisits > 0) {
     appendBestsKicker(titleBestEl);
     appendRecordRows(titleBestEl, null);
+    paintTitleMarsBadge();
   }
 }
 
@@ -651,8 +711,11 @@ function finish() {
   cardFeetEl.textContent = formatFt(game.feet);
   fillShotLine(cardNoteEl, k.cause);
   tallyEnding(k.cause);
+  const marsHit = tallyMars();
   cardBestEl.replaceChildren();
   appendPersonalStats(cardBestEl, marks, k.cause);
+  paintCardMarsBadge({ pop: marsHit });
+  paintTitleMarsBadge();
   if (game.furthest > game.was.furthest) plantPole(game.furthestX, game.furthest);
   // The landing stake hides on the next shot. This pole stays for the visit,
   // including a landing that did not set a new furthest.
@@ -1548,6 +1611,11 @@ function applyQuery() {
     onEvent(step(game.kitten, fieldProps(game.kitten)));
     afterStep();
   }
+  // Optional peak= elevates the recorded crest for demos and badge checks.
+  const peakFt = Number(params.get('peak') || 0);
+  if (peakFt > 0) {
+    game.peakY = Math.max(game.peakY, GROUND_Y + peakFt * PIXELS_PER_FOOT);
+  }
   commitRecords();
   if (frames > 0 && game.kitten && game.kitten.dead) game.hold = 0;
 }
@@ -1570,6 +1638,7 @@ window.__kitten = {
       highest: game.highest,
       fastest: game.fastest,
       longest: game.longest,
+      marsVisits: game.marsVisits,
     };
   },
   get poles() {

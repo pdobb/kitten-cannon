@@ -12,6 +12,11 @@ export function spaceBlend(feet) {
   return (feet - TWILIGHT_FEET) / (SPACE_FEET - TWILIGHT_FEET);
 }
 
+// Peak altitude that puts Mars fully in the night sky.
+export function reachedMars(feet) {
+  return feet >= SPACE_FEET;
+}
+
 // Sky color is a function of world height. The warm band sits on world y = 0,
 // the same line the grass and the ranges use. Above 1000 ft the sample is night.
 const SKY_STOPS = [
