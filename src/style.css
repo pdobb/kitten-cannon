@@ -289,6 +289,11 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   position: relative;
 }
 
+#title .bestline {
+  margin-top: 10px;
+  width: min(340px, 100%);
+}
+
 .sheet {
   width: 100%;
   display: flex;
@@ -427,8 +432,10 @@ button.ride-badge:active {
 }
 
 .bestline p.kicker {
-  margin-top: 4px;
-  padding-top: 10px;
+  position: relative;
+  margin-top: 12px;
+  margin-bottom: 6px;
+  padding-top: 16px;
   border-top: 3px solid #2b2118;
   justify-content: center;
   text-align: center;
@@ -442,6 +449,39 @@ button.ride-badge:active {
   font-weight: 800;
   letter-spacing: 0.14em;
   line-height: 1.1;
+}
+
+/* Clear sits on the right; the kicker label stays visually centered. */
+.bestline .bests-clear {
+  position: absolute;
+  right: 0;
+  top: calc(50% + 5px);
+  transform: translateY(-50%);
+  margin: 0;
+  padding: 3px 10px 4px;
+  border: 2px solid #2b2118;
+  border-radius: 999px;
+  background: #fff6e4;
+  box-shadow: 2px 2px 0 #2b2118;
+  font-family: Nunito, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5a3018;
+  cursor: pointer;
+  line-height: 1.2;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.bestline .bests-clear:active {
+  transform: translate(1px, calc(-50% + 1px));
+  box-shadow: none;
+}
+
+#title .bestline p:not(.kicker) {
+  padding: 4px 0;
 }
 
 .sheet .fresh b {
@@ -963,9 +1003,23 @@ kbd {
   gap: 8px;
 }
 
-#build.ver {
+#title .title-mark {
+  position: relative;
   display: inline-block;
-  padding: 2px 8px 3px;
+  max-width: 100%;
+}
+
+#title .title-mark h1 {
+  margin: 0;
+}
+
+#build.ver {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  transform: translate(28%, 42%);
+  display: inline-block;
+  padding: 1px 7px 2px;
   font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 11px;
   font-weight: 700;
@@ -977,11 +1031,9 @@ kbd {
   border-radius: 999px;
   box-shadow: 1px 1px 0 #2b2118;
   line-height: 1.2;
-  touch-action: manipulation;
+  pointer-events: none;
   -webkit-user-select: none;
   user-select: none;
-  -webkit-touch-callout: none;
-  cursor: default;
 }
 
 h1, h2 {
@@ -1255,11 +1307,14 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   .sheet { gap: 0; }
   .sheet p { line-height: 1.15; }
   .sheet p.kicker,
-  .bestline p.kicker { margin-top: 6px; }
-  .bestline p.kicker { padding-top: 6px; }
+  .bestline p.kicker { margin-top: 8px; }
+  .bestline p.kicker { padding-top: 12px; margin-bottom: 4px; }
   .bestline p.kicker span,
   .sheet p.kicker span,
   .sheet p.endings-kicker { font-size: 13px; letter-spacing: 0.1em; }
+  .bestline .bests-clear { font-size: 11px; padding: 2px 8px 3px; }
+  #title .panel { gap: 6px; }
+  #title .bestline { margin-top: 4px; }
   .ride-badge svg { width: 22px; height: 22px; }
   .ride-badge b { font-size: 13px; }
   .ride-badge-tip { max-width: min(200px, calc(100vw - 20px)); padding: 6px 8px; border-radius: 10px; }

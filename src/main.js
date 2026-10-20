@@ -50,48 +50,8 @@ document.getElementById('need-js')?.remove();
 
 const buildEl = document.getElementById('build');
 if (buildEl) {
-  buildEl.textContent = __KC_VERSION__;
+  buildEl.textContent = `v${__KC_VERSION__}`;
   buildEl.hidden = false;
-}
-
-// Phones have no Shift+R. A long-press on the quiet version chip opens the
-// same wipe dialog. Short taps do nothing.
-function bindVersionWipe(el) {
-  if (!el) return;
-  let hold = 0;
-  const ms = 550;
-  const arm = (event) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    // Keep the field tap handler from treating this hold as Start.
-    event.stopPropagation();
-    if (event.cancelable) event.preventDefault();
-    touchAim = null;
-    window.clearTimeout(hold);
-    try {
-      el.setPointerCapture(event.pointerId);
-    } catch {
-      // Capture is best-effort; the hold still runs without it.
-    }
-    hold = window.setTimeout(() => {
-      hold = 0;
-      confirmClearBests();
-    }, ms);
-  };
-  const cancel = (event) => {
-    if (event) event.stopPropagation();
-    if (!hold) return;
-    window.clearTimeout(hold);
-    hold = 0;
-  };
-  el.addEventListener('pointerdown', arm);
-  el.addEventListener('pointerup', cancel);
-  el.addEventListener('pointercancel', cancel);
-  // Touch keeps capture through small finger drift. Mouse still cancels on leave.
-  el.addEventListener('pointerleave', (event) => {
-    if (event.pointerType === 'touch') return;
-    cancel(event);
-  });
-  el.addEventListener('contextmenu', (event) => event.preventDefault());
 }
 
 // The published page is one file. Register only that build, so the dev server
@@ -706,8 +666,6 @@ function confirmClearBests() {
   setWipeOpen(true);
 }
 
-bindVersionWipe(buildEl);
-
 function acceptWipe() {
   if (!wipeOpen()) return;
   setWipeOpen(false);
@@ -817,12 +775,21 @@ function fillShotLine(el, cause) {
   el.replaceChildren(ending, stats);
 }
 
-function appendBestsKicker(el) {
+function appendBestsKicker(el, { clear = false } = {}) {
   const best = document.createElement('p');
-  best.className = 'kicker';
+  best.className = clear ? 'kicker has-clear' : 'kicker';
   const name = document.createElement('span');
   name.textContent = 'Personal bests';
   best.append(name);
+  if (clear) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'bests-clear';
+    btn.textContent = 'Clear';
+    btn.setAttribute('aria-label', 'Clear personal bests');
+    best.append(btn);
+    bindTap(btn, confirmClearBests);
+  }
   el.append(best);
 }
 
@@ -849,8 +816,9 @@ function paintRecords() {
   recordsEl.replaceChildren();
   appendRecordRows(recordsEl, null);
   titleBestEl.replaceChildren();
-  if (game.furthest > 0 || game.highest > 0 || game.longest > 0) {
-    appendBestsKicker(titleBestEl);
+  const hasRows = game.furthest > 0 || game.highest > 0 || game.longest > 0;
+  if (hasRows) {
+    appendBestsKicker(titleBestEl, { clear: true });
     appendRecordRows(titleBestEl, null);
   }
   paintHudRideBadges();
@@ -1437,7 +1405,7 @@ let touchAim = null;
 function fieldTarget(target) {
   // Cream dialog panels absorb taps so they do not Start / Fire again.
   return !(target && target.closest && target.closest(
-    'button, a, #build, #wipe, #title .panel, #card .panel, #pause .panel',
+    'button, a, #wipe, #title .panel, #card .panel, #pause .panel',
   ));
 }
 // A long press on the field must not start a selection. The stats cards
