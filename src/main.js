@@ -135,6 +135,7 @@ const LANE_KEYS = ['KeyS', 'KeyP', 'KeyA', 'KeyC', 'KeyE'];
 const app = document.querySelector('#app');
 const canvas = document.querySelector('#view');
 const distanceEl = document.querySelector('#distance');
+const distanceNumEl = document.querySelector('#distance-num');
 const altitudeEl = document.querySelector('#altitude');
 const speedEl = document.querySelector('#speed');
 const timeEl = document.querySelector('#time');
@@ -1117,7 +1118,8 @@ function reloadField() {
   bannerEl.textContent = '';
   powerCheerEl.className = '';
   powerCheerEl.replaceChildren();
-  distanceEl.textContent = formatFt(0);
+  if (distanceNumEl) distanceNumEl.textContent = '0';
+  else distanceEl.textContent = formatFt(0);
   altitudeEl.textContent = `↑ ${formatFt(0)}`;
   altitudeEl.dataset.tier = '0';
   altitudeEl.classList.remove('pop');
@@ -1507,6 +1509,11 @@ app.addEventListener('pointerdown', (e) => {
   // Dismissing a tip by tapping elsewhere must not also Start / Fire.
   const closedTip = onBadge ? false : closeBadgeTips();
   if (wipeOpen() || !fieldTarget(e.target)) return;
+  // Pause scrim is pointer-events:none so HUD buttons work; a field tap resumes.
+  if (game.paused) {
+    setPaused(false);
+    return;
+  }
   if (e.pointerType !== 'mouse') safeAudio(() => audio.unlock());
   touchAim = {
     id: e.pointerId,
@@ -1822,7 +1829,11 @@ function updateHud() {
   if (game.kitten && (game.phase === 'flight' || game.phase === 'result')) {
     const feet = feetFromTravel(game.kitten.startX, game.kitten.x);
     game.feet = feet;
-    distanceEl.textContent = formatFt(feet);
+    if (distanceNumEl) {
+      distanceNumEl.textContent = Math.max(0, Math.round(feet)).toLocaleString('en-US');
+    } else {
+      distanceEl.textContent = formatFt(feet);
+    }
     const alt = feetFromAltitude(game.kitten.y);
     const tier = heightTier(alt);
     const prev = Number(altitudeEl.dataset.tier || 0);

@@ -158,6 +158,9 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
 }
 
 #distance {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
   font-size: clamp(34px, 5vw, 64px);
   line-height: 0.9;
   color: #fffaf0;
@@ -165,6 +168,20 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   paint-order: stroke fill;
   letter-spacing: 0.5px;
   white-space: nowrap;
+}
+
+/* Fixed number slot so digit/comma changes do not shove "ft" around. Lilita One
+   has no tabular figures, so width is reserved and the value stays right-aligned. */
+#distance-num {
+  display: inline-block;
+  min-width: 8ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+#distance .ft-unit {
+  flex: 0 0 auto;
 }
 
 #vectors {
@@ -750,6 +767,10 @@ button.ride-badge:active {
 #pause-btn { left: calc(72px + var(--safe-left)); }
 
 #mute svg, #pause-btn svg { width: 28px; height: 28px; display: block; }
+
+#pause-btn .play-icon { display: none; }
+#app.is-paused #pause-btn .pause-icon { display: none; }
+#app.is-paused #pause-btn .play-icon { display: block; }
 #mute .slash { display: none; }
 #mute.is-muted .wave { display: none; }
 #mute.is-muted .slash { display: block; }
@@ -767,7 +788,10 @@ button.ride-badge:active {
 #app.is-paused #hint,
 #app.is-paused #pad { visibility: hidden; }
 #app.is-paused #mute,
-#app.is-paused #pause-btn { z-index: 7; }
+#app.is-paused #pause-btn {
+  z-index: 7;
+  pointer-events: auto;
+}
 /* Wipe is the modal. Keep the pause card tucked away under it. */
 #app.is-wiping #pause { visibility: hidden; pointer-events: none; }
 #app.is-wiping #mute,
@@ -1070,9 +1094,10 @@ kbd {
   pointer-events: none;
 }
 
+/* Panel catches taps; scrim is visual only so #mute / #pause-btn stay clickable above. */
 #pause {
   z-index: 6;
-  pointer-events: auto;
+  pointer-events: none;
   background: rgba(43, 33, 24, 0.35);
 }
 
