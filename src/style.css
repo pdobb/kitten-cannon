@@ -1300,11 +1300,11 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     font-size: clamp(48px, 13vw, 64px);
     -webkit-text-stroke-width: 7px;
   }
-  #vectors { gap: 10px; font-size: 15px; white-space: nowrap; flex-wrap: nowrap; }
-  #altitude[data-tier="1"] { font-size: 16px; }
-  #altitude[data-tier="2"] { font-size: 18px; }
-  #altitude[data-tier="3"] { font-size: 20px; }
-  #altitude[data-tier="4"] { font-size: 22px; }
+  #vectors { gap: 14px; font-size: 18px; white-space: nowrap; flex-wrap: nowrap; }
+  #altitude[data-tier="1"] { font-size: 20px; }
+  #altitude[data-tier="2"] { font-size: 23px; }
+  #altitude[data-tier="3"] { font-size: 26px; }
+  #altitude[data-tier="4"] { font-size: 28px; }
   #left-hud {
     top: calc(10px + var(--safe-top));
     left: calc(10px + var(--safe-left));
