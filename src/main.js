@@ -803,6 +803,17 @@ function setPhase(phase) {
   paintRecords();
 }
 
+function resultCardOpen() {
+  return game.phase === 'result' && !cardEl.classList.contains('hidden');
+}
+
+// Peek the landed field. Phase stays result so the next field tap / Space retries.
+function dismissResultCard() {
+  if (!resultCardOpen()) return false;
+  cardEl.classList.add('hidden');
+  return true;
+}
+
 function recordRows() {
   return [
     ['Furthest', game.furthest > 0 ? formatFt(game.furthest) : '—', 'far'],
@@ -1333,6 +1344,10 @@ window.addEventListener('keydown', (e) => {
     if (!e.repeat && (accept || e.code === 'Escape' || e.code === 'KeyP')) setPaused(false);
     return;
   }
+  if (resultCardOpen() && !e.repeat && e.code === 'Escape') {
+    dismissResultCard();
+    return;
+  }
   if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
     if (!e.repeat) press(e.code);
     return;
@@ -1512,6 +1527,9 @@ app.addEventListener('pointerdown', (e) => {
     setPaused(false);
     return;
   }
+  // First press outside the score panel peeks the landed field. Stay in result
+  // so a later tap / Space / Again still retries. Mouse and touch both count.
+  if (dismissResultCard()) return;
   if (e.pointerType !== 'mouse') safeAudio(() => audio.unlock());
   touchAim = {
     id: e.pointerId,
