@@ -876,7 +876,7 @@ button.ride-badge:active {
 
 #power {
   height: 100%;
-  width: 0%;
+  width: var(--power-pct, 0%);
   background: linear-gradient(90deg, #ffd15c 0%, #ff8a1e 55%, #e23b2e 100%);
 }
 
@@ -1167,15 +1167,6 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
 
 @media (max-width: 720px) {
   #hint { display: none; }
-  #meter {
-    bottom: calc(14px + var(--safe-bottom));
-    left: calc(72px + var(--safe-left));
-    right: calc(12px + var(--safe-right));
-    width: auto;
-    transform: none;
-    justify-content: center;
-  }
-  #meter .barwrap { width: auto; flex: 1; max-width: 280px; }
   /* Clear a 4-row bests chip (top ~10px + ~120px tall) so distance does not sit on it. */
   #scoreblock { top: calc(148px + var(--safe-top)); }
   #vectors { gap: 14px; font-size: 16px; white-space: normal; flex-wrap: wrap; }
@@ -1206,6 +1197,74 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   }
   #mute { left: calc(12px + var(--safe-left)); }
   #pause-btn { left: calc(68px + var(--safe-left)); }
+}
+
+/* Portrait phones: vertical power rail on the right so mute keeps the bottom-left
+   and the meter is no longer inset by that chip. Angle stays above the bar. */
+@media (max-width: 720px) and (orientation: portrait) {
+  #meter {
+    left: auto;
+    right: calc(12px + var(--safe-right));
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    max-width: none;
+    padding: 10px 8px;
+    gap: 8px;
+  }
+  #meter .col {
+    min-width: 0;
+    width: 100%;
+  }
+  #meter .col span { font-size: 11px; }
+  #meter .col b { font-size: 18px; }
+  #meter .barwrap {
+    width: 18px;
+    height: min(36vh, 240px);
+    flex: 0 0 auto;
+    max-width: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  #power {
+    width: 100%;
+    height: var(--power-pct, 0%);
+    background: linear-gradient(0deg, #ffd15c 0%, #ff8a1e 55%, #e23b2e 100%);
+  }
+}
+
+/* Narrow landscape (or a short wide window under 720px): keep a bottom bar that
+   clears mute on the left. */
+@media (max-width: 720px) and (orientation: landscape) {
+  #meter {
+    bottom: calc(14px + var(--safe-bottom));
+    left: calc(72px + var(--safe-left));
+    right: calc(12px + var(--safe-right));
+    top: auto;
+    width: auto;
+    transform: none;
+    flex-direction: row;
+    justify-content: center;
+    padding: 8px 14px;
+    gap: 14px;
+  }
+  #meter .barwrap {
+    width: auto;
+    height: 22px;
+    flex: 1;
+    max-width: 280px;
+    display: block;
+  }
+  #power {
+    width: var(--power-pct, 0%);
+    height: 100%;
+    background: linear-gradient(90deg, #ffd15c 0%, #ff8a1e 55%, #e23b2e 100%);
+  }
 }
 
 /* A landscape phone is wider than 720px, so width alone still shows the keys.

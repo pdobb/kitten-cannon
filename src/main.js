@@ -1731,7 +1731,7 @@ function updateHud() {
   const power = powerFromClock(playSeconds());
   const pct = powerPercent(power);
   angleEl.textContent = `${Math.round(game.angle)}°`;
-  powerEl.style.width = `${pct}%`;
+  powerEl.style.setProperty('--power-pct', `${pct}%`);
   powerLabelEl.textContent = `${pct}%`;
   if (game.kitten && (game.phase === 'flight' || game.phase === 'result')) {
     const feet = feetFromTravel(game.kitten.startX, game.kitten.x);
