@@ -510,7 +510,9 @@ function venus() {
   return { mesh: root, parts: { head: main.head, upper: main.upper, lower: main.lower, open: TRAP_OPEN } };
 }
 
-function bombCharge(sparkAt) {
+// World is y-up. Bomb sits below the balloon bag; fuse and spark hang under it.
+function bombCharge() {
+  const root = new Container();
   const g = new Graphics();
   g.moveTo(0, -4);
   g.quadraticCurveTo(5, -12, 0, -18);
@@ -521,21 +523,20 @@ function bombCharge(sparkAt) {
   g.moveTo(3, -17);
   g.quadraticCurveTo(8, -12, 6, -6);
   g.stroke(strokeOf(1.7, 0xc2a15a));
+  root.addChild(g);
 
   const spark = new Graphics();
   spark.circle(0, 0, 2.3);
   spark.fill(0xffb703);
   spark.circle(-0.6, 0.6, 0.8);
   spark.fill(0xfff6d0);
-  spark.position.set(sparkAt[0], sparkAt[1]);
-  return { body: g, spark };
+  spark.position.set(6, -5);
+  root.addChild(spark);
+  return { root, spark };
 }
 
 function bombBalloon(color) {
   const root = new Container();
-  const charge = bombCharge([6, -5]);
-  root.addChild(charge.body);
-
   const bag = new Graphics();
   paint(bag, bag, (p) => p.ellipse(0, 10, 15.5, 18.5), color, 2.5);
   bag.poly([-2.4, -6.5, 2.4, -6.5, 0, -11]);
@@ -543,41 +544,37 @@ function bombBalloon(color) {
   bag.stroke(strokeOf(2));
   bag.ellipse(-5.5, 16, 4.2, 7);
   bag.fill({ color: 0xffffff, alpha: 0.4 });
-  root.addChild(bag, charge.spark);
+  root.addChild(bag);
+
+  const charge = bombCharge();
+  root.addChild(charge.root);
   return { mesh: root, parts: { spark: charge.spark } };
 }
 
-// Classic teardrop party balloon that still hauls a bomb on the string.
+// Classic party balloon (y-up: bag high, knot and bomb low) hauling a bomb.
 function partyBalloon(color) {
   const root = new Container();
+  // Charge first (under), bag last so the balloon always paints above its bomb.
+  const charge = bombCharge();
+  // bombCharge centers the ball near local y=-24; sit it well under the knot.
+  charge.root.position.set(0, -22);
+  charge.root.scale.set(0.72);
+  root.addChild(charge.root);
+
   const bag = new Graphics();
-  // Pear body + pinched knot.
-  paint(bag, bag, (p) => {
-    p.moveTo(0, -36);
-    p.bezierCurveTo(16, -36, 18, -8, 8, 2);
-    p.quadraticCurveTo(3.2, 7, 0, 8);
-    p.quadraticCurveTo(-3.2, 7, -8, 2);
-    p.bezierCurveTo(-18, -8, -16, -36, 0, -36);
-  }, color, 2.4);
-  bag.poly([-2.6, 7.2, 2.6, 7.2, 0, 12.5]);
+  // Tall oval above the origin, same orientation as the bomb-bag balloon.
+  paint(bag, bag, (p) => p.ellipse(0, 16, 14, 20), color, 2.4);
+  bag.poly([-3.2, -2, 3.2, -2, 0, -9]);
   bag.fill(color);
   bag.stroke(strokeOf(2));
-  bag.ellipse(-5.5, -18, 4.4, 8.5);
+  bag.ellipse(-5, 22, 4.2, 8);
   bag.fill({ color: 0xffffff, alpha: 0.38 });
-  // Curly ribbon string.
-  bag.moveTo(0, 12.5);
-  bag.quadraticCurveTo(7, 20, 0, 26);
-  bag.quadraticCurveTo(-7, 32, 0, 38);
+  // Curly ribbon string hanging down toward the bomb.
+  bag.moveTo(0, -9);
+  bag.quadraticCurveTo(8, -16, 1, -24);
+  bag.quadraticCurveTo(-7, -32, 0, -40);
   bag.stroke(strokeOf(1.6, 0x4a4038));
   root.addChild(bag);
-
-  // Bomb hangs under the party balloon.
-  const charge = bombCharge([5, 44]);
-  charge.body.position.set(0, 62);
-  charge.body.scale.set(0.72);
-  charge.spark.position.set(4, 48);
-  charge.spark.scale.set(0.85);
-  root.addChild(charge.body, charge.spark);
   return { mesh: root, parts: { spark: charge.spark } };
 }
 
