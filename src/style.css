@@ -846,15 +846,18 @@ button.ride-badge:active {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 22px;
   background: #fff6e4;
   border: 4px solid #2b2118;
   border-radius: 16px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   box-shadow: 4px 4px 0 #2b2118;
 }
 
-.col { min-width: 72px; text-align: center; }
+.col {
+  min-width: 4.75rem;
+  text-align: center;
+}
 .col span {
   display: block;
   font-size: 13px;
@@ -863,11 +866,18 @@ button.ride-badge:active {
   font-weight: 800;
   color: #3f2918;
 }
-.col b { font-size: 26px; }
+.col b {
+  display: block;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  /* Floor for "100%" / "80°" so the chip width does not pulse at full charge. */
+  min-width: 4ch;
+}
 
 .barwrap {
   width: min(42vw, 280px);
   height: 22px;
+  flex: 0 0 auto;
   background: #3a241c;
   border-radius: 8px;
   border: 3px solid #2b2118;
@@ -1199,32 +1209,32 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #pause-btn { left: calc(68px + var(--safe-left)); }
 }
 
-/* Portrait phones: vertical power rail on the right so mute keeps the bottom-left
-   and the meter is no longer inset by that chip. Angle stays above the bar. */
+/* Portrait phones: vertical rail at bottom-left. column-reverse puts Power above
+   the bar and Angle below. Mute/pause sit to the right of the rail. */
 @media (max-width: 720px) and (orientation: portrait) {
   #meter {
-    left: auto;
-    right: calc(12px + var(--safe-right));
-    top: 50%;
-    bottom: auto;
-    transform: translateY(-50%);
-    flex-direction: column;
+    left: calc(12px + var(--safe-left));
+    right: auto;
+    top: auto;
+    bottom: calc(12px + var(--safe-bottom));
+    transform: none;
+    flex-direction: column-reverse;
     align-items: center;
     justify-content: center;
-    width: auto;
+    width: 4.75rem;
     max-width: none;
-    padding: 10px 8px;
-    gap: 8px;
+    padding: 12px 8px;
+    gap: 14px;
   }
   #meter .col {
     min-width: 0;
     width: 100%;
   }
   #meter .col span { font-size: 11px; }
-  #meter .col b { font-size: 18px; }
+  #meter .col b { font-size: 18px; min-width: 4ch; }
   #meter .barwrap {
     width: 18px;
-    height: min(36vh, 240px);
+    height: min(32vh, 220px);
     flex: 0 0 auto;
     max-width: none;
     display: flex;
@@ -1235,6 +1245,14 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     width: 100%;
     height: var(--power-pct, 0%);
     background: linear-gradient(0deg, #ffd15c 0%, #ff8a1e 55%, #e23b2e 100%);
+  }
+  #mute {
+    left: calc(100px + var(--safe-left));
+    bottom: calc(12px + var(--safe-bottom));
+  }
+  #pause-btn {
+    left: calc(156px + var(--safe-left));
+    bottom: calc(12px + var(--safe-bottom));
   }
 }
 
@@ -1251,7 +1269,7 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     flex-direction: row;
     justify-content: center;
     padding: 8px 14px;
-    gap: 14px;
+    gap: 18px;
   }
   #meter .barwrap {
     width: auto;
@@ -1291,13 +1309,13 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     transform: none;
     width: auto;
     max-width: none;
-    padding: 4px 8px;
-    gap: 8px;
+    padding: 4px 10px;
+    gap: 16px;
     justify-content: center;
   }
-  #meter .col { min-width: 48px; }
+  #meter .col { min-width: 3.75rem; }
   #meter .col span { font-size: 11px; }
-  #meter .col b { font-size: 18px; }
+  #meter .col b { font-size: 18px; min-width: 4ch; }
   #meter .barwrap { height: 12px; width: auto; flex: 1; max-width: 280px; }
   #power-cheer { bottom: calc(8px + var(--safe-bottom)); }
   #power-cheer b { font-size: 44px; }
