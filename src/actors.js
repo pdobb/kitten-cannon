@@ -285,21 +285,56 @@ export function createCannon() {
   return { root, pivot, ticks, muzzle };
 }
 
+function tntStick(x) {
+  const stick = new Container();
+  stick.position.set(x, 0);
+  const g = new Graphics();
+  // Wrapped stick charge strapped to the crate.
+  paint(g, g, (p) => p.roundRect(-6.5, 2, 13, 48, 3.2), 0xd9c28a, 2);
+  g.roundRect(-6.5, 10, 13, 5, 0);
+  g.roundRect(-6.5, 24, 13, 5, 0);
+  g.roundRect(-6.5, 38, 13, 5, 0);
+  g.fill(0xb89a5e);
+  g.roundRect(-5.2, 4, 10.4, 8, 2);
+  g.fill(0x7a2418);
+  g.moveTo(0, 2);
+  g.quadraticCurveTo(4, -4, 1.5, -9);
+  g.stroke(strokeOf(1.5, 0x4a4038));
+  g.circle(1.5, -9.5, 1.7);
+  g.fill(0xffb703);
+  stick.addChild(g);
+  return stick;
+}
+
 function crate() {
   const root = new Container();
+  // Side sticks first so the crate face and label sit in front.
+  root.addChild(tntStick(-31), tntStick(31));
+
   const g = new Graphics();
-  paint(g, g, (p) => p.roundRect(-25, 4, 50, 46, 5), PAL.red, 2.6);
-  g.roundRect(-25, 18, 50, 16, 0);
+  paint(g, g, (p) => p.roundRect(-24, 4, 48, 46, 5), PAL.red, 2.6);
+  // Cream band tall enough for the TNT stamp.
+  g.roundRect(-24, 16, 48, 20, 0);
   g.fill(PAL.cream);
-  g.roundRect(-25, 18, 50, 16, 0);
+  g.roundRect(-24, 16, 48, 20, 0);
   g.stroke(strokeOf(2.2));
-  for (const [x, y] of [[-18, 10], [18, 10], [-18, 42], [18, 42]]) {
+  // Rope straps tying the side sticks to the box.
+  for (const y of [14, 40]) {
+    g.moveTo(-31, y);
+    g.lineTo(31, y);
+    g.stroke(strokeOf(2.4, 0x6b4632));
+    g.moveTo(-31, y + 2.2);
+    g.lineTo(31, y + 2.2);
+    g.stroke(strokeOf(1.2, 0x9a6236));
+  }
+  for (const [x, y] of [[-17, 10], [17, 10], [-17, 42], [17, 42]]) {
     g.circle(x, y, 2.1);
     g.fill(0x7a2418);
   }
   root.addChild(g);
-  const label = letter('TNT', 72, 0x1c140f);
-  label.scale.set(0.42, -0.42);
+  // Scale so the stamp sits inside the cream band (~20px tall, ~48px wide).
+  const label = letter('TNT', 48, 0x1c140f);
+  label.scale.set(0.38, -0.38);
   label.position.set(0, 26);
   root.addChild(label);
   return { mesh: root, parts: {} };
@@ -475,9 +510,7 @@ function venus() {
   return { mesh: root, parts: { head: main.head, upper: main.upper, lower: main.lower, open: TRAP_OPEN } };
 }
 
-function balloon(salt) {
-  const root = new Container();
-  const color = BALLOON_COLORS[Math.abs(Math.round(salt)) % BALLOON_COLORS.length];
+function bombCharge(sparkAt) {
   const g = new Graphics();
   g.moveTo(0, -4);
   g.quadraticCurveTo(5, -12, 0, -18);
@@ -488,15 +521,20 @@ function balloon(salt) {
   g.moveTo(3, -17);
   g.quadraticCurveTo(8, -12, 6, -6);
   g.stroke(strokeOf(1.7, 0xc2a15a));
-  root.addChild(g);
 
   const spark = new Graphics();
   spark.circle(0, 0, 2.3);
   spark.fill(0xffb703);
   spark.circle(-0.6, 0.6, 0.8);
   spark.fill(0xfff6d0);
-  spark.position.set(6, -5);
-  root.addChild(spark);
+  spark.position.set(sparkAt[0], sparkAt[1]);
+  return { body: g, spark };
+}
+
+function bombBalloon(color) {
+  const root = new Container();
+  const charge = bombCharge([6, -5]);
+  root.addChild(charge.body);
 
   const bag = new Graphics();
   paint(bag, bag, (p) => p.ellipse(0, 10, 15.5, 18.5), color, 2.5);
@@ -505,8 +543,51 @@ function balloon(salt) {
   bag.stroke(strokeOf(2));
   bag.ellipse(-5.5, 16, 4.2, 7);
   bag.fill({ color: 0xffffff, alpha: 0.4 });
+  root.addChild(bag, charge.spark);
+  return { mesh: root, parts: { spark: charge.spark } };
+}
+
+// Classic teardrop party balloon that still hauls a bomb on the string.
+function partyBalloon(color) {
+  const root = new Container();
+  const bag = new Graphics();
+  // Pear body + pinched knot.
+  paint(bag, bag, (p) => {
+    p.moveTo(0, -36);
+    p.bezierCurveTo(16, -36, 18, -8, 8, 2);
+    p.quadraticCurveTo(3.2, 7, 0, 8);
+    p.quadraticCurveTo(-3.2, 7, -8, 2);
+    p.bezierCurveTo(-18, -8, -16, -36, 0, -36);
+  }, color, 2.4);
+  bag.poly([-2.6, 7.2, 2.6, 7.2, 0, 12.5]);
+  bag.fill(color);
+  bag.stroke(strokeOf(2));
+  bag.ellipse(-5.5, -18, 4.4, 8.5);
+  bag.fill({ color: 0xffffff, alpha: 0.38 });
+  // Curly ribbon string.
+  bag.moveTo(0, 12.5);
+  bag.quadraticCurveTo(7, 20, 0, 26);
+  bag.quadraticCurveTo(-7, 32, 0, 38);
+  bag.stroke(strokeOf(1.6, 0x4a4038));
   root.addChild(bag);
-  return { mesh: root, parts: { spark } };
+
+  // Bomb hangs under the party balloon.
+  const charge = bombCharge([5, 44]);
+  charge.body.position.set(0, 62);
+  charge.body.scale.set(0.72);
+  charge.spark.position.set(4, 48);
+  charge.spark.scale.set(0.85);
+  root.addChild(charge.body, charge.spark);
+  return { mesh: root, parts: { spark: charge.spark } };
+}
+
+function balloon(salt) {
+  const n = Math.abs(Math.round(salt));
+  const color = BALLOON_COLORS[n % BALLOON_COLORS.length];
+  // About one in four. Hash the x salt so round coordinates do not bias the mix.
+  const party = ((n * 2654435761) >>> 0) % 4 === 0;
+  if (party) return partyBalloon(color);
+  return bombBalloon(color);
 }
 
 export function createProp(type, salt) {
