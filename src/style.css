@@ -1248,10 +1248,15 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #mute, #pause-btn {
     top: auto;
     right: auto;
-    bottom: calc(84px + var(--safe-bottom));
+    bottom: calc(12px + var(--safe-bottom));
   }
   #mute { left: calc(12px + var(--safe-left)); }
   #pause-btn { left: calc(68px + var(--safe-left)); }
+  /* Lift only while the meter is up (aim). Flight/result drop them back down. */
+  #app[data-phase="aim"] #mute,
+  #app[data-phase="aim"] #pause-btn {
+    bottom: calc(84px + var(--safe-bottom));
+  }
 }
 
 /* A landscape phone is wider than 720px, so width alone still shows the keys.
@@ -1288,6 +1293,10 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #meter .col b { font-size: 18px; min-width: 4ch; }
   #meter .barwrap { height: 12px; width: auto; flex: 1; max-width: none; }
   #mute, #pause-btn {
+    bottom: calc(8px + var(--safe-bottom));
+  }
+  #app[data-phase="aim"] #mute,
+  #app[data-phase="aim"] #pause-btn {
     bottom: calc(74px + var(--safe-bottom));
   }
   #power-cheer { bottom: calc(8px + var(--safe-bottom)); }
@@ -1319,8 +1328,8 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   (max-height: 500px) and (min-aspect-ratio: 6 / 5) {
   #left-hud {
     top: calc(8px + var(--safe-top));
-    left: 16px;
-    max-width: calc(100% - 80px - var(--safe-right));
+    left: 32px;
+    max-width: calc(100% - 96px - var(--safe-right));
     gap: 6px;
   }
   #records {
@@ -1332,6 +1341,10 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #mute, #pause-btn {
     top: auto;
     right: auto;
+    bottom: calc(8px + var(--safe-bottom));
+  }
+  #app[data-phase="aim"] #mute,
+  #app[data-phase="aim"] #pause-btn {
     bottom: calc(74px + var(--safe-bottom));
   }
   #mute { left: 16px; }
