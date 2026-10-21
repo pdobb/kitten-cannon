@@ -246,9 +246,24 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
 
 #badges {
   position: relative;
+  /* Match the records column width while bests are visible (aim/flight). */
   width: 0;
   min-width: 100%;
   pointer-events: none;
+}
+
+/* Title/result hide #records, so the 0/100% trick collapses to one badge and
+   stacks them. Size the rail naturally and keep a horizontal wrap. */
+#app[data-phase="title"] #badges,
+#app[data-phase="result"] #badges {
+  width: auto;
+  min-width: 0;
+}
+
+#app[data-phase="title"] .ride-badges,
+#app[data-phase="result"] .ride-badges {
+  width: max-content;
+  max-width: min(280px, calc(100vw - 48px - var(--safe-left) - var(--safe-right)));
 }
 
 #records p, .bestline p, .sheet p {
