@@ -104,6 +104,9 @@ const TERM_KEY = 'kitten-cannon-terminal-visits';
 const POWER_KEY = 'kitten-cannon-fullpower-visits';
 const END_KEY = 'kitten-cannon-endings';
 const RESET_KEY = 'kitten-cannon-resets';
+// Session flag: an aim/flight is open and has not landed yet. A refresh mid-ride
+// becomes a reset on the next boot; finish() clears it without counting one.
+const ATTEMPT_KEY = 'kitten-cannon-open-attempt';
 const ENDINGS = [
   ['landed', 'Soft landing'],
   ['spikes', 'Tar pit'],
@@ -255,6 +258,7 @@ const game = {
   paused: false,
   endings: loadEndings(),
   resets: loadNumber(RESET_KEY),
+  attemptOpen: false,
 };
 const cam = { x: 500, y: 120, z: 980, shake: 0 };
 const hold = { ArrowUp: 0, ArrowDown: 0 };
@@ -307,6 +311,42 @@ function noteReset() {
   } catch {
     // Private mode can refuse storage. The count still shows for this visit.
   }
+}
+
+function markAttempt() {
+  game.attemptOpen = true;
+  try {
+    sessionStorage.setItem(ATTEMPT_KEY, '1');
+  } catch {
+    // Private mode can refuse session storage.
+  }
+}
+
+function clearAttempt() {
+  game.attemptOpen = false;
+  try {
+    sessionStorage.removeItem(ATTEMPT_KEY);
+  } catch {
+    // Private mode can refuse session storage.
+  }
+}
+
+function hasOpenAttempt() {
+  if (game.attemptOpen) return true;
+  try {
+    return sessionStorage.getItem(ATTEMPT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+// Mid-game abandon only (aim / flight). End-card Again and a finished landing
+// do not count — those already have a landing type, or are starting fresh.
+function abandonOpenAttempt(phase = game.phase) {
+  if (phase !== 'aim' && phase !== 'flight') return;
+  if (!hasOpenAttempt()) return;
+  noteReset();
+  clearAttempt();
 }
 
 function saveVisitCount(key, n) {
@@ -937,7 +977,7 @@ function startAim() {
   game.kitten = null;
   game.sink = 0;
   game.squash = 0;
-  noteReset();
+  markAttempt();
   safeAudio(() => audio.unlock());
 }
 
@@ -1034,6 +1074,8 @@ function finish() {
   cardFeetEl.textContent = formatFt(game.feet);
   fillShotLine(cardNoteEl, k.cause);
   tallyEnding(k.cause);
+  // Ride completed — not a mid-game reset, even in quiet mode with no landing tally.
+  clearAttempt();
   cardBestEl.replaceChildren();
   appendPersonalStats(cardBestEl, marks, k.cause, { resets: true });
   // Badges already awarded mid-flight / at launch on the HUD rail.
@@ -1056,7 +1098,9 @@ function finish() {
 // Full screen stays, and the start card stays hidden if the visit already began.
 function reloadField() {
   if (!kitten || !flybys) return;
-  const onTitle = game.phase === 'title';
+  const from = game.phase;
+  const onTitle = from === 'title';
+  abandonOpenAttempt(from);
   if (game.paused) setPaused(false);
   for (let i = 0; i < course.length; i++) releaseProp(course[i]);
   course = buildCourse(freshSeed(), balloonCrowd());
@@ -1107,6 +1151,8 @@ function reloadField() {
 
 function retry() {
   if (!kitten) return;
+  // Space/Again mid-flight abandons the open ride; from the score card it does not.
+  abandonOpenAttempt();
   resetCourse(course);
   for (let i = 0; i < course.length; i++) {
     const prop = course[i];
@@ -1132,6 +1178,8 @@ function retry() {
 function goTitle() {
   if (wipeOpen()) return;
   closeBadgeTips();
+  // Count a mid-game back-out before we flip to title (reloadField then no-ops).
+  abandonOpenAttempt();
   // reloadField keeps the title card when phase is already title.
   game.phase = 'title';
   reloadField();
@@ -1973,10 +2021,13 @@ async function boot() {
   setPhase('title');
   paintRecords();
   paintMark();
+  // A refresh that interrupted aim/flight counts as a mid-game reset once,
+  // before applyQuery opens a fresh attempt for demos / ?phase=aim.
+  if (hasOpenAttempt()) {
+    noteReset();
+    clearAttempt();
+  }
   applyQuery();
-  // Page load / refresh counts as a reset when we stay on the title card.
-  // startAim already notes one when the query jumps straight into aim.
-  if (game.phase === 'title') noteReset();
   requestAnimationFrame(frame);
 }
 
