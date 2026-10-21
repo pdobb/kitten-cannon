@@ -846,7 +846,7 @@ button.ride-badge:active {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 16px;
   background: #fff6e4;
   border: 4px solid #2b2118;
   border-radius: 16px;
@@ -856,6 +856,13 @@ button.ride-badge:active {
 
 .col {
   min-width: 4.75rem;
+  text-align: center;
+}
+.col.angle {
+  text-align: left;
+  min-width: 3.5rem;
+}
+.col.power {
   text-align: center;
 }
 .col span {
@@ -872,6 +879,16 @@ button.ride-badge:active {
   font-variant-numeric: tabular-nums;
   /* Floor for "100%" / "80°" so the chip width does not pulse at full charge. */
   min-width: 4ch;
+}
+.col.angle b { min-width: 3ch; }
+
+.meter-sep {
+  flex: 0 0 3px;
+  align-self: stretch;
+  width: 3px;
+  margin: 2px 2px;
+  border-radius: 2px;
+  background: #2b2118;
 }
 
 .barwrap {
@@ -1200,89 +1217,41 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   }
   #records span, .sheet span, .bestline span { font-size: 12px; }
   #records b, .sheet b, .bestline b { font-size: 16px; }
-  #mute, #pause-btn {
-    top: auto;
-    right: auto;
-    bottom: calc(12px + var(--safe-bottom));
-  }
-  #mute { left: calc(12px + var(--safe-left)); }
-  #pause-btn { left: calc(68px + var(--safe-left)); }
-}
-
-/* Portrait phones: vertical rail at bottom-left. column-reverse puts Power above
-   the bar and Angle below. Mute/pause sit to the right of the rail. */
-@media (max-width: 720px) and (orientation: portrait) {
+  /* Full-width bottom meter; mute/pause sit above it so they do not shorten the bar. */
   #meter {
     left: calc(12px + var(--safe-left));
-    right: auto;
-    top: auto;
-    bottom: calc(12px + var(--safe-bottom));
-    transform: none;
-    flex-direction: column-reverse;
-    align-items: center;
-    justify-content: center;
-    width: 4.75rem;
-    max-width: none;
-    padding: 12px 8px;
-    gap: 14px;
-  }
-  #meter .col {
-    min-width: 0;
-    width: 100%;
-  }
-  #meter .col span { font-size: 11px; }
-  #meter .col b { font-size: 18px; min-width: 4ch; }
-  #meter .barwrap {
-    width: 18px;
-    height: min(32vh, 220px);
-    flex: 0 0 auto;
-    max-width: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-  }
-  #power {
-    width: 100%;
-    height: var(--power-pct, 0%);
-    background: linear-gradient(0deg, #ffd15c 0%, #ff8a1e 55%, #e23b2e 100%);
-  }
-  #mute {
-    left: calc(100px + var(--safe-left));
-    bottom: calc(12px + var(--safe-bottom));
-  }
-  #pause-btn {
-    left: calc(156px + var(--safe-left));
-    bottom: calc(12px + var(--safe-bottom));
-  }
-}
-
-/* Narrow landscape (or a short wide window under 720px): keep a bottom bar that
-   clears mute on the left. */
-@media (max-width: 720px) and (orientation: landscape) {
-  #meter {
-    bottom: calc(14px + var(--safe-bottom));
-    left: calc(72px + var(--safe-left));
     right: calc(12px + var(--safe-right));
+    bottom: calc(12px + var(--safe-bottom));
     top: auto;
     width: auto;
     transform: none;
     flex-direction: row;
     justify-content: center;
-    padding: 8px 14px;
-    gap: 18px;
+    padding: 8px 12px;
+    gap: 12px;
   }
+  #meter .col { min-width: 3.25rem; }
+  #meter .col.angle { min-width: 2.75rem; }
+  #meter .col span { font-size: 11px; }
+  #meter .col b { font-size: 18px; }
   #meter .barwrap {
     width: auto;
-    height: 22px;
+    height: 16px;
     flex: 1;
-    max-width: 280px;
-    display: block;
+    max-width: none;
   }
   #power {
     width: var(--power-pct, 0%);
     height: 100%;
     background: linear-gradient(90deg, #ffd15c 0%, #ff8a1e 55%, #e23b2e 100%);
   }
+  #mute, #pause-btn {
+    top: auto;
+    right: auto;
+    bottom: calc(84px + var(--safe-bottom));
+  }
+  #mute { left: calc(12px + var(--safe-left)); }
+  #pause-btn { left: calc(68px + var(--safe-left)); }
 }
 
 /* A landscape phone is wider than 720px, so width alone still shows the keys.
@@ -1304,19 +1273,23 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #meter {
     top: auto;
     bottom: calc(8px + var(--safe-bottom));
-    left: calc(72px + var(--safe-left));
-    right: calc(210px + var(--safe-right));
+    left: calc(12px + var(--safe-left));
+    right: calc(12px + var(--safe-right));
     transform: none;
     width: auto;
     max-width: none;
     padding: 4px 10px;
-    gap: 16px;
+    gap: 12px;
     justify-content: center;
   }
-  #meter .col { min-width: 3.75rem; }
+  #meter .col { min-width: 3.25rem; }
+  #meter .col.angle { min-width: 2.75rem; }
   #meter .col span { font-size: 11px; }
   #meter .col b { font-size: 18px; min-width: 4ch; }
-  #meter .barwrap { height: 12px; width: auto; flex: 1; max-width: 280px; }
+  #meter .barwrap { height: 12px; width: auto; flex: 1; max-width: none; }
+  #mute, #pause-btn {
+    bottom: calc(74px + var(--safe-bottom));
+  }
   #power-cheer { bottom: calc(8px + var(--safe-bottom)); }
   #power-cheer b { font-size: 44px; }
   #power-cheer.perfect b { font-size: 56px; -webkit-text-stroke-width: 5px; }
@@ -1359,7 +1332,7 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #mute, #pause-btn {
     top: auto;
     right: auto;
-    bottom: calc(8px + var(--safe-bottom));
+    bottom: calc(74px + var(--safe-bottom));
   }
   #mute { left: 16px; }
   #pause-btn { left: 72px; }
