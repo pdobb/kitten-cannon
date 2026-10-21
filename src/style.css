@@ -1196,6 +1196,11 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #hint { display: none; }
   /* Clear a 4-row bests chip (top ~10px + ~120px tall) so distance does not sit on it. */
   #scoreblock { top: calc(148px + var(--safe-top)); }
+  /* 5vw bottoms out at the desktop floor on narrow phones; go bigger for flight. */
+  #distance {
+    font-size: clamp(48px, 13vw, 64px);
+    -webkit-text-stroke-width: 7px;
+  }
   #vectors { gap: 14px; font-size: 16px; white-space: normal; flex-wrap: wrap; }
   #altitude[data-tier="1"] { font-size: 18px; }
   #altitude[data-tier="2"] { font-size: 21px; }
@@ -1326,6 +1331,10 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
 @media (max-height: 500px) and (pointer: coarse),
   (max-height: 500px) and (hover: none),
   (max-height: 500px) and (min-aspect-ratio: 6 / 5) {
+  #distance {
+    font-size: clamp(44px, 7vw, 58px);
+    -webkit-text-stroke-width: 6px;
+  }
   #left-hud {
     top: calc(8px + var(--safe-top));
     left: 32px;
