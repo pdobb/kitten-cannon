@@ -524,6 +524,16 @@ function rideBadgeEl(kind, count, { pop = false } = {}) {
   const mark = document.createElement('b');
   mark.textContent = `×${count}`;
   badge.append(mark);
+  if (pop) {
+    const glyph = kind === 'power' ? '★' : kind === 'terminal' ? '✦' : '✧';
+    for (const spot of ['a', 'b', 'c', 'd', 'e', 'f']) {
+      const spark = document.createElement('span');
+      spark.className = `badge-spark ${spot}`;
+      spark.setAttribute('aria-hidden', 'true');
+      spark.textContent = glyph;
+      badge.append(spark);
+    }
+  }
   badge.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
