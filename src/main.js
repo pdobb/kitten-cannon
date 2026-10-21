@@ -262,6 +262,14 @@ const game = {
 };
 const cam = { x: 500, y: 120, z: 980, shake: 0 };
 const hold = { ArrowUp: 0, ArrowDown: 0 };
+// Physical keys currently held per aim direction (arrows and W/S share a slot).
+const aimHeld = { ArrowUp: new Set(), ArrowDown: new Set() };
+
+function aimDir(code) {
+  if (code === 'ArrowUp' || code === 'KeyW') return 'ArrowUp';
+  if (code === 'ArrowDown' || code === 'KeyS') return 'ArrowDown';
+  return null;
+}
 
 function loadNumber(key) {
   try {
@@ -1147,6 +1155,8 @@ function reloadField() {
   cam.shake = 0;
   hold.ArrowUp = 0;
   hold.ArrowDown = 0;
+  aimHeld.ArrowUp.clear();
+  aimHeld.ArrowDown.clear();
   kitten.mesh.visible = true;
   stake.visible = false;
   const home = aimFocus();
@@ -1261,6 +1271,24 @@ function release(code) {
   hold[code] = 0;
 }
 
+function pressAimKey(code) {
+  const dir = aimDir(code);
+  if (!dir) return false;
+  const keys = aimHeld[dir];
+  const fresh = keys.size === 0;
+  keys.add(code);
+  if (fresh) press(dir);
+  return true;
+}
+
+function releaseAimKey(code) {
+  const dir = aimDir(code);
+  if (!dir) return;
+  const keys = aimHeld[dir];
+  keys.delete(code);
+  if (keys.size === 0) release(dir);
+}
+
 function onAction() {
   if (wipeOpen() || !kitten) return;
   if (game.phase === 'title') startAim();
@@ -1315,7 +1343,7 @@ window.addEventListener('keydown', (e) => {
       e.preventDefault();
       if (document.activeElement === wipeConfirmEl) acceptWipe();
       else cancelWipe();
-    } else if (e.code === 'KeyR' || e.code === 'KeyP' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+    } else if (e.code === 'KeyR' || e.code === 'KeyP' || aimDir(e.code)) {
       e.preventDefault();
     }
     return;
@@ -1325,9 +1353,10 @@ window.addEventListener('keydown', (e) => {
     closeBadgeTips();
     return;
   }
+  // SPACE easter egg. S still aims; P in the sequence must not pause.
   if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && noteLane(e.code)) {
     e.preventDefault();
-    return;
+    if (e.code !== 'KeyS') return;
   }
   // Space and Enter start the same visit over. R rebuilds the field in place.
   // Shift+R opens an in-game wipe confirm. It is not listed in the hint.
@@ -1339,7 +1368,8 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   const accept = e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter';
-  if (accept || e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'KeyP') e.preventDefault();
+  const aiming = !!aimDir(e.code);
+  if (accept || aiming || e.code === 'KeyP') e.preventDefault();
   if (game.paused) {
     if (!e.repeat && (accept || e.code === 'Escape' || e.code === 'KeyP')) setPaused(false);
     return;
@@ -1348,8 +1378,8 @@ window.addEventListener('keydown', (e) => {
     dismissResultCard();
     return;
   }
-  if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
-    if (!e.repeat) press(e.code);
+  if (aiming) {
+    if (!e.repeat) pressAimKey(e.code);
     return;
   }
   if (e.repeat) return;
@@ -1361,7 +1391,7 @@ window.addEventListener('keydown', (e) => {
   }
 });
 window.addEventListener('keyup', (e) => {
-  if (e.code === 'ArrowUp' || e.code === 'ArrowDown') release(e.code);
+  if (aimDir(e.code)) releaseAimKey(e.code);
 });
 
 // iOS drops click on a local file, and it also drops the first tap when a
