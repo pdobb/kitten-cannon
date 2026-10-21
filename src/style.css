@@ -191,6 +191,11 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   white-space: nowrap;
 }
 
+/* A little extra air after ↑ ft so duration does not feel cramped against it. */
+#time {
+  margin-left: 8px;
+}
+
 #speed.terminal {
   color: #ffb703;
 }
