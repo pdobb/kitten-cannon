@@ -211,16 +211,17 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   100% { transform: scale(1) rotate(0deg); }
 }
 
-/* Bests chip + ride badges share one top-left column. */
+/* Bests chip + ride badges share one top-left column. Grid column sizes to
+   #records; badges stretch to that width and wrap instead of widening it. */
 #left-hud {
   position: absolute;
   top: calc(16px + var(--safe-top));
   left: calc(16px + var(--safe-left));
   right: auto;
   z-index: 4;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  display: inline-grid;
+  grid-template-columns: max-content;
+  justify-items: stretch;
   gap: 8px;
   max-width: calc(100% - 32px - var(--safe-left) - var(--safe-right));
   pointer-events: none;
@@ -245,6 +246,8 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
 
 #badges {
   position: relative;
+  width: 0;
+  min-width: 100%;
   pointer-events: none;
 }
 
@@ -306,9 +309,12 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   position: relative;
   z-index: 1;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  gap: 4px 8px;
+  width: 100%;
   pointer-events: none;
 }
 
@@ -1283,11 +1289,11 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #meter {
     top: auto;
     bottom: calc(8px + var(--safe-bottom));
-    left: calc(12px + var(--safe-left));
-    right: calc(12px + var(--safe-right));
-    transform: none;
-    width: auto;
-    max-width: none;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(420px, 52vw);
+    max-width: min(420px, 52vw);
     padding: 4px 10px;
     gap: 12px;
     justify-content: center;
@@ -1300,10 +1306,6 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #mute, #pause-btn {
     bottom: calc(8px + var(--safe-bottom));
   }
-  #app[data-phase="aim"] #mute,
-  #app[data-phase="aim"] #pause-btn {
-    bottom: calc(74px + var(--safe-bottom));
-  }
   #power-cheer { bottom: calc(8px + var(--safe-bottom)); }
   #power-cheer b { font-size: 44px; }
   #power-cheer.perfect b { font-size: 56px; -webkit-text-stroke-width: 5px; }
@@ -1315,12 +1317,6 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #power-cheer .spark.d { --dx: 60px; --dy: 22px; }
   #records p, .bestline p, .sheet p { line-height: 1.25; gap: 10px; }
   #pad button { padding: 8px 12px; font-size: 18px; min-height: 36px; }
-}
-
-@media (max-height: 500px) and (pointer: coarse),
-  (max-height: 500px) and (hover: none),
-  (max-height: 500px) and (max-width: 720px) {
-  #meter { right: calc(12px + var(--safe-right)); }
 }
 
 /* Landscape phones are wider than 720px, so the portrait left insets never
@@ -1347,17 +1343,21 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   }
   #records span { font-size: 12px; }
   #records b { font-size: 16px; }
+  /* Narrow centered meter; mute stays on the bottom next to it. */
+  #meter {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(400px, 48vw);
+    max-width: min(400px, 48vw);
+  }
   #mute, #pause-btn {
     top: auto;
     right: auto;
     bottom: calc(8px + var(--safe-bottom));
   }
-  #app[data-phase="aim"] #mute,
-  #app[data-phase="aim"] #pause-btn {
-    bottom: calc(74px + var(--safe-bottom));
-  }
-  #mute { left: 16px; }
-  #pause-btn { left: 72px; }
+  #mute { left: 32px; }
+  #pause-btn { left: 88px; }
 }
 
 @media (max-height: 520px) {
