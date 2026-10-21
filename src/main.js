@@ -135,7 +135,6 @@ const LANE_KEYS = ['KeyS', 'KeyP', 'KeyA', 'KeyC', 'KeyE'];
 const app = document.querySelector('#app');
 const canvas = document.querySelector('#view');
 const distanceEl = document.querySelector('#distance');
-const distanceNumEl = document.querySelector('#distance-num');
 const altitudeEl = document.querySelector('#altitude');
 const speedEl = document.querySelector('#speed');
 const timeEl = document.querySelector('#time');
@@ -1118,8 +1117,7 @@ function reloadField() {
   bannerEl.textContent = '';
   powerCheerEl.className = '';
   powerCheerEl.replaceChildren();
-  if (distanceNumEl) distanceNumEl.textContent = '0';
-  else distanceEl.textContent = formatFt(0);
+  distanceEl.textContent = formatFt(0);
   altitudeEl.textContent = `↑ ${formatFt(0)}`;
   altitudeEl.dataset.tier = '0';
   altitudeEl.classList.remove('pop');
@@ -1829,11 +1827,7 @@ function updateHud() {
   if (game.kitten && (game.phase === 'flight' || game.phase === 'result')) {
     const feet = feetFromTravel(game.kitten.startX, game.kitten.x);
     game.feet = feet;
-    if (distanceNumEl) {
-      distanceNumEl.textContent = Math.max(0, Math.round(feet)).toLocaleString('en-US');
-    } else {
-      distanceEl.textContent = formatFt(feet);
-    }
+    distanceEl.textContent = formatFt(feet);
     const alt = feetFromAltitude(game.kitten.y);
     const tier = heightTier(alt);
     const prev = Number(altitudeEl.dataset.tier || 0);
