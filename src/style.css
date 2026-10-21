@@ -157,10 +157,13 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   pointer-events: none;
 }
 
+/* Reserve a centered slot so digit/comma changes do not shove the readout.
+   The "N ft" pair stays shrink-wrapped and centered inside that width. */
 #distance {
   display: flex;
   justify-content: center;
   align-items: baseline;
+  min-width: 10ch;
   font-size: clamp(34px, 5vw, 64px);
   line-height: 0.9;
   color: #fffaf0;
@@ -170,12 +173,7 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   white-space: nowrap;
 }
 
-/* Fixed number slot so digit/comma changes do not shove "ft" around. Lilita One
-   has no tabular figures, so width is reserved and the value stays right-aligned. */
 #distance-num {
-  display: inline-block;
-  min-width: 8ch;
-  text-align: right;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
