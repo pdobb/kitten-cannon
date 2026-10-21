@@ -164,6 +164,7 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   -webkit-text-stroke: 6px #2b2118;
   paint-order: stroke fill;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 #vectors {

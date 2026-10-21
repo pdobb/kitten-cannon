@@ -103,6 +103,7 @@ const MARS_KEY = 'kitten-cannon-mars-visits';
 const TERM_KEY = 'kitten-cannon-terminal-visits';
 const POWER_KEY = 'kitten-cannon-fullpower-visits';
 const END_KEY = 'kitten-cannon-endings';
+const RESET_KEY = 'kitten-cannon-resets';
 const ENDINGS = [
   ['landed', 'Soft landing'],
   ['spikes', 'Tar pit'],
@@ -253,6 +254,7 @@ const game = {
   checked: false,
   paused: false,
   endings: loadEndings(),
+  resets: loadNumber(RESET_KEY),
 };
 const cam = { x: 500, y: 120, z: 980, shake: 0 };
 const hold = { ArrowUp: 0, ArrowDown: 0 };
@@ -296,6 +298,15 @@ function tallyEnding(cause) {
   if (!Object.prototype.hasOwnProperty.call(game.endings, cause)) return;
   game.endings[cause] += 1;
   saveEndings();
+}
+
+function noteReset() {
+  game.resets += 1;
+  try {
+    localStorage.setItem(RESET_KEY, String(game.resets));
+  } catch {
+    // Private mode can refuse storage. The count still shows for this visit.
+  }
 }
 
 function saveVisitCount(key, n) {
@@ -543,8 +554,9 @@ function endingTotal() {
   return game.endings.landed + game.endings.spikes + game.endings.venus;
 }
 
-function appendEndingRows(el, cause, kicker = true) {
-  const total = endingTotal();
+function appendEndingRows(el, cause, kicker = true, includeResets = false) {
+  const landings = endingTotal();
+  const total = includeResets ? landings + game.resets : landings;
   if (kicker) {
     const label = document.createElement('p');
     label.className = 'endings-kicker';
@@ -562,8 +574,22 @@ function appendEndingRows(el, cause, kicker = true) {
     num.textContent = n.toLocaleString('en-US');
     const pct = document.createElement('b');
     pct.className = 'pct';
-    if (total > 0) pct.textContent = `· ${Math.round((n / total) * 100)}%`;
+    // Percents stay against landings only so resets do not dilute them.
+    if (landings > 0) pct.textContent = `· ${Math.round((n / landings) * 100)}%`;
     row.classList.add('landing');
+    row.append(name, num, pct);
+    el.append(row);
+  }
+  if (includeResets) {
+    const row = document.createElement('p');
+    row.className = 'landing';
+    const name = document.createElement('span');
+    name.textContent = 'Resets';
+    const num = document.createElement('b');
+    num.className = 'count';
+    num.textContent = game.resets.toLocaleString('en-US');
+    const pct = document.createElement('b');
+    pct.className = 'pct';
     row.append(name, num, pct);
     el.append(row);
   }
@@ -598,7 +624,7 @@ function saveRecords() {
   }
 }
 
-const BEST_KEYS = [FAR_KEY, HIGH_KEY, LONG_KEY, MARS_KEY, TERM_KEY, POWER_KEY, END_KEY];
+const BEST_KEYS = [FAR_KEY, HIGH_KEY, LONG_KEY, MARS_KEY, TERM_KEY, POWER_KEY, END_KEY, RESET_KEY];
 
 function clearBests() {
   game.furthest = 0;
@@ -609,6 +635,7 @@ function clearBests() {
   game.terminalVisits = 0;
   game.fullPowerVisits = 0;
   game.endings = emptyEndings();
+  game.resets = 0;
   game.was = { furthest: 0, highest: 0, longest: 0 };
   try {
     for (const key of BEST_KEYS) localStorage.removeItem(key);
@@ -623,7 +650,7 @@ function clearBests() {
   paintHudRideBadges();
   if (game.phase === 'result' && game.kitten) {
     cardBestEl.replaceChildren();
-    appendPersonalStats(cardBestEl, null, game.kitten.cause);
+    appendPersonalStats(cardBestEl, null, game.kitten.cause, { resets: true });
   }
   if (game.paused) fillPauseCard();
 }
@@ -793,10 +820,10 @@ function appendBestsKicker(el, { clear = false } = {}) {
   el.append(best);
 }
 
-function appendPersonalStats(el, marks, cause) {
+function appendPersonalStats(el, marks, cause, { resets = false } = {}) {
   appendBestsKicker(el);
   appendRecordRows(el, marks);
-  appendEndingRows(el, cause, true);
+  appendEndingRows(el, cause, true, resets);
 }
 
 function appendRecordRows(el, marks) {
@@ -900,6 +927,7 @@ function startAim() {
   game.kitten = null;
   game.sink = 0;
   game.squash = 0;
+  noteReset();
   safeAudio(() => audio.unlock());
 }
 
@@ -997,7 +1025,7 @@ function finish() {
   fillShotLine(cardNoteEl, k.cause);
   tallyEnding(k.cause);
   cardBestEl.replaceChildren();
-  appendPersonalStats(cardBestEl, marks, k.cause);
+  appendPersonalStats(cardBestEl, marks, k.cause, { resets: true });
   // Badges already awarded mid-flight / at launch on the HUD rail.
   paintHudRideBadges();
   if (game.furthest > game.was.furthest) plantPole(game.furthestX, game.furthest);
@@ -1936,6 +1964,9 @@ async function boot() {
   paintRecords();
   paintMark();
   applyQuery();
+  // Page load / refresh counts as a reset when we stay on the title card.
+  // startAim already notes one when the query jumps straight into aim.
+  if (game.phase === 'title') noteReset();
   requestAnimationFrame(frame);
 }
 
@@ -1986,6 +2017,8 @@ window.__kitten = {
       marsVisits: game.marsVisits,
       terminalVisits: game.terminalVisits,
       fullPowerVisits: game.fullPowerVisits,
+      resets: game.resets,
+      endings: { ...game.endings },
     };
   },
   get poles() {
