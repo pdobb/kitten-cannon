@@ -757,7 +757,6 @@ button.ride-badge:active {
 #mute .slash { display: none; }
 #mute.is-muted .wave { display: none; }
 #mute.is-muted .slash { display: block; }
-#mute.is-marked { background: #ffd23a; }
 
 #mute:active, #pause-btn:active { transform: translate(2px, 2px); box-shadow: none; }
 

@@ -129,8 +129,6 @@ const FAR_PROP = 14000;
 // The view is about 600px tall. A balloon picture is only needed near the camera.
 const NEAR_BALLOON_Y = 1100;
 const FAR_BALLOON_Y = 1600;
-const BALLOON_KEY = 'kitten-cannon-balloons';
-const LANE_KEYS = ['KeyS', 'KeyP', 'KeyA', 'KeyC', 'KeyE'];
 
 const app = document.querySelector('#app');
 const canvas = document.querySelector('#view');
@@ -171,22 +169,7 @@ function freshSeed() {
   return seed;
 }
 
-// 3 packs the high lanes. 1 is the normal field. Saved rides stay on 1.
-let laneAt = 0;
-function balloonCrowd() {
-  try {
-    const saved = localStorage.getItem(BALLOON_KEY);
-    return saved === '3' || saved === '2' || saved === '10' ? 3 : 1;
-  } catch {
-    return 1;
-  }
-}
-
-function paintMark() {
-  if (muteEl) muteEl.classList.toggle('is-marked', balloonCrowd() > 1);
-}
-
-let course = buildCourse(freshSeed(), balloonCrowd());
+let course = buildCourse(freshSeed());
 
 const pixi = new Application();
 const world = new Container();
@@ -306,7 +289,6 @@ function saveEndings() {
 }
 
 function tallyEnding(cause) {
-  if (balloonCrowd() > 1) return;
   if (!Object.prototype.hasOwnProperty.call(game.endings, cause)) return;
   game.endings[cause] += 1;
   saveEndings();
@@ -366,13 +348,9 @@ function saveVisitCount(key, n) {
 }
 
 // Ride badges award as soon as each goal is hit (launch / mid-flight).
-// Quiet balloon lanes skip them, same as landings. One tally per kind per ride.
-function quietRide() {
-  return balloonCrowd() > 1;
-}
-
+// One tally per kind per ride.
 function tallyMars() {
-  if (game.badgeArmed.mars || quietRide()) return false;
+  if (game.badgeArmed.mars) return false;
   if (!reachedMars(feetFromAltitude(game.peakY))) return false;
   game.badgeArmed.mars = true;
   game.marsVisits += 1;
@@ -381,7 +359,7 @@ function tallyMars() {
 }
 
 function tallyTerminal() {
-  if (game.badgeArmed.terminal || quietRide()) return false;
+  if (game.badgeArmed.terminal) return false;
   if (!reachedTerminal(game.peakSpeed)) return false;
   game.badgeArmed.terminal = true;
   game.terminalVisits += 1;
@@ -390,7 +368,7 @@ function tallyTerminal() {
 }
 
 function tallyFullPower() {
-  if (game.badgeArmed.power || quietRide()) return false;
+  if (game.badgeArmed.power) return false;
   if (!reachedFullPower(game.power)) return false;
   game.badgeArmed.power = true;
   game.fullPowerVisits += 1;
@@ -665,9 +643,10 @@ function appendEndingRows(el, cause, kicker = true, includeResets = false) {
 }
 
 try {
-  // Drop retired fastest personal-best keys so old installs do not keep stale data.
+  // Drop retired keys so old installs do not keep stale data.
   localStorage.removeItem('kitten-cannon-fastest');
   localStorage.removeItem('kitten-cannon-fastest-x');
+  localStorage.removeItem('kitten-cannon-balloons');
 } catch {
   // Private mode can refuse storage.
 }
@@ -1048,21 +1027,18 @@ function afterStep() {
 function commitRecords() {
   const k = game.kitten;
   if (!k) return;
-  const quiet = balloonCrowd() > 1;
   const far = feetFromTravel(k.startX, k.x);
   const high = feetFromAltitude(game.peakY);
   const long = k.frame;
   let dirty = false;
-  if (!quiet) {
-    if (far > game.furthest) {
-      game.furthest = far;
-      game.furthestX = k.x;
-      dirty = true;
-    }
-    if (high > game.highest) {
-      game.highest = high;
-      dirty = true;
-    }
+  if (far > game.furthest) {
+    game.furthest = far;
+    game.furthestX = k.x;
+    dirty = true;
+  }
+  if (high > game.highest) {
+    game.highest = high;
+    dirty = true;
   }
   if (long > game.longest) {
     game.longest = long;
@@ -1079,10 +1055,9 @@ function finish() {
   afterStep();
   commitRecords();
   game.feet = feetFromTravel(k.startX, k.x);
-  const quiet = balloonCrowd() > 1;
   const marks = {
-    far: !quiet && game.feet > game.was.furthest,
-    high: !quiet && feetFromAltitude(game.peakY) > game.was.highest,
+    far: game.feet > game.was.furthest,
+    high: feetFromAltitude(game.peakY) > game.was.highest,
     long: k.frame > game.was.longest,
   };
   const fresh = [];
@@ -1093,7 +1068,7 @@ function finish() {
   cardFeetEl.textContent = formatFt(game.feet);
   fillShotLine(cardNoteEl, k.cause);
   tallyEnding(k.cause);
-  // Ride completed — not a mid-game reset, even in quiet mode with no landing tally.
+  // Ride completed — not a mid-game reset.
   clearAttempt();
   cardBestEl.replaceChildren();
   appendPersonalStats(cardBestEl, marks, k.cause, { resets: true });
@@ -1122,7 +1097,7 @@ function reloadField() {
   abandonOpenAttempt(from);
   if (game.paused) setPaused(false);
   for (let i = 0; i < course.length; i++) releaseProp(course[i]);
-  course = buildCourse(freshSeed(), balloonCrowd());
+  course = buildCourse(freshSeed());
   for (let i = poles.length - 1; i >= 0; i--) {
     poles[i].mesh.destroy({ children: true });
     poles.pop();
@@ -1296,42 +1271,6 @@ function onAction() {
   else if (game.phase === 'flight' || game.phase === 'result') retry();
 }
 
-function noteLane(code) {
-  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return false;
-  if (code === LANE_KEYS[laneAt]) {
-    laneAt += 1;
-    if (laneAt === LANE_KEYS.length) {
-      laneAt = 0;
-      toggleBalloons();
-    }
-    return true;
-  }
-  if (code === LANE_KEYS[0]) {
-    laneAt = 1;
-    return true;
-  }
-  laneAt = 0;
-  return false;
-}
-
-function toggleBalloons() {
-  const on = balloonCrowd() === 1;
-  try {
-    if (on) localStorage.setItem(BALLOON_KEY, '3');
-    else localStorage.removeItem(BALLOON_KEY);
-  } catch {
-    // Private mode can refuse storage. This visit can still switch.
-  }
-  if (!kitten || !flybys) {
-    for (let i = 0; i < course.length; i++) releaseProp(course[i]);
-    course = buildCourse(freshSeed(), balloonCrowd());
-  } else {
-    reloadField();
-  }
-  shout(on ? 'BALLOONS' : 'NORMAL');
-  paintMark();
-}
-
 window.addEventListener('keydown', (e) => {
   if (wipeOpen()) {
     if (e.repeat) return;
@@ -1352,11 +1291,6 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     closeBadgeTips();
     return;
-  }
-  // SPACE easter egg. S still aims; P in the sequence must not pause.
-  if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && noteLane(e.code)) {
-    e.preventDefault();
-    if (e.code !== 'KeyS') return;
   }
   // Space and Enter start the same visit over. R rebuilds the field in place.
   // Shift+R opens an in-game wipe confirm. It is not listed in the hint.
@@ -2073,7 +2007,6 @@ async function boot() {
   assertFrames();
   setPhase('title');
   paintRecords();
-  paintMark();
   // A refresh that interrupted aim/flight counts as a mid-game reset once,
   // before applyQuery opens a fresh attempt for demos / ?phase=aim.
   if (hasOpenAttempt()) {
