@@ -458,7 +458,7 @@ const BADGE_LABEL = {
 const BADGE_TIP = {
   terminal: 'Hit the 256 mph speed cap on a ride.',
   power: 'Launched at 100% power.',
-  mars: 'Climbed to 1,000 ft — high enough to see Mars.',
+  mars: 'Made it to space and saw Mars.',
 };
 
 const BADGE_KINDS = ['terminal', 'power', 'mars'];
