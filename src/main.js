@@ -1642,6 +1642,10 @@ app.addEventListener('pointercancel', endTouchAim);
 
 // Trackpad / mouse wheel aims like a touch drag: up and left raise, down and
 // right lower. Both axes count. Same phases as mobile swipe aim.
+// macOS Natural Scrolling is not exposed to the page; Mac defaults to it and
+// that flips wheel deltas vs the touch map, so invert on Mac platforms.
+const macScrollAim = /Mac|PPC/i.test(navigator.platform)
+  || /Mac OS X/i.test(navigator.userAgent);
 app.addEventListener('wheel', (e) => {
   if (wipeOpen() || game.paused) return;
   if (game.phase !== 'aim' && game.phase !== 'title') return;
@@ -1649,7 +1653,8 @@ app.addEventListener('wheel', (e) => {
   e.preventDefault();
   // deltaMode: 0 = pixels, 1 = lines, 2 = pages. Normalize toward pixels.
   const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 32 : 1;
-  game.angle -= (e.deltaX + e.deltaY) * unit * 0.08;
+  const sign = macScrollAim ? -1 : 1;
+  game.angle -= (e.deltaX + e.deltaY) * unit * 0.08 * sign;
   clampAngle();
 }, { passive: false });
 
