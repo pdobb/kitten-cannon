@@ -98,6 +98,7 @@ keepScreenAwake();
 const FAR_KEY = 'kitten-cannon-best-ft';
 const HIGH_KEY = 'kitten-cannon-highest-ft';
 const LONG_KEY = 'kitten-cannon-longest-frames';
+const SHORT_KEY = 'kitten-cannon-shortest-frames';
 // Fastest used to be a personal-best row. The terminal badge covers speed now.
 const MARS_KEY = 'kitten-cannon-mars-visits';
 const TERM_KEY = 'kitten-cannon-terminal-visits';
@@ -225,12 +226,13 @@ const game = {
   furthestX: 0,
   highest: loadNumber(HIGH_KEY),
   longest: loadNumber(LONG_KEY),
+  shortest: loadNumber(SHORT_KEY),
   marsVisits: loadNumber(MARS_KEY),
   terminalVisits: loadNumber(TERM_KEY),
   fullPowerVisits: loadNumber(POWER_KEY),
   peakY: 0,
   peakSpeed: 0,
-  was: { furthest: 0, highest: 0, longest: 0 },
+  was: { furthest: 0, highest: 0, longest: 0, shortest: 0 },
   // One award per badge kind per ride. Reset in beginShot.
   badgeArmed: { mars: false, terminal: false, power: false },
   hold: 0,
@@ -656,24 +658,26 @@ function saveRecords() {
     localStorage.setItem(FAR_KEY, String(game.furthest));
     localStorage.setItem(HIGH_KEY, String(game.highest));
     localStorage.setItem(LONG_KEY, String(game.longest));
+    localStorage.setItem(SHORT_KEY, String(game.shortest));
   } catch {
     // Private mode can refuse storage. The score still shows for this run.
   }
 }
 
-const BEST_KEYS = [FAR_KEY, HIGH_KEY, LONG_KEY, MARS_KEY, TERM_KEY, POWER_KEY, END_KEY, RESET_KEY];
+const BEST_KEYS = [FAR_KEY, HIGH_KEY, LONG_KEY, SHORT_KEY, MARS_KEY, TERM_KEY, POWER_KEY, END_KEY, RESET_KEY];
 
 function clearBests() {
   game.furthest = 0;
   game.furthestX = 0;
   game.highest = 0;
   game.longest = 0;
+  game.shortest = 0;
   game.marsVisits = 0;
   game.terminalVisits = 0;
   game.fullPowerVisits = 0;
   game.endings = emptyEndings();
   game.resets = 0;
-  game.was = { furthest: 0, highest: 0, longest: 0 };
+  game.was = { furthest: 0, highest: 0, longest: 0, shortest: 0 };
   try {
     for (const key of BEST_KEYS) localStorage.removeItem(key);
   } catch {
@@ -806,6 +810,7 @@ function recordRows() {
     ['Furthest', game.furthest > 0 ? formatFt(game.furthest) : '—', 'far'],
     ['Highest', game.highest > 0 ? formatFt(game.highest) : '—', 'high'],
     ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long'],
+    ['Shortest', game.shortest > 0 ? formatFlight(flightSeconds(game.shortest)) : '—', 'short'],
   ];
 }
 
@@ -891,7 +896,7 @@ function paintRecords() {
   recordsEl.replaceChildren();
   appendRecordRows(recordsEl, null);
   titleBestEl.replaceChildren();
-  const hasRows = game.furthest > 0 || game.highest > 0 || game.longest > 0;
+  const hasRows = game.furthest > 0 || game.highest > 0 || game.longest > 0 || game.shortest > 0;
   if (hasRows) {
     appendBestsKicker(titleBestEl, { clear: true });
     appendRecordRows(titleBestEl, null);
@@ -987,6 +992,7 @@ function beginShot(forcedPower) {
     furthest: game.furthest,
     highest: game.highest,
     longest: game.longest,
+    shortest: game.shortest,
   };
   game.badgeArmed = { mars: false, terminal: false, power: false };
   game.kitten = makeState(game.angle, power);
@@ -1044,6 +1050,12 @@ function commitRecords() {
     game.longest = long;
     dirty = true;
   }
+  // Shortest only counts a finished ride. Live frames would stamp every launch
+  // as a fraction of a second. 0 means no shortest yet.
+  if (k.dead && long > 0 && (game.shortest === 0 || long < game.shortest)) {
+    game.shortest = long;
+    dirty = true;
+  }
   if (dirty) {
     saveRecords();
     paintRecords();
@@ -1059,11 +1071,13 @@ function finish() {
     far: game.feet > game.was.furthest,
     high: feetFromAltitude(game.peakY) > game.was.highest,
     long: k.frame > game.was.longest,
+    short: k.frame > 0 && (game.was.shortest === 0 || k.frame < game.was.shortest),
   };
   const fresh = [];
   if (marks.far) fresh.push('furthest');
   if (marks.high) fresh.push('highest');
   if (marks.long) fresh.push('longest');
+  if (marks.short) fresh.push('shortest');
   cardKickerEl.textContent = fresh.length === 0 ? 'Score' : fresh.length === 1 ? `New ${fresh[0]}` : 'New records';
   cardFeetEl.textContent = formatFt(game.feet);
   fillShotLine(cardNoteEl, k.cause);
@@ -2061,6 +2075,7 @@ window.__kitten = {
       furthest: game.furthest,
       highest: game.highest,
       longest: game.longest,
+      shortest: game.shortest,
       marsVisits: game.marsVisits,
       terminalVisits: game.terminalVisits,
       fullPowerVisits: game.fullPowerVisits,
