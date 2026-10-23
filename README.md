@@ -4,7 +4,7 @@ Aim the barrel, fire when the power bar is full, and see how far the kitty flies
 
 **[Play the game](https://pdobb.github.io/kitten-cannon/)**
 
-![A tuxedo kitten flies across a green field past balloons and bombs after being fired from a cannon](docs/load.png)
+![A wooden cannon on the grass fires a tuxedo kitten a few feet into the air above a green field](docs/load.png)
 
 ## Where it comes from
 
