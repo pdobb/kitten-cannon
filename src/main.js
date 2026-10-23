@@ -1640,6 +1640,19 @@ function endTouchAim(e) {
 app.addEventListener('pointerup', endTouchAim);
 app.addEventListener('pointercancel', endTouchAim);
 
+// Trackpad / mouse wheel aims like a touch drag: up and left raise, down and
+// right lower. Both axes count. Same phases as mobile swipe aim.
+app.addEventListener('wheel', (e) => {
+  if (wipeOpen() || game.paused) return;
+  if (game.phase !== 'aim' && game.phase !== 'title') return;
+  closeBadgeTips();
+  e.preventDefault();
+  // deltaMode: 0 = pixels, 1 = lines, 2 = pages. Normalize toward pixels.
+  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 32 : 1;
+  game.angle -= (e.deltaX + e.deltaY) * unit * 0.08;
+  clampAngle();
+}, { passive: false });
+
 for (const button of document.querySelectorAll('#pad button')) {
   const act = button.dataset.act;
   button.addEventListener('pointerdown', (e) => {
