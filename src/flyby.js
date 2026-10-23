@@ -65,9 +65,8 @@ function ufo() {
 // Flit cameos (Gabe-Torres/flit). Drawn in KC style from those silhouettes.
 // Local +X is beak-forward; launch flips the mesh when flying left.
 // Art sits on an inner node so parallax scale on the root does not erase size.
-// ~1.15 keeps a long bird (pelican / flamingo) about UFO-saucer width or a
-// touch smaller; the saucer is ~144 across.
-const BIRD_SCALE = 1.15;
+// Kitten body is ~28 wide; long bird art is ~100–130, so ~0.35 reads cat-sized.
+const BIRD_SCALE = 0.35;
 
 function birdShell() {
   const mesh = new Container();
@@ -247,15 +246,20 @@ export function createFlybys(layer) {
     return craft;
   }
 
-  function launch(cam, kittenY, kind, at) {
+  // kittenVx helps right-bound visitors outrun the camera so they still cross.
+  function launch(cam, kittenY, kind, at, kittenVx = 0) {
     // Rockets are gone. Asking for one does not launch a visitor instead.
     if (kind === 'rocket' || kind === 'starship') return;
     const type = MAKERS[kind] ? kind : pickKind();
-    let dir = Math.random() < 0.5 ? 1 : -1;
+    const dir = Math.random() < 0.5 ? 1 : -1;
     const bird = type !== 'ufo';
-    const speed = bird ? 95 + Math.random() * 45 : 70 + Math.random() * 30;
+    const base = bird ? 100 + Math.random() * 50 : 70 + Math.random() * 30;
+    // Camera tracks a rightward kitten. Against-traffic (dir < 0) crosses easily;
+    // with-traffic needs a push or it stays off the left edge forever.
+    const chase = dir > 0 ? Math.max(0, kittenVx) * 0.85 + 40 : 0;
+    const speed = base + chase;
     const z = at && at.z != null ? at.z : -5400 - Math.random() * 1200;
-    const lead = viewHalfWidthAt(z) + 220 + Math.random() * 280;
+    const lead = viewHalfWidthAt(z) + (dir > 0 ? 360 : 220) + Math.random() * 280;
     const lift = (Math.random() < 0.6 ? 1 : -1) * (220 + Math.random() * 180);
     add(type, {
       x: at ? cam.x + at.x : cam.x - dir * lead,
@@ -266,7 +270,7 @@ export function createFlybys(layer) {
     });
   }
 
-  function update(time, dt, cam, kittenY, flying) {
+  function update(time, dt, cam, kittenY, flying, kittenVx = 0) {
     for (let i = crafts.length - 1; i >= 0; i--) {
       const craft = crafts[i];
       const parallax = parallaxFor(craft.z);
@@ -313,7 +317,7 @@ export function createFlybys(layer) {
     if (!coming) return;
     wait -= dt;
     if (wait <= 0 && crafts.length < 1) {
-      launch(cam, kittenY);
+      launch(cam, kittenY, null, null, kittenVx);
       seen = true;
     }
   }

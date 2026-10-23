@@ -2047,7 +2047,14 @@ function frame(now) {
   shadow.visible = kitten.mesh.visible;
 
   scenery.update(time, draw, view);
-  flybys.update(time, dt, draw, game.kitten ? game.kitten.y : 0, game.phase === 'flight' && game.kitten && !game.kitten.dead);
+  flybys.update(
+    time,
+    dt,
+    draw,
+    game.kitten ? game.kitten.y : 0,
+    game.phase === 'flight' && game.kitten && !game.kitten.dead,
+    game.kitten ? game.kitten.vx : 0,
+  );
   particles.update(dt);
   pixi.render();
 
