@@ -628,25 +628,53 @@ export function createParticles(parent) {
   const g = new Graphics();
   parent.addChild(g);
   const pool = [];
-  for (let i = 0; i < 280; i++) {
-    pool.push({ life: 0, max: 1, x: 0, y: 0, vx: 0, vy: 0, r: 4, color: 0xffffff });
+  for (let i = 0; i < 360; i++) {
+    pool.push({
+      life: 0,
+      max: 1,
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      r: 4,
+      color: 0xffffff,
+      grow: 0.8,
+      drag: 0,
+      gravity: 40,
+    });
   }
 
-  function spawn(x, y, color, count, speed, life, size) {
+  // opts: { aim, spread, lift, grow, drag, gravity, jitter }
+  // aim is radians in world space (+x right, +y up). spread is half-angle.
+  function spawn(x, y, color, count, speed, life, size, opts = {}) {
+    const aim = opts.aim;
+    const spread = opts.spread == null ? Math.PI : opts.spread;
+    const lift = opts.lift == null ? 0.15 : opts.lift;
+    const grow = opts.grow == null ? 0.8 : opts.grow;
+    const drag = opts.drag || 0;
+    const gravity = opts.gravity == null ? 40 : opts.gravity;
+    const jitter = opts.jitter || 0;
     let made = 0;
     for (let i = 0; i < pool.length && made < count; i++) {
       const p = pool[i];
       if (p.life > 0) continue;
-      const a = Math.random() * Math.PI * 2;
+      const a = aim == null
+        ? Math.random() * Math.PI * 2
+        : aim + (Math.random() * 2 - 1) * spread;
       const s = speed * (0.35 + Math.random() * 0.85);
       p.vx = Math.cos(a) * s;
-      p.vy = Math.abs(Math.sin(a)) * s * 0.8 + speed * 0.15;
+      p.vy = aim == null
+        ? Math.abs(Math.sin(a)) * s * 0.8 + speed * lift
+        : Math.sin(a) * s + speed * lift * Math.random();
       p.life = life * (0.7 + Math.random() * 0.5);
       p.max = p.life;
-      p.x = x;
-      p.y = y;
+      p.x = x + (Math.random() * 2 - 1) * jitter;
+      p.y = y + (Math.random() * 2 - 1) * jitter;
       p.r = size * (0.28 + Math.random() * 0.28);
       p.color = color;
+      p.grow = grow;
+      p.drag = drag;
+      p.gravity = gravity;
       made += 1;
     }
   }
@@ -658,12 +686,18 @@ export function createParticles(parent) {
       if (p.life <= 0) continue;
       p.life -= dt;
       if (p.life <= 0) continue;
-      p.vy -= 40 * dt;
+      const damp = Math.max(0, 1 - p.drag * dt);
+      p.vx *= damp;
+      p.vy *= damp;
+      p.vy -= p.gravity * dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.r *= 1 + dt * 0.8;
+      p.r *= 1 + dt * p.grow;
+      const t = Math.max(0, p.life / p.max);
+      // Stay readable through the middle of the life, then ease out.
+      const alpha = Math.min(1, 0.2 + Math.pow(t, 0.5) * 0.9);
       g.circle(p.x, p.y, Math.max(0.5, p.r));
-      g.fill({ color: p.color, alpha: Math.max(0, p.life / p.max) });
+      g.fill({ color: p.color, alpha });
     }
   }
 

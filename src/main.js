@@ -997,11 +997,52 @@ function celebratePower(power) {
   powerCheerEl.classList.add('show');
 }
 
-function burst(x, y, colors, count, speed, life, size) {
+function burst(x, y, colors, count, speed, life, size, opts) {
   if (!particles) return;
   for (let i = 0; i < colors.length; i++) {
-    particles.spawn(x, y, colors[i], count, speed, life, size);
+    particles.spawn(x, y, colors[i], count, speed, life, size, opts);
   }
+}
+
+// Layered muzzle pop: hot flash, amber sparks along the aim, then slower smoke.
+function muzzleBlast(angleDeg) {
+  if (!particles) return;
+  const muzzle = barrelMuzzle(angleDeg);
+  const aim = (angleDeg * Math.PI) / 180;
+  const x = muzzle.x;
+  const y = muzzle.y;
+  // A second spout just outside the lip so the puff reads as leaving the barrel.
+  const ox = x + Math.cos(aim) * 10;
+  const oy = y + Math.sin(aim) * 10;
+  // Bright core at the lip.
+  burst(x, y, [0xfff8e8, 0xffe08a], 14, 130, 0.36, 22, {
+    aim,
+    spread: 0.6,
+    lift: 0.06,
+    grow: 1.6,
+    gravity: 16,
+    jitter: 6,
+  });
+  // Sparks thrown down the barrel line.
+  burst(ox, oy, [0xffb703, 0xff7a1a, 0xfff1c2], 18, 180, 0.55, 16, {
+    aim,
+    spread: 0.45,
+    lift: 0.12,
+    grow: 0.75,
+    gravity: 48,
+    drag: 0.5,
+    jitter: 5,
+  });
+  // Billowing smoke — dark enough to read on the blue sky, hangs a beat.
+  burst(ox, oy, [0xddd4c6, 0xbdb3a4, 0x9c9284, 0x7a7268, 0x5c564e], 14, 72, 1.35, 46, {
+    aim,
+    spread: 1.05,
+    lift: 0.48,
+    grow: 2.4,
+    gravity: 8,
+    drag: 1.6,
+    jitter: 10,
+  });
 }
 
 function safeAudio(fn) {
@@ -1052,8 +1093,7 @@ function beginShot(forcedPower) {
   stake.visible = false;
   kitten.mesh.visible = true;
   cam.shake = Math.min(1.4, cam.shake + 0.7);
-  const muzzle = barrelMuzzle(game.angle);
-  burst(muzzle.x, muzzle.y, [0xfff6e0, 0xc9c3ba, 0xffb703], 8, 70, 0.5, 18);
+  muzzleBlast(game.angle);
   audio.launch();
   audio.meow();
   setPhase('flight');
