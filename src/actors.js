@@ -641,11 +641,13 @@ export function createParticles(parent) {
       grow: 0.8,
       drag: 0,
       gravity: 40,
+      fade: 1,
     });
   }
 
-  // opts: { aim, spread, lift, grow, drag, gravity, jitter }
+  // opts: { aim, spread, lift, grow, drag, gravity, jitter, fade }
   // aim is radians in world space (+x right, +y up). spread is half-angle.
+  // fade scales peak opacity (1 = full).
   function spawn(x, y, color, count, speed, life, size, opts = {}) {
     const aim = opts.aim;
     const spread = opts.spread == null ? Math.PI : opts.spread;
@@ -654,6 +656,7 @@ export function createParticles(parent) {
     const drag = opts.drag || 0;
     const gravity = opts.gravity == null ? 40 : opts.gravity;
     const jitter = opts.jitter || 0;
+    const fade = opts.fade == null ? 1 : opts.fade;
     let made = 0;
     for (let i = 0; i < pool.length && made < count; i++) {
       const p = pool[i];
@@ -675,6 +678,7 @@ export function createParticles(parent) {
       p.grow = grow;
       p.drag = drag;
       p.gravity = gravity;
+      p.fade = fade;
       made += 1;
     }
   }
@@ -694,8 +698,8 @@ export function createParticles(parent) {
       p.y += p.vy * dt;
       p.r *= 1 + dt * p.grow;
       const t = Math.max(0, p.life / p.max);
-      // Stay readable through the middle of the life, then ease out.
-      const alpha = Math.min(1, 0.2 + Math.pow(t, 0.5) * 0.9);
+      // Soft ease-out so puffs dissolve instead of hanging as a slab.
+      const alpha = Math.min(1, (p.fade == null ? 1 : p.fade) * t * t * (3 - 2 * t));
       g.circle(p.x, p.y, Math.max(0.5, p.r));
       g.fill({ color: p.color, alpha });
     }

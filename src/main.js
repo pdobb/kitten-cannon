@@ -1004,44 +1004,47 @@ function burst(x, y, colors, count, speed, life, size, opts) {
   }
 }
 
-// Layered muzzle pop: hot flash, amber sparks along the aim, then slower smoke.
+// Soft launch pop: warm flash, a few gold sparks, then light cream wisps.
+// Reads like a cartoon puff, not a diesel cloud.
 function muzzleBlast(angleDeg) {
   if (!particles) return;
   const muzzle = barrelMuzzle(angleDeg);
   const aim = (angleDeg * Math.PI) / 180;
   const x = muzzle.x;
   const y = muzzle.y;
-  // A second spout just outside the lip so the puff reads as leaving the barrel.
-  const ox = x + Math.cos(aim) * 10;
-  const oy = y + Math.sin(aim) * 10;
-  // Bright core at the lip.
-  burst(x, y, [0xfff8e8, 0xffe08a], 14, 130, 0.36, 22, {
+  const ox = x + Math.cos(aim) * 8;
+  const oy = y + Math.sin(aim) * 8;
+  // Warm flash at the lip.
+  burst(x, y, [0xfffdf6, 0xffe9a8], 6, 90, 0.28, 14, {
     aim,
-    spread: 0.6,
-    lift: 0.06,
-    grow: 1.6,
-    gravity: 16,
-    jitter: 6,
+    spread: 0.5,
+    lift: 0.08,
+    grow: 1.2,
+    gravity: 12,
+    jitter: 3,
+    fade: 0.85,
   });
-  // Sparks thrown down the barrel line.
-  burst(ox, oy, [0xffb703, 0xff7a1a, 0xfff1c2], 18, 180, 0.55, 16, {
+  // Tiny gold sparks along the aim.
+  burst(ox, oy, [0xffd56a, 0xffb347, 0xfff6d6], 7, 140, 0.4, 8, {
     aim,
-    spread: 0.45,
-    lift: 0.12,
-    grow: 0.75,
-    gravity: 48,
-    drag: 0.5,
+    spread: 0.35,
+    lift: 0.1,
+    grow: 0.45,
+    gravity: 40,
+    drag: 0.7,
+    jitter: 2,
+    fade: 0.9,
+  });
+  // Soft cream / peach wisps — translucent, dissolve quickly.
+  burst(ox, oy, [0xfffaf0, 0xffe8c8, 0xffd9b0], 5, 48, 0.7, 22, {
+    aim,
+    spread: 0.75,
+    lift: 0.45,
+    grow: 1.5,
+    gravity: 6,
+    drag: 1.8,
     jitter: 5,
-  });
-  // Billowing smoke — dark enough to read on the blue sky, hangs a beat.
-  burst(ox, oy, [0xddd4c6, 0xbdb3a4, 0x9c9284, 0x7a7268, 0x5c564e], 14, 72, 1.35, 46, {
-    aim,
-    spread: 1.05,
-    lift: 0.48,
-    grow: 2.4,
-    gravity: 8,
-    drag: 1.6,
-    jitter: 10,
+    fade: 0.45,
   });
 }
 
