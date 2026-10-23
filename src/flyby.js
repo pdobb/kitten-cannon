@@ -65,7 +65,9 @@ function ufo() {
 // Flit cameos (Gabe-Torres/flit). Drawn in KC style from those silhouettes.
 // Local +X is beak-forward; launch flips the mesh when flying left.
 // Art sits on an inner node so parallax scale on the root does not erase size.
-const BIRD_SCALE = 2.6;
+// ~1.15 keeps a long bird (pelican / flamingo) about UFO-saucer width or a
+// touch smaller; the saucer is ~144 across.
+const BIRD_SCALE = 1.15;
 
 function birdShell() {
   const mesh = new Container();
