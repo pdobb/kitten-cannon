@@ -1207,6 +1207,7 @@ function reloadField() {
     plantPole(game.furthestX, game.furthest);
   }
   if (particles) particles.clear();
+  // Same contract as course props: new sky on New field / R, not on Fire again.
   if (scenery && scenery.reshuffleClouds) scenery.reshuffleClouds();
   bannerEl.classList.remove('show');
   bannerEl.textContent = '';

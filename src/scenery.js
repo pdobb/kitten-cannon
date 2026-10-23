@@ -384,7 +384,10 @@ export function createScenery(world) {
     const origin = -span * 0.45;
     for (const cloud of group) {
       cloud.span = span;
-      cloud.root.position.set(origin + cloud.home + cloud.width / 2, cloud.altitude);
+      // Fixed world anchor so a camera snap (Fire again) rematerializes the
+      // same lane. Only fillClouds / reshuffleClouds rolls a new layout.
+      cloud.anchor = origin + cloud.home + cloud.width / 2;
+      cloud.root.position.set(cloud.anchor, cloud.altitude);
     }
     return group;
   }
@@ -483,8 +486,8 @@ export function createScenery(world) {
       for (let i = 0; i < clouds.length; i++) {
         const cloud = clouds[i];
         const left = cam.x - cloud.span * 0.45;
-        const x = cloud.root.position.x;
-        cloud.root.position.x = left + ((x - left) % cloud.span + cloud.span) % cloud.span;
+        cloud.root.position.x = left
+          + ((cloud.anchor - left) % cloud.span + cloud.span) % cloud.span;
         cloud.root.position.y = cloud.altitude + Math.sin(time * cloud.rate + cloud.phase) * cloud.bob;
       }
     },
