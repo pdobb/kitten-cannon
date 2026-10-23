@@ -1207,6 +1207,7 @@ function reloadField() {
     plantPole(game.furthestX, game.furthest);
   }
   if (particles) particles.clear();
+  if (scenery && scenery.reshuffleClouds) scenery.reshuffleClouds();
   bannerEl.classList.remove('show');
   bannerEl.textContent = '';
   powerCheerEl.className = '';

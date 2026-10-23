@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { PAL } from './look.js';
 import { skyCss, spaceBlend } from './sky.js';
-import { GROUND_Y, PIXELS_PER_FOOT } from './tune.js';
+import { CANNON_X, GROUND_Y, PIXELS_PER_FOOT } from './tune.js';
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -346,17 +346,31 @@ export function createScenery(world) {
   });
 
   // Each band wraps on its own. Clouds stop below 50 ft, so a climb leaves them.
-  function scatterClouds(rng, count, y0, y1, gap0, gap1) {
+  // clearLaunch: keep the barrel sky open on the title / aim view.
+  function scatterClouds(rng, count, y0, y1, gap0, gap1, clearLaunch) {
     const group = [];
     let cursor = rng() * 280;
     for (let i = 0; i < count; i++) {
       const made = drawCloud(rng);
       const gap = gap0 + rng() * (gap1 - gap0);
+      let altitude = y0 + rng() * (y1 - y0);
+      if (clearLaunch) {
+        // Sit above the muzzle / first arc so a puff does not mask the shot.
+        altitude = Math.max(altitude, 290 + rng() * Math.max(40, y1 - 290));
+      }
+      let home = cursor;
+      if (clearLaunch) {
+        // Aim cam looks near the cannon. Nudge homes that would park a low
+        // cloud across the barrel into the open sky beside it.
+        const center = home + made.width / 2;
+        const near = Math.abs(center - CANNON_X) < 420 || Math.abs(center - 500) < 380;
+        if (near) home += 520 + rng() * 640;
+      }
       const cloud = {
         root: new Container(),
         width: made.width,
-        home: cursor,
-        altitude: y0 + rng() * (y1 - y0),
+        home,
+        altitude,
         phase: rng() * Math.PI * 2,
         bob: 7 + rng() * 16,
         rate: 0.12 + rng() * 0.22,
@@ -364,7 +378,7 @@ export function createScenery(world) {
       cloud.root.addChild(made.graphic);
       world.addChild(cloud.root);
       group.push(cloud);
-      cursor += made.width + gap;
+      cursor = Math.max(cursor, home) + made.width + gap;
     }
     const span = Math.max(cursor, 1);
     const origin = -span * 0.45;
@@ -375,14 +389,26 @@ export function createScenery(world) {
     return group;
   }
 
-  const cloudRng = mulberry32(0xc10d);
   // Puffs and the bob sit above the anchor. 84 keeps that drawing under 50 ft.
   const cloudTop = GROUND_Y + 50 * PIXELS_PER_FOOT - 84;
-  const clouds = [
-    ...scatterClouds(cloudRng, 12, 150, 470, 70, 200),
-    ...scatterClouds(cloudRng, 10, 400, 1150, 80, 220),
-    ...scatterClouds(cloudRng, 10, 1000, cloudTop, 80, 230),
-  ];
+  const clouds = [];
+
+  function fillClouds(seed) {
+    for (let i = clouds.length - 1; i >= 0; i--) {
+      const cloud = clouds[i];
+      world.removeChild(cloud.root);
+      cloud.root.destroy({ children: true });
+      clouds.pop();
+    }
+    const cloudRng = mulberry32(seed >>> 0);
+    clouds.push(
+      ...scatterClouds(cloudRng, 12, 150, 470, 70, 200, true),
+      ...scatterClouds(cloudRng, 10, 400, 1150, 80, 220, false),
+      ...scatterClouds(cloudRng, 10, 1000, cloudTop, 80, 230, false),
+    );
+  }
+
+  fillClouds((Math.random() * 0xffffffff) >>> 0);
 
   const flyLayer = new Container();
   world.addChild(flyLayer);
@@ -422,6 +448,9 @@ export function createScenery(world) {
   return {
     sky,
     flyLayer,
+    reshuffleClouds() {
+      fillClouds((Math.random() * 0xffffffff) >>> 0);
+    },
     update(time, cam, view) {
       paintSky(view.screenW, view.screenH, cam.y, view.scale);
       const halfW = view.halfW;
