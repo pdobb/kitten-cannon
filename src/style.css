@@ -1032,11 +1032,20 @@ button.ride-badge:active {
   background: linear-gradient(90deg, #ffd15c 0%, #ff8a1e 55%, #e23b2e 100%);
 }
 
+/* Centered under the meter. The meter sits at bottom: 58px + safe; this box
+   fills that 58px band and flex-centers the keys in it. */
 #hint {
   position: absolute;
-  left: calc(150px + var(--safe-left));
-  right: calc(24px + var(--safe-right));
-  bottom: calc(22px + var(--safe-bottom));
+  left: 50%;
+  right: auto;
+  bottom: var(--safe-bottom);
+  transform: translateX(-50%);
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  max-width: calc(100% - 48px - var(--safe-left) - var(--safe-right));
   margin: 0;
   text-align: center;
   color: #fffaf0;
@@ -1059,10 +1068,6 @@ button.ride-badge:active {
     z-index: 7;
     pointer-events: none;
   }
-}
-
-#app[data-phase="result"] #hint {
-  right: calc(250px + var(--safe-right));
 }
 
 kbd {
