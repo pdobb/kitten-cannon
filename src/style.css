@@ -285,6 +285,20 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   line-height: 1.35;
 }
 
+.bestline p.duration-best,
+.sheet p.duration-best {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.bestline p.duration-best:focus-visible,
+.sheet p.duration-best:focus-visible {
+  outline: 2px solid #2b2118;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 #records p {
   white-space: nowrap;
 }

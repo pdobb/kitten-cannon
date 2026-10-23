@@ -678,6 +678,8 @@ function clearBests() {
   game.endings = emptyEndings();
   game.resets = 0;
   game.was = { furthest: 0, highest: 0, longest: 0, shortest: 0 };
+  durationBestKind = 'long';
+  lastBestMarks = null;
   try {
     for (const key of BEST_KEYS) localStorage.removeItem(key);
   } catch {
@@ -805,15 +807,40 @@ function dismissResultCard() {
   return true;
 }
 
+// Title / score / pause share one duration row that toggles Longest ↔ Shortest.
+// The live HUD chip stays on Longest only.
+let durationBestKind = 'long';
+let lastBestMarks = null;
+
+function durationBestRow() {
+  if (durationBestKind === 'short') {
+    return ['Shortest', game.shortest > 0 ? formatFlight(flightSeconds(game.shortest)) : '—', 'short'];
+  }
+  return ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long'];
+}
+
 function recordRows({ hud = false } = {}) {
-  const rows = [
+  return [
     ['Furthest', game.furthest > 0 ? formatFt(game.furthest) : '—', 'far'],
     ['Highest', game.highest > 0 ? formatFt(game.highest) : '—', 'high'],
-    ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long'],
-    ['Shortest', game.shortest > 0 ? formatFlight(flightSeconds(game.shortest)) : '—', 'short'],
+    hud
+      ? ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long']
+      : durationBestRow(),
   ];
-  // Live chip stays compact; title / score / pause still show Shortest.
-  return hud ? rows.filter((row) => row[2] !== 'short') : rows;
+}
+
+function toggleDurationBest() {
+  durationBestKind = durationBestKind === 'long' ? 'short' : 'long';
+  paintDurationBestLists();
+}
+
+function paintDurationBestLists() {
+  paintRecords();
+  if (game.phase === 'result') {
+    cardBestEl.replaceChildren();
+    appendPersonalStats(cardBestEl, lastBestMarks, game.kitten ? game.kitten.cause : null, { resets: true });
+  }
+  if (game.paused) fillPauseCard();
 }
 
 // Height bands. Each step up is a little louder. Distance stays the big number.
@@ -890,6 +917,20 @@ function appendRecordRows(el, marks, { hud = false } = {}) {
     const num = document.createElement('b');
     num.textContent = marks && marks[key] ? `${value}  new` : value;
     row.append(name, num);
+    if (!hud && (key === 'long' || key === 'short')) {
+      const other = key === 'long' ? 'Shortest' : 'Longest';
+      row.classList.add('duration-best');
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      row.setAttribute('aria-label', `${label} ${value}. Show ${other}.`);
+      bindTap(row, toggleDurationBest);
+      row.addEventListener('keydown', (e) => {
+        if (e.code !== 'Enter' && e.code !== 'Space' && e.code !== 'NumpadEnter') return;
+        e.preventDefault();
+        e.stopPropagation();
+        toggleDurationBest();
+      });
+    }
     el.append(row);
   }
 }
@@ -1086,6 +1127,8 @@ function finish() {
   tallyEnding(k.cause);
   // Ride completed — not a mid-game reset.
   clearAttempt();
+  durationBestKind = 'long';
+  lastBestMarks = marks;
   cardBestEl.replaceChildren();
   appendPersonalStats(cardBestEl, marks, k.cause, { resets: true });
   // Badges already awarded mid-flight / at launch on the HUD rail.
