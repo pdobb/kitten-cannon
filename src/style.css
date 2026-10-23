@@ -781,7 +781,6 @@ button.ride-badge:active {
 #app.is-paused #records,
 #app.is-paused #badges,
 #app.is-paused #meter,
-#app.is-paused #hint,
 #app.is-paused #pad { visibility: hidden; }
 #app.is-paused #mute,
 #app.is-paused #pause-btn {
@@ -1045,9 +1044,19 @@ button.ride-badge:active {
   text-shadow: 0 2px 0 #2b2118, 0 0 6px rgba(43, 33, 24, 0.45);
 }
 
-#app[data-phase="aim"] #hint,
+/* Aim keeps the keys under the meter. Flight hides them until pause. */
 #app[data-phase="flight"] #hint {
   display: none;
+}
+
+/* After the flight hide rule so pause wins on specificity order. Desktop only. */
+@media (hover: hover) and (pointer: fine) {
+  #app.is-paused #hint {
+    display: block;
+    visibility: visible;
+    z-index: 7;
+    pointer-events: none;
+  }
 }
 
 #app[data-phase="result"] #hint {
