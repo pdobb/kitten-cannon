@@ -805,13 +805,15 @@ function dismissResultCard() {
   return true;
 }
 
-function recordRows() {
-  return [
+function recordRows({ hud = false } = {}) {
+  const rows = [
     ['Furthest', game.furthest > 0 ? formatFt(game.furthest) : '—', 'far'],
     ['Highest', game.highest > 0 ? formatFt(game.highest) : '—', 'high'],
     ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long'],
     ['Shortest', game.shortest > 0 ? formatFlight(flightSeconds(game.shortest)) : '—', 'short'],
   ];
+  // Live chip stays compact; title / score / pause still show Shortest.
+  return hud ? rows.filter((row) => row[2] !== 'short') : rows;
 }
 
 // Height bands. Each step up is a little louder. Distance stays the big number.
@@ -879,8 +881,8 @@ function appendPersonalStats(el, marks, cause, { resets = false } = {}) {
   appendEndingRows(el, cause, true, resets);
 }
 
-function appendRecordRows(el, marks) {
-  for (const [label, value, key] of recordRows()) {
+function appendRecordRows(el, marks, { hud = false } = {}) {
+  for (const [label, value, key] of recordRows({ hud })) {
     const row = document.createElement('p');
     if (marks && marks[key]) row.className = 'fresh';
     const name = document.createElement('span');
@@ -894,7 +896,7 @@ function appendRecordRows(el, marks) {
 
 function paintRecords() {
   recordsEl.replaceChildren();
-  appendRecordRows(recordsEl, null);
+  appendRecordRows(recordsEl, null, { hud: true });
   titleBestEl.replaceChildren();
   const hasRows = game.furthest > 0 || game.highest > 0 || game.longest > 0 || game.shortest > 0;
   if (hasRows) {
