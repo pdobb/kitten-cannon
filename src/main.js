@@ -807,8 +807,8 @@ function dismissResultCard() {
   return true;
 }
 
-// Title / score / pause share one duration row that toggles Longest ↔ Shortest.
-// The live HUD chip stays on Longest only.
+// Title / score / pause / live HUD share one duration row that toggles
+// Longest ↔ Shortest. Kind resets to Longest on finish and after clear.
 let durationBestKind = 'long';
 let lastBestMarks = null;
 
@@ -819,13 +819,11 @@ function durationBestRow() {
   return ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long'];
 }
 
-function recordRows({ hud = false } = {}) {
+function recordRows() {
   return [
     ['Furthest', game.furthest > 0 ? formatFt(game.furthest) : '—', 'far'],
     ['Highest', game.highest > 0 ? formatFt(game.highest) : '—', 'high'],
-    hud
-      ? ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long']
-      : durationBestRow(),
+    durationBestRow(),
   ];
 }
 
@@ -908,8 +906,8 @@ function appendPersonalStats(el, marks, cause, { resets = false } = {}) {
   appendEndingRows(el, cause, true, resets);
 }
 
-function appendRecordRows(el, marks, { hud = false } = {}) {
-  for (const [label, value, key] of recordRows({ hud })) {
+function appendRecordRows(el, marks) {
+  for (const [label, value, key] of recordRows()) {
     const row = document.createElement('p');
     if (marks && marks[key]) row.className = 'fresh';
     const name = document.createElement('span');
@@ -917,7 +915,7 @@ function appendRecordRows(el, marks, { hud = false } = {}) {
     const num = document.createElement('b');
     num.textContent = marks && marks[key] ? `${value}  new` : value;
     row.append(name, num);
-    if (!hud && (key === 'long' || key === 'short')) {
+    if (key === 'long' || key === 'short') {
       const other = key === 'long' ? 'Shortest' : 'Longest';
       row.classList.add('duration-best');
       row.setAttribute('role', 'button');
@@ -937,7 +935,7 @@ function appendRecordRows(el, marks, { hud = false } = {}) {
 
 function paintRecords() {
   recordsEl.replaceChildren();
-  appendRecordRows(recordsEl, null, { hud: true });
+  appendRecordRows(recordsEl, null);
   titleBestEl.replaceChildren();
   const hasRows = game.furthest > 0 || game.highest > 0 || game.longest > 0 || game.shortest > 0;
   if (hasRows) {
@@ -1527,9 +1525,10 @@ wipeEl.addEventListener('pointerdown', (e) => {
 // Buttons keep their own taps.
 let touchAim = null;
 function fieldTarget(target) {
-  // Cream dialog panels absorb taps so they do not Start / Fire again.
+  // Cream dialog panels and the live bests chip absorb taps so they do not
+  // Start / Fire / toggle Shortest and launch in the same gesture.
   return !(target && target.closest && target.closest(
-    'button, a, #wipe, #title .panel, #card .panel, #pause .panel',
+    'button, a, #wipe, #title .panel, #card .panel, #pause .panel, #records',
   ));
 }
 // A long press on the field must not start a selection. The stats cards

@@ -285,6 +285,7 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   line-height: 1.35;
 }
 
+#records p.duration-best,
 .bestline p.duration-best,
 .sheet p.duration-best {
   cursor: pointer;
@@ -292,6 +293,7 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   user-select: none;
 }
 
+#records p.duration-best:focus-visible,
 .bestline p.duration-best:focus-visible,
 .sheet p.duration-best:focus-visible {
   outline: 2px solid #2b2118;
