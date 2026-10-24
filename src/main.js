@@ -432,7 +432,7 @@ function fullPowerDiscSvg() {
 const BADGE_LABEL = {
   terminal: 'Terminal Velocity',
   power: 'Full power',
-  mars: 'Mars',
+  mars: 'Space',
 };
 
 const BADGE_TIP = {
