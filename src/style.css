@@ -1291,10 +1291,21 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   right: calc(16px + var(--safe-right));
   bottom: calc(16px + var(--safe-bottom));
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-#pad button { padding: 10px 14px; min-width: 52px; }
+#pad button {
+  box-sizing: border-box;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  min-width: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
 
 #app[data-phase="title"] #pause-btn,
 #app[data-phase="aim"] #pause-btn,
@@ -1451,7 +1462,12 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #power-cheer .spark.c { --dx: -56px; --dy: 20px; }
   #power-cheer .spark.d { --dx: 60px; --dy: 22px; }
   #records p, .bestline p, .sheet p { line-height: 1.25; gap: 10px; }
-  #pad button { padding: 8px 12px; font-size: 18px; min-height: 36px; }
+  #pad button {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 18px;
+  }
 }
 
 /* Landscape phones are wider than 720px, so the portrait left insets never
