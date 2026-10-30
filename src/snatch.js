@@ -1,18 +1,20 @@
 // Pterodactyl snatch — same beast as Flit (Gabe-Torres/flit).
-// Swoops in from the left, carries the kitten a beat, then drops it
-// with rightward speed leveled to 100–120 mph.
+// Paces in from behind, grabs without freezing the shot, carries ~5.5 s
+// forward, then ejects the kitten with a rightward boost (never a slowdown
+// unless already at terminal).
 
 import { Container, Graphics } from 'pixi.js';
 import { FLYBY_EVERY_FT, FLYBY_Y } from './flyby.js';
-import { speedFromMph } from './tune.js';
+import { atTerminalSpeed, SPEED_MAX, speedFromMph } from './tune.js';
 
 // Same band gate as flybys; high enough that most long climbs still meet one.
 export const SNATCH_CHANCE = 0.22;
-export const SNATCH_APPROACH = 0.92;
-export const SNATCH_CARRY = 1.28;
+export const SNATCH_APPROACH = 1.15;
+export const SNATCH_CARRY = 5.5;
 export const SNATCH_DURATION = SNATCH_APPROACH + SNATCH_CARRY;
-export const SNATCH_DROP_MPH_MIN = 100;
-export const SNATCH_DROP_MPH_MAX = 120;
+// Eject adds this much mph on top of the carry speed (clamped at terminal).
+export const SNATCH_BOOST_MPH_MIN = 30;
+export const SNATCH_BOOST_MPH_MAX = 55;
 
 // Body → kitten hang point. Local +X is beak-forward, +Y up.
 const TALON_X = -6;
@@ -81,19 +83,22 @@ function drawPterodactyl(g, flap, grabbed) {
   claws(-6, footY - 2);
 }
 
-export function snatchPose(time, caught, entryX) {
+// Pure pose for tests and drawing. `kitten` is the live flight body during
+// approach; `carry` is { x0, y0, vx, vy } once the talons latch.
+export function snatchPose(time, kitten, entryX, entryY, carry = null) {
   const wing = Math.sin(time * 26);
-  const grabX = caught.x - TALON_X;
-  const grabY = caught.y - TALON_Y;
+  const grabX = kitten.x - TALON_X;
+  const grabY = kitten.y - TALON_Y;
   if (time < SNATCH_APPROACH) {
     const u = time / SNATCH_APPROACH;
     const ease = u * u * (3 - 2 * u);
+    // Close on the moving kitten from behind/above — flight keeps running.
     const dinoX = entryX + (grabX - entryX) * ease;
-    const dinoY = caught.y + 190 + (grabY - (caught.y + 190)) * ease
-      + Math.sin(u * Math.PI) * 80;
+    const dinoY = entryY + (grabY - entryY) * ease
+      + Math.sin(u * Math.PI) * 55;
     return {
-      kittenX: caught.x,
-      kittenY: caught.y,
+      kittenX: kitten.x,
+      kittenY: kitten.y,
       dinoX,
       dinoY,
       grabbed: false,
@@ -101,26 +106,32 @@ export function snatchPose(time, caught, entryX) {
     };
   }
   const u = clamp((time - SNATCH_APPROACH) / SNATCH_CARRY, 0, 1);
-  const ease = 1 - (1 - u) * (1 - u);
-  // Carry further right and a little up, then the drop happens at the end.
-  const endX = grabX + 480;
-  const endY = grabY + 140;
-  const dinoX = grabX + (endX - grabX) * ease;
-  const dinoY = grabY + (endY - grabY) * ease;
+  // Carry advances at cruise px/frame × 30 Hz so distance keeps ticking.
+  const frames = u * SNATCH_CARRY * 30;
+  const origin = carry || { x0: kitten.x, y0: kitten.y, vx: 0, vy: 0 };
+  const kittenX = origin.x0 + origin.vx * frames;
+  const kittenY = origin.y0 + origin.vy * frames;
   return {
-    kittenX: dinoX + TALON_X,
-    kittenY: dinoY + TALON_Y,
-    dinoX,
-    dinoY,
+    kittenX,
+    kittenY,
+    dinoX: kittenX - TALON_X,
+    dinoY: kittenY - TALON_Y,
     grabbed: true,
     wing,
   };
 }
 
-export function dropSpeed(rand = Math.random) {
-  const mph = SNATCH_DROP_MPH_MIN
-    + rand() * (SNATCH_DROP_MPH_MAX - SNATCH_DROP_MPH_MIN);
-  return speedFromMph(mph);
+// Always a positive rightward change unless already at the 256 mph cap.
+export function ejectSpeed(currentVx, rand = Math.random) {
+  if (atTerminalSpeed(currentVx) || currentVx >= SPEED_MAX) return SPEED_MAX;
+  const boostMph = SNATCH_BOOST_MPH_MIN
+    + rand() * (SNATCH_BOOST_MPH_MAX - SNATCH_BOOST_MPH_MIN);
+  return Math.min(SPEED_MAX, currentVx + speedFromMph(boostMph));
+}
+
+// Kept for callers/tests that still say dropSpeed — same as ejectSpeed.
+export function dropSpeed(currentVx, rand = Math.random) {
+  return ejectSpeed(currentVx, rand);
 }
 
 export function createSnatch(layer) {
@@ -133,19 +144,21 @@ export function createSnatch(layer) {
   let phase = 'idle'; // idle | armed | approach | carry | done
   let time = 0;
   let wait = 0;
-  let caught = null;
   let entryX = 0;
+  let entryY = 0;
   let lastBand = -1;
-  let dropVx = 0;
+  let carry = null;
+  let ejectVx = 0;
 
   function clear() {
     phase = 'idle';
     time = 0;
     wait = 0;
-    caught = null;
     entryX = 0;
+    entryY = 0;
     lastBand = -1;
-    dropVx = 0;
+    carry = null;
+    ejectVx = 0;
     root.visible = false;
     art.clear();
   }
@@ -161,19 +174,32 @@ export function createSnatch(layer) {
     }
   }
 
-  function begin(kitten, cam) {
+  function begin(kitten) {
     if (phase !== 'armed' && phase !== 'idle') return false;
     phase = 'approach';
     time = 0;
     wait = 0;
-    caught = { x: kitten.x, y: kitten.y };
-    entryX = cam.x - 420;
-    dropVx = dropSpeed();
-    kitten.vx = 0;
-    kitten.vy = 0;
-    kitten.turn = 0;
+    // Pace in from behind and a little above — do not freeze the kitten.
+    entryX = kitten.x - 340;
+    entryY = kitten.y + 150;
+    carry = null;
+    ejectVx = 0;
     root.visible = true;
     return true;
+  }
+
+  function latch(kitten) {
+    // Keep forward pace at grab; mild climb while carried.
+    const cruiseVx = Math.max(kitten.vx, speedFromMph(70));
+    const cruiseVy = 2.4;
+    carry = {
+      x0: kitten.x,
+      y0: kitten.y,
+      vx: cruiseVx,
+      vy: cruiseVy,
+    };
+    ejectVx = ejectSpeed(cruiseVx);
+    phase = 'carry';
   }
 
   function update(dt, kitten, cam, flying, travelFeet) {
@@ -196,44 +222,55 @@ export function createSnatch(layer) {
     if (phase === 'armed') {
       if (kitten.y < FLYBY_Y) return null;
       wait -= dt;
-      if (wait <= 0) begin(kitten, cam);
+      if (wait <= 0) begin(kitten);
       else return null;
     }
 
     if (phase !== 'approach' && phase !== 'carry') return null;
 
     time += dt;
-    const pose = snatchPose(time, caught, entryX);
+
+    if (phase === 'approach' && time >= SNATCH_APPROACH) {
+      latch(kitten);
+    }
+
+    const pose = snatchPose(
+      time,
+      kitten,
+      entryX,
+      entryY,
+      carry,
+    );
     drawPterodactyl(art, pose.wing, pose.grabbed);
     root.position.set(pose.dinoX, pose.dinoY);
     root.rotation = pose.grabbed ? -0.12 : Math.sin(time * 3) * 0.08;
 
-    kitten.x = pose.kittenX;
-    kitten.y = pose.kittenY;
-    kitten.vx = 0;
-    kitten.vy = 0;
-    kitten.spin = pose.grabbed ? -35 : kitten.spin * 0.9;
-    kitten.turn = 0;
-
-    if (time < SNATCH_APPROACH) {
-      phase = 'approach';
+    if (phase === 'approach') {
+      // Kitten keeps normal physics; only the dino moves.
       return { state: 'approach', grabbed: false };
     }
 
+    // Carry: ride the talons forward. Props/gravity stay paused in main.
+    kitten.x = pose.kittenX;
+    kitten.y = pose.kittenY;
+    kitten.vx = carry.vx;
+    kitten.vy = carry.vy;
+    kitten.spin = -35;
+    kitten.turn = 0;
+
     if (time < SNATCH_DURATION) {
-      phase = 'carry';
       return { state: 'carry', grabbed: true };
     }
 
-    // Drop: level speed to 100–120 mph, slight tumble.
+    // Eject forward with a boost — never slower than the carry unless capped.
     kitten.x = pose.kittenX;
     kitten.y = pose.kittenY;
-    kitten.vx = dropVx;
-    kitten.vy = -4 + Math.random() * 10;
-    kitten.spin = 10;
-    kitten.turn = -(Math.abs(kitten.vx) * 0.045);
+    kitten.vx = ejectVx;
+    kitten.vy = 6 + Math.random() * 8;
+    kitten.spin = 14;
+    kitten.turn = -(Math.abs(kitten.vx) * 0.04);
     phase = 'done';
-    return { state: 'drop', grabbed: false, vx: dropVx };
+    return { state: 'drop', grabbed: false, vx: ejectVx };
   }
 
   function afterglow(dt, cam) {
@@ -247,8 +284,8 @@ export function createSnatch(layer) {
     }
     const flap = Math.sin(time * 26);
     drawPterodactyl(art, flap, false);
-    root.x += 280 * dt;
-    root.y += 40 * dt;
+    root.x += 320 * dt;
+    root.y += 50 * dt;
     root.rotation = -0.18;
     if (root.x > cam.x + 900) {
       root.visible = false;
@@ -256,19 +293,20 @@ export function createSnatch(layer) {
     }
   }
 
-  function force(kitten, cam) {
+  function force(kitten) {
     clear();
     phase = 'armed';
     wait = 0;
-    return begin(kitten, cam);
+    return begin(kitten);
   }
 
   return {
     clear,
     update,
     force,
+    // Only the hold pauses physics. Approach paces beside a live flight.
     get active() {
-      return phase === 'approach' || phase === 'carry';
+      return phase === 'carry';
     },
     get phase() {
       return phase;

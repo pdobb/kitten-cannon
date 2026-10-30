@@ -2056,14 +2056,14 @@ function frame(now) {
       afterStep();
     }
     if (snatch && snatch.active) {
-      // Held in the talons: no gravity, no props. Keep the 30Hz flight clock.
+      // Carry only: ride forward in the talons (approach still runs physics).
       acc += dt;
       while (acc >= STEP) {
         game.kitten.frame += 1;
         acc -= STEP;
       }
       afterStep();
-      audio.wind(0.35);
+      audio.wind(Math.min(1, Math.abs(game.kitten.vx) / 240));
       commitRecords();
     } else {
       acc += dt;
@@ -2272,7 +2272,7 @@ window.__kitten = {
   // Demo: force a pterodactyl snatch during flight.
   grab() {
     if (!snatch || !game.kitten || game.phase !== 'flight' || game.kitten.dead) return false;
-    return snatch.force(game.kitten, cam);
+    return snatch.force(game.kitten);
   },
   // Launch meow picker: meows() lists 1–10; meow(n) previews; useMeow(n) selects.
   meows() { return audio.meowList(); },

@@ -5,13 +5,13 @@ import { FLYBY_CHANCE, FLYBY_EVERY_FT, FLYBY_Y } from './flyby.js';
 import { HIT } from './propspec.js';
 import { skyRgb, spaceBlend, reachedMars, SPACE_FEET } from './sky.js';
 import {
-  dropSpeed,
+  ejectSpeed,
   snatchPose,
   SNATCH_APPROACH,
+  SNATCH_BOOST_MPH_MAX,
+  SNATCH_BOOST_MPH_MIN,
   SNATCH_CARRY,
   SNATCH_CHANCE,
-  SNATCH_DROP_MPH_MAX,
-  SNATCH_DROP_MPH_MIN,
   SNATCH_DURATION,
 } from './snatch.js';
 import { CAM_FOV, CAM_Z, viewHalfHeight } from './view.js';
@@ -448,45 +448,68 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(skull.spent, true);
 }
 
-// Pterodactyl snatch: swoop, carry, drop with speed leveled to 100–120 mph.
+// Pterodactyl snatch: pace in, carry ~5.5s forward, eject with a boost.
 {
   assert.ok(SNATCH_CHANCE > 0 && SNATCH_CHANCE < 1);
   assert.equal(SNATCH_DURATION, SNATCH_APPROACH + SNATCH_CARRY);
-  assert.equal(SNATCH_DROP_MPH_MIN, 100);
-  assert.equal(SNATCH_DROP_MPH_MAX, 120);
+  assert.ok(SNATCH_CARRY >= 5 && SNATCH_CARRY <= 6, 'hold is about 5–6 seconds');
   assert.equal(speedFromMph(100), (100 * 5280) / 3600);
   assert.equal(mphFromSpeed(speedFromMph(110)), 110);
 
-  const caught = { x: 4000, y: 1200 };
-  const entryX = 3200;
-  const approach = snatchPose(0, caught, entryX);
+  const kitten = { x: 4000, y: 1200, vx: 80, vy: -2 };
+  const entryX = kitten.x - 340;
+  const entryY = kitten.y + 150;
+  const approach = snatchPose(0, kitten, entryX, entryY);
   assert.equal(approach.grabbed, false);
-  assert.equal(approach.kittenX, caught.x);
-  assert.equal(approach.kittenY, caught.y);
-  assert.ok(approach.dinoX < caught.x, 'dino starts left of the kitten');
+  assert.equal(approach.kittenX, kitten.x);
+  assert.equal(approach.kittenY, kitten.y);
+  assert.ok(approach.dinoX < kitten.x, 'dino starts behind the kitten');
 
-  const mid = snatchPose(SNATCH_APPROACH * 0.5, caught, entryX);
+  // Kitten keeps flying during approach — pose tracks the live body.
+  kitten.x += 200;
+  kitten.y += 40;
+  const mid = snatchPose(SNATCH_APPROACH * 0.5, kitten, entryX, entryY);
   assert.equal(mid.grabbed, false);
-  assert.ok(mid.dinoX > approach.dinoX, 'dino closes from the left');
+  assert.equal(mid.kittenX, kitten.x);
+  assert.ok(mid.dinoX > approach.dinoX, 'dino closes from behind');
+  assert.ok(mid.dinoX < kitten.x, 'dino is still closing in');
 
-  const grabbed = snatchPose(SNATCH_APPROACH, caught, entryX);
+  const carry = { x0: kitten.x, y0: kitten.y, vx: 90, vy: 2.4 };
+  const grabbed = snatchPose(SNATCH_APPROACH, kitten, entryX, entryY, carry);
   assert.equal(grabbed.grabbed, true);
-  // Kitten hangs from the talon offset under the body.
   assert.ok(Math.abs(grabbed.kittenX - (grabbed.dinoX - 6)) < 0.01);
   assert.ok(grabbed.kittenY < grabbed.dinoY);
 
-  const carried = snatchPose(SNATCH_APPROACH + SNATCH_CARRY * 0.5, caught, entryX);
+  const carried = snatchPose(
+    SNATCH_APPROACH + SNATCH_CARRY * 0.5,
+    kitten,
+    entryX,
+    entryY,
+    carry,
+  );
   assert.equal(carried.grabbed, true);
   assert.ok(carried.dinoX > grabbed.dinoX, 'carry continues rightward');
-  assert.ok(carried.kittenY > caught.y - 1, 'carry lifts or holds altitude');
+  assert.ok(carried.kittenY > kitten.y - 1, 'carry climbs or holds altitude');
+  // Half the hold at 90 px/frame × 30 Hz × (5.5/2) s ≈ 7425 px forward.
+  assert.ok(carried.kittenX > kitten.x + 5000, 'carry covers real distance');
 
-  const lo = dropSpeed(() => 0);
-  const hi = dropSpeed(() => 1);
-  assert.equal(mphFromSpeed(lo), SNATCH_DROP_MPH_MIN);
-  assert.equal(mphFromSpeed(hi), SNATCH_DROP_MPH_MAX);
-  const midDrop = dropSpeed(() => 0.5);
-  const midMph = mphFromSpeed(midDrop);
-  assert.ok(midMph >= SNATCH_DROP_MPH_MIN && midMph <= SNATCH_DROP_MPH_MAX);
+  const cruise = speedFromMph(100);
+  const lo = ejectSpeed(cruise, () => 0);
+  const hi = ejectSpeed(cruise, () => 1);
+  assert.ok(lo > cruise, 'eject always adds speed when under the cap');
+  assert.ok(hi > lo);
+  assert.equal(
+    mphFromSpeed(lo) - mphFromSpeed(cruise),
+    SNATCH_BOOST_MPH_MIN,
+  );
+  assert.equal(
+    mphFromSpeed(hi) - mphFromSpeed(cruise),
+    SNATCH_BOOST_MPH_MAX,
+  );
+  assert.equal(ejectSpeed(SPEED_MAX, () => 0), SPEED_MAX);
+  assert.equal(ejectSpeed(SPEED_MAX, () => 1), SPEED_MAX);
+  assert.ok(atTerminalSpeed(ejectSpeed(SPEED_MAX * 0.99, () => 1))
+    || ejectSpeed(SPEED_MAX * 0.99, () => 1) <= SPEED_MAX);
 }
 
 console.log('physics ok');
