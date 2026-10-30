@@ -134,7 +134,8 @@ export function createAudio() {
     const src = c.createBufferSource();
     src.buffer = buf;
     const g = c.createGain();
-    g.gain.value = 1;
+    // Loudnorm samples peak near full scale; match old synth meow (~0.3) under the boom.
+    g.gain.value = 0.32;
     src.connect(g);
     g.connect(c.destination);
     src.start();
