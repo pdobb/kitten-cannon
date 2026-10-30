@@ -1,8 +1,19 @@
 import assert from 'node:assert/strict';
 import { buildCourse, resetCourse } from './course.js';
 import { createKitten, resolveHit, runUntilDone, step } from './physics.js';
+import { FLYBY_CHANCE, FLYBY_EVERY_FT, FLYBY_Y } from './flyby.js';
 import { HIT } from './propspec.js';
 import { skyRgb, spaceBlend, reachedMars, SPACE_FEET } from './sky.js';
+import {
+  dropSpeed,
+  snatchPose,
+  SNATCH_APPROACH,
+  SNATCH_CARRY,
+  SNATCH_CHANCE,
+  SNATCH_DROP_MPH_MAX,
+  SNATCH_DROP_MPH_MIN,
+  SNATCH_DURATION,
+} from './snatch.js';
 import { CAM_FOV, CAM_Z, viewHalfHeight } from './view.js';
 import {
   aimVector,
@@ -20,6 +31,7 @@ import {
   reachedFullPower,
   reachedTerminal,
   rightwardSpeed,
+  speedFromMph,
   POWER_MAX,
   POWER_MIN,
   SPEED_MAX,
@@ -337,8 +349,8 @@ function shot(angle, power, props, frames = 30 * 60) {
 }
 
 // A full bar flies on its own. A low bar is a short hop. A full-power 32°
-// shot catches crates with its nose and ends in a flytrap. A 70° lob pops
-// balloons, then the wider tar catches the descent.
+// shot catches crates with its nose and ends in a flytrap. A 70° lob's head
+// clips an early balloon, then the wider tar catches the descent.
 {
   const course = buildCourse();
   assert.equal(buildCourse().length, course.length);
@@ -351,10 +363,10 @@ function shot(angle, power, props, frames = 30 * 60) {
   const natural = shot(32, POWER_MAX, course);
   const lob = shot(70, POWER_MAX, course, 30 * 160);
   const weak = shot(32, POWER_MIN, course);
-  assert.equal(feetFromTravel(natural.kitten.startX, natural.kitten.x), 2348);
+  assert.equal(feetFromTravel(natural.kitten.startX, natural.kitten.x), 2349);
   assert.equal(natural.kitten.cause, 'venus');
   assert.ok(natural.hits.includes('balloon') && natural.hits.includes('tnt'));
-  assert.equal(feetFromTravel(lob.kitten.startX, lob.kitten.x), 2203);
+  assert.equal(feetFromTravel(lob.kitten.startX, lob.kitten.x), 658);
   assert.equal(lob.kitten.cause, 'spikes');
   assert.ok(lob.hits.includes('balloon'));
   assert.ok(feetFromTravel(weak.kitten.startX, weak.kitten.x) < 20);
@@ -408,10 +420,73 @@ function shot(angle, power, props, frames = 30 * 60) {
 
   const nearNatural = runNear(32, POWER_MAX, course, 30 * 60);
   const nearLob = runNear(70, POWER_MAX, course, 30 * 160);
-  assert.equal(feetFromTravel(nearNatural.kitten.startX, nearNatural.kitten.x), 2348);
+  assert.equal(feetFromTravel(nearNatural.kitten.startX, nearNatural.kitten.x), 2349);
   assert.equal(nearNatural.kitten.cause, 'venus');
-  assert.equal(feetFromTravel(nearLob.kitten.startX, nearLob.kitten.x), 2203);
+  assert.equal(feetFromTravel(nearLob.kitten.startX, nearLob.kitten.x), 658);
   assert.equal(nearLob.kitten.cause, 'spikes');
+}
+
+// Flit cameos: most high flights, and a fresh roll every 10k ft.
+{
+  assert.ok(FLYBY_CHANCE >= 0.6);
+  assert.equal(FLYBY_EVERY_FT, 10000);
+  assert.ok(FLYBY_Y > 500);
+}
+
+// Head samples count. A balloon on the skull connects; body center alone would miss.
+{
+  const k = createKitten(0, 40);
+  k.frame = 20;
+  k.x = 200;
+  k.y = 120;
+  k.vx = 8;
+  k.vy = 0;
+  k.spin = 0;
+  // Head center is local (16.5, 2.2). Place the balloon on that point.
+  const skull = prop('balloon', 200 + 16.5, 120 + 2.2);
+  assert.equal(step(k, [skull]), 'balloon');
+  assert.equal(skull.spent, true);
+}
+
+// Pterodactyl snatch: swoop, carry, drop with speed leveled to 100–120 mph.
+{
+  assert.ok(SNATCH_CHANCE > 0 && SNATCH_CHANCE < 1);
+  assert.equal(SNATCH_DURATION, SNATCH_APPROACH + SNATCH_CARRY);
+  assert.equal(SNATCH_DROP_MPH_MIN, 100);
+  assert.equal(SNATCH_DROP_MPH_MAX, 120);
+  assert.equal(speedFromMph(100), (100 * 5280) / 3600);
+  assert.equal(mphFromSpeed(speedFromMph(110)), 110);
+
+  const caught = { x: 4000, y: 1200 };
+  const entryX = 3200;
+  const approach = snatchPose(0, caught, entryX);
+  assert.equal(approach.grabbed, false);
+  assert.equal(approach.kittenX, caught.x);
+  assert.equal(approach.kittenY, caught.y);
+  assert.ok(approach.dinoX < caught.x, 'dino starts left of the kitten');
+
+  const mid = snatchPose(SNATCH_APPROACH * 0.5, caught, entryX);
+  assert.equal(mid.grabbed, false);
+  assert.ok(mid.dinoX > approach.dinoX, 'dino closes from the left');
+
+  const grabbed = snatchPose(SNATCH_APPROACH, caught, entryX);
+  assert.equal(grabbed.grabbed, true);
+  // Kitten hangs from the talon offset under the body.
+  assert.ok(Math.abs(grabbed.kittenX - (grabbed.dinoX - 6)) < 0.01);
+  assert.ok(grabbed.kittenY < grabbed.dinoY);
+
+  const carried = snatchPose(SNATCH_APPROACH + SNATCH_CARRY * 0.5, caught, entryX);
+  assert.equal(carried.grabbed, true);
+  assert.ok(carried.dinoX > grabbed.dinoX, 'carry continues rightward');
+  assert.ok(carried.kittenY > caught.y - 1, 'carry lifts or holds altitude');
+
+  const lo = dropSpeed(() => 0);
+  const hi = dropSpeed(() => 1);
+  assert.equal(mphFromSpeed(lo), SNATCH_DROP_MPH_MIN);
+  assert.equal(mphFromSpeed(hi), SNATCH_DROP_MPH_MAX);
+  const midDrop = dropSpeed(() => 0.5);
+  const midMph = mphFromSpeed(midDrop);
+  assert.ok(midMph >= SNATCH_DROP_MPH_MIN && midMph <= SNATCH_DROP_MPH_MAX);
 }
 
 console.log('physics ok');

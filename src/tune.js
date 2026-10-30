@@ -92,6 +92,11 @@ export function mphFromSpeed(pxPerFrame) {
   return Math.max(0, Math.round((rightwardSpeed(pxPerFrame) * 3600) / 5280));
 }
 
+// Inverse of mphFromSpeed for a known rightward mph (no rounding).
+export function speedFromMph(mph) {
+  return (Math.max(0, mph) * 5280) / 3600;
+}
+
 // Balloon chains used to climb without a ceiling and stall the step sampler.
 export const SPEED_MAX_MPH = 256;
 export const SPEED_MAX = (SPEED_MAX_MPH * 5280) / 3600;

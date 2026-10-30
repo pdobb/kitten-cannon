@@ -4,8 +4,10 @@ import { CAM_Z, viewHalfWidthAt } from './view.js';
 
 // Visitors wait until the kitten is above the low cloud lanes.
 export const FLYBY_Y = 980;
-// A climb past FLYBY_Y rolls once. A little rare, not exceedingly rare.
-const FLYBY_CHANCE = 0.28;
+// Most high flights get a visitor (~2 in 3). Re-rolls every FLYBY_EVERY_FT.
+export const FLYBY_CHANCE = 0.67;
+// After the first high roll, try again every this many feet of travel.
+export const FLYBY_EVERY_FT = 10000;
 
 const INK = 0x2b2118;
 const STROKE = 0x6a3d16;
@@ -65,8 +67,8 @@ function ufo() {
 // Flit cameos (Gabe-Torres/flit). Drawn in KC style from those silhouettes.
 // Local +X is beak-forward; launch flips the mesh when flying left.
 // Art sits on an inner node so parallax scale on the root does not erase size.
-// Kitten body is ~28 wide; long bird art is ~100–130, so ~0.35 reads cat-sized.
-const BIRD_SCALE = 0.35;
+// 0.8 keeps Flit cameos readable next to the UFO without matching its full bulk.
+const BIRD_SCALE = 0.8;
 
 function birdShell() {
   const mesh = new Container();
@@ -186,18 +188,36 @@ function bat() {
   return { mesh, parts: { bulbs: [], wings: [wing] } };
 }
 
+// Flit pterodactyl silhouette (Gabe-Torres/flit), beak toward local +X.
 function pterodactyl() {
   const { mesh, art } = birdShell();
   const body = new Graphics();
   const ink = new Graphics();
   const wing = new Graphics();
-  paint(wing, ink, (p) => p.poly([0, 4, -20, 36, -64, 22, -8, -6, 12, 2]), 0xb56538, 2.2);
-  paint(body, ink, (p) => p.ellipse(0, 0, 24, 14), 0xd4843f, 2.4);
-  // Red head crest.
-  paint(body, ink, (p) => p.poly([-4, 10, -18, 32, 4, 6]), 0xe15a42, 1.8);
-  paint(body, ink, (p) => p.poly([18, 2, 56, 6, 20, -6]), 0xf2c14b, 2);
-  body.circle(14, 6, 2.4);
+  // Trailing membrane; flap rotates this node.
+  paint(wing, ink, (p) => p.poly([2, 0, -32, 16, -24, -2, -4, -10]), 0xb56538, 2.2);
+  wing.moveTo(0, 0);
+  wing.lineTo(-28, 10);
+  wing.stroke(strokeOf(2.2, 0x6b3a22));
+  paint(body, ink, (p) => p.ellipse(-2, -2, 13, 8), 0xd4843f, 2.4);
+  body.ellipse(0, -6, 7, 3.6);
+  body.fill(0xf6d7a2);
+  paint(body, ink, (p) => p.ellipse(12, 1, 6.5, 5.2), 0xd4843f, 2);
+  // Red crest.
+  paint(body, ink, (p) => p.poly([8, 5, 2, 18, 14, 3]), 0xe15a42, 1.8);
+  paint(body, ink, (p) => p.poly([16, 2, 36, 0, 16, -4]), 0xf2c14b, 2);
+  body.poly([16, -1, 28, -3, 16, -5]);
+  body.fill(0xe7a23a);
+  body.circle(13, 2, 2.1);
+  body.fill(0xffffff);
+  body.circle(13.6, 2, 1);
   body.fill(INK);
+  // Short legs.
+  body.moveTo(-2, -8);
+  body.lineTo(-5, -16);
+  body.moveTo(4, -8);
+  body.lineTo(6, -16);
+  body.stroke(strokeOf(2.2, 0x6b3a22));
   art.addChild(wing, body, ink);
   return { mesh, parts: { bulbs: [], wings: [wing] } };
 }
@@ -212,8 +232,16 @@ const MAKERS = {
 };
 const VISITORS = ['ufo', 'flamingo', 'magpie', 'pelican', 'bat', 'pterodactyl'];
 
-function pickKind() {
-  return VISITORS[Math.floor(Math.random() * VISITORS.length)];
+// Shuffle bag: each kind once per cycle so the UFO is not streakier than birds.
+function freshBag() {
+  const bag = VISITORS.slice();
+  for (let i = bag.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = bag[i];
+    bag[i] = bag[j];
+    bag[j] = t;
+  }
+  return bag;
 }
 
 function parallaxFor(z) {
@@ -223,9 +251,15 @@ function parallaxFor(z) {
 export function createFlybys(layer) {
   const crafts = [];
   let wait = 0;
-  let rolled = false;
   let coming = false;
-  let seen = false;
+  // Travel-feet band of the last spawn roll (−1 = not yet).
+  let lastBand = -1;
+  let bag = freshBag();
+
+  function pickKind() {
+    if (bag.length < 1) bag = freshBag();
+    return bag.pop();
+  }
 
   function add(type, spec) {
     const built = MAKERS[type]();
@@ -247,18 +281,19 @@ export function createFlybys(layer) {
   }
 
   // kittenVx helps right-bound visitors outrun the camera so they still cross.
+  // Birds and the UFO share the same speed band so each kind stays on screen alike.
   function launch(cam, kittenY, kind, at, kittenVx = 0) {
     // Rockets are gone. Asking for one does not launch a visitor instead.
     if (kind === 'rocket' || kind === 'starship') return;
     const type = MAKERS[kind] ? kind : pickKind();
     const dir = Math.random() < 0.5 ? 1 : -1;
-    const bird = type !== 'ufo';
-    const base = bird ? 100 + Math.random() * 50 : 70 + Math.random() * 30;
+    const base = 70 + Math.random() * 30;
     // Camera tracks a rightward kitten. Against-traffic (dir < 0) crosses easily;
     // with-traffic needs a push or it stays off the left edge forever.
     const chase = dir > 0 ? Math.max(0, kittenVx) * 0.85 + 40 : 0;
     const speed = base + chase;
-    const z = at && at.z != null ? at.z : -5400 - Math.random() * 1200;
+    // Closer than the old −5400 lane so Flit cameos read clearly, not as specks.
+    const z = at && at.z != null ? at.z : -3200 - Math.random() * 1000;
     const lead = viewHalfWidthAt(z) + (dir > 0 ? 360 : 220) + Math.random() * 280;
     const lift = (Math.random() < 0.6 ? 1 : -1) * (220 + Math.random() * 180);
     add(type, {
@@ -270,7 +305,7 @@ export function createFlybys(layer) {
     });
   }
 
-  function update(time, dt, cam, kittenY, flying, kittenVx = 0) {
+  function update(time, dt, cam, kittenY, flying, kittenVx = 0, travelFeet = 0) {
     for (let i = crafts.length - 1; i >= 0; i--) {
       const craft = crafts[i];
       const parallax = parallaxFor(craft.z);
@@ -298,9 +333,11 @@ export function createFlybys(layer) {
       for (let w = 0; w < wings.length; w++) {
         wings[w].rotation = Math.sin(time * 9 + craft.phase) * 0.42;
       }
-      const past = Math.abs(craft.x - cam.x) > viewHalfWidthAt(craft.z) + 360
+      // Despawn once past the far edge. Age cap is a long safety only — birds
+      // used to use a faster lane and vanish before you could clock them.
+      const past = Math.abs(craft.x - cam.x) > viewHalfWidthAt(craft.z) + 420
         && Math.sign(craft.x - cam.x) === Math.sign(craft.vx || 1);
-      if (past || craft.age > 48) {
+      if (past || craft.age > 72) {
         layer.removeChild(craft.mesh);
         craft.mesh.destroy({ children: true });
         crafts.splice(i, 1);
@@ -308,17 +345,22 @@ export function createFlybys(layer) {
     }
 
     const high = flying && kittenY >= FLYBY_Y;
-    if (!high || seen) return;
-    if (!rolled) {
-      rolled = true;
-      coming = Math.random() < FLYBY_CHANCE;
-      wait = 1.4 + Math.random() * 2.6;
+    if (!high) return;
+    // Band 0 on first high moment, then every FLYBY_EVERY_FT of travel.
+    const band = Math.max(0, Math.floor(travelFeet / FLYBY_EVERY_FT));
+    if (band > lastBand) {
+      lastBand = band;
+      if (!coming && Math.random() < FLYBY_CHANCE) {
+        coming = true;
+        // Short wait so the visitor still crosses before a short hop lands.
+        wait = 0.4 + Math.random() * 1.2;
+      }
     }
     if (!coming) return;
     wait -= dt;
     if (wait <= 0 && crafts.length < 1) {
       launch(cam, kittenY, null, null, kittenVx);
-      seen = true;
+      coming = false;
     }
   }
 
@@ -329,9 +371,10 @@ export function createFlybys(layer) {
       craft.mesh.destroy({ children: true });
       crafts.splice(i, 1);
     }
-    rolled = false;
+    wait = 0;
     coming = false;
-    seen = false;
+    lastBand = -1;
+    bag = freshBag();
   }
 
   return {

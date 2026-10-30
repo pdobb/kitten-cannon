@@ -64,10 +64,19 @@ function canHit(k, prop) {
   return k.vy < 0;
 }
 
-// Nose, chest, belly, and paws. Local +X is the nose. spin matches the mesh:
+// Sample points on the kitten. Local +X is the nose. spin matches the mesh:
 // world = (lx cos - ly sin, lx sin + ly cos).
-const TNT_POINTS = [
+// Head sits at ~(16.5, 2.2) r≈7.2; nose ~24. Body center alone missed head clips.
+// Body plus the drawn head (center, crown, face). Nose tip stays TNT-only so
+// balloon chains on the learned course do not rewrite every landing.
+const KIT_POINTS = [
   [0, 0],
+  [16.5, 2.2],
+  [16.5, 8.5],
+  [20, 2],
+];
+// Nose, chest, belly, and paws — TNT painted-crate tests only.
+const TNT_EXTRA = [
   [23, 1.2],
   [16, 1],
   [6, -1],
@@ -76,21 +85,32 @@ const TNT_POINTS = [
   [-2, -12],
 ];
 
-function overlaps(k, prop) {
-  const point = Math.abs(k.x - prop.x) < prop.hw && Math.abs(k.y - prop.y) < prop.hh;
-  if (prop.type !== 'tnt') return point;
-  // The body point keeps the padded box. Nose, chest, and paws use the painted
-  // crate (x ±25, and y from 4 to 50 when the crate sits on cy 26).
-  if (point) return true;
+function kitPoint(k, lx, ly) {
+  if (lx === 0 && ly === 0) return { x: k.x, y: k.y };
   const rad = (k.spin * Math.PI) / 180;
   const c = Math.cos(rad);
   const s = Math.sin(rad);
-  for (let i = 1; i < TNT_POINTS.length; i++) {
-    const lx = TNT_POINTS[i][0];
-    const ly = TNT_POINTS[i][1];
-    const x = k.x + lx * c - ly * s;
-    const y = k.y + lx * s + ly * c;
-    if (Math.abs(x - prop.x) < 25 && y > prop.y - 22 && y < prop.y + 24) return true;
+  return {
+    x: k.x + lx * c - ly * s,
+    y: k.y + lx * s + ly * c,
+  };
+}
+
+function overlaps(k, prop) {
+  // Body center keeps the padded TNT box. Head and paws use the painted crate
+  // (x ±25, and y from 4 to 50 when the crate sits on cy 26).
+  if (prop.type === 'tnt') {
+    if (Math.abs(k.x - prop.x) < prop.hw && Math.abs(k.y - prop.y) < prop.hh) return true;
+    const pts = KIT_POINTS.concat(TNT_EXTRA);
+    for (let i = 1; i < pts.length; i++) {
+      const p = kitPoint(k, pts[i][0], pts[i][1]);
+      if (Math.abs(p.x - prop.x) < 25 && p.y > prop.y - 22 && p.y < prop.y + 24) return true;
+    }
+    return false;
+  }
+  for (let i = 0; i < KIT_POINTS.length; i++) {
+    const p = kitPoint(k, KIT_POINTS[i][0], KIT_POINTS[i][1]);
+    if (Math.abs(p.x - prop.x) < prop.hw && Math.abs(p.y - prop.y) < prop.hh) return true;
   }
   return false;
 }
@@ -100,8 +120,8 @@ function pickHit(k, props) {
   let bestD = Infinity;
   for (let i = 0; i < props.length; i++) {
     const prop = props[i];
-    // The nose sits well ahead of the body point, so a crate needs a longer reject.
-    const reach = prop.type === 'tnt' ? 30 : 1;
+    // Head/nose sit well ahead of the body point.
+    const reach = prop.type === 'tnt' ? 30 : 26;
     if (Math.abs(prop.x - k.x) > prop.hw + reach) continue;
     if (!canHit(k, prop) || !overlaps(k, prop)) continue;
     const d = Math.abs(k.x - prop.x) + Math.abs(k.y - prop.y);

@@ -12,6 +12,7 @@ import { buildCourse, resetCourse } from './course.js';
 import { createKitten as makeState, step } from './physics.js';
 import { createFlybys } from './flyby.js';
 import { createScenery } from './scenery.js';
+import { createSnatch } from './snatch.js';
 import { reachedMars } from './sky.js';
 import { applyWorld, viewHalfWidth } from './view.js';
 import {
@@ -178,6 +179,7 @@ const propLayer = new Container();
 const actorLayer = new Container();
 let scenery;
 let flybys;
+let snatch;
 let kitten;
 let cannon;
 let stake;
@@ -1059,6 +1061,7 @@ function safeAudio(fn) {
 function startAim() {
   if (!kitten || !flybys) return;
   flybys.clear();
+  if (snatch) snatch.clear();
   setPhase('aim');
   stake.visible = false;
   kitten.mesh.visible = true;
@@ -1241,6 +1244,7 @@ function reloadField() {
   cam.y = home.y;
   if (onTitle) {
     flybys.clear();
+    if (snatch) snatch.clear();
     setPhase('title');
     return;
   }
@@ -1419,6 +1423,25 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (e.repeat) return;
+  // During aim/title, 1–9 and 0 preview launch meows 1–10. Tell which number wins.
+  if (game.phase === 'aim' || game.phase === 'title') {
+    let digit = '';
+    if (e.code.startsWith('Digit')) digit = e.code.slice(5);
+    else if (e.code.startsWith('Numpad') && e.code.length === 7) digit = e.code.slice(6);
+    else if (e.key >= '0' && e.key <= '9') digit = e.key;
+    if (digit.length === 1 && digit >= '0' && digit <= '9') {
+      e.preventDefault();
+      const id = digit === '0' ? 10 : Number(digit);
+      const named = audio.meowList().find((m) => m.id === id);
+      audio.useMeow(id);
+      safeAudio(() => {
+        audio.unlock();
+        audio.meow(id);
+      });
+      shout(`Meow ${id}${named ? ` — ${named.name}` : ''}`);
+      return;
+    }
+  }
   if (accept) onAction();
   else if (e.code === 'KeyP') setPaused(true);
   else if (e.code === 'KeyM') {
@@ -2017,24 +2040,45 @@ function frame(now) {
   if (game.kitten && game.kitten.cause === 'spikes') game.sink = Math.min(12, game.sink + dt * 22);
 
   if (game.phase === 'flight' && game.kitten && !game.kitten.dead) {
-    acc += dt;
-    let steps = 0;
-    while (acc >= STEP && steps < 5 && !game.kitten.dead) {
-      const props = fieldProps(game.kitten);
-      for (let i = 0; i < props.length; i++) {
-        const prop = props[i];
-        if (prop.type === 'balloon' && !prop.spent) {
-          prop.y = prop.baseY + Math.sin(time * 1.5 + prop.bob) * 11;
-        }
-      }
-      onEvent(step(game.kitten, props));
+    const travelFeet = feetFromTravel(game.kitten.startX, game.kitten.x);
+    const snatchEvent = snatch
+      ? snatch.update(dt, game.kitten, cam, true, travelFeet)
+      : null;
+    if (snatchEvent && snatchEvent.state === 'drop') {
+      cam.shake = Math.min(1.2, cam.shake + 0.35);
+      safeAudio(() => audio.meow());
       afterStep();
-      acc -= STEP;
-      steps += 1;
     }
-    // Loudness levels off around the old 240 px/frame. The flight itself does not.
-    audio.wind(Math.min(1, Math.abs(game.kitten.vx) / 240));
-    commitRecords();
+    if (snatch && snatch.active) {
+      // Held in the talons: no gravity, no props. Keep the 30Hz flight clock.
+      acc += dt;
+      while (acc >= STEP) {
+        game.kitten.frame += 1;
+        acc -= STEP;
+      }
+      afterStep();
+      audio.wind(0.35);
+      commitRecords();
+    } else {
+      acc += dt;
+      let steps = 0;
+      while (acc >= STEP && steps < 5 && !game.kitten.dead) {
+        const props = fieldProps(game.kitten);
+        for (let i = 0; i < props.length; i++) {
+          const prop = props[i];
+          if (prop.type === 'balloon' && !prop.spent) {
+            prop.y = prop.baseY + Math.sin(time * 1.5 + prop.bob) * 11;
+          }
+        }
+        onEvent(step(game.kitten, props));
+        afterStep();
+        acc -= STEP;
+        steps += 1;
+      }
+      // Loudness levels off around the old 240 px/frame. The flight itself does not.
+      audio.wind(Math.min(1, Math.abs(game.kitten.vx) / 240));
+      commitRecords();
+    }
   } else {
     acc = 0;
     audio.wind(0);
@@ -2065,13 +2109,18 @@ function frame(now) {
   shadow.visible = kitten.mesh.visible;
 
   scenery.update(time, draw, view);
+  const flyingNow = game.phase === 'flight' && game.kitten && !game.kitten.dead;
+  const travelNow = game.kitten
+    ? feetFromTravel(game.kitten.startX, game.kitten.x)
+    : 0;
   flybys.update(
     time,
     dt,
     draw,
     game.kitten ? game.kitten.y : 0,
-    game.phase === 'flight' && game.kitten && !game.kitten.dead,
+    flyingNow && !(snatch && snatch.active),
     game.kitten ? game.kitten.vx : 0,
+    travelNow,
   );
   particles.update(dt);
   pixi.render();
@@ -2118,6 +2167,8 @@ async function boot() {
   shadow.ellipse(0, 2, 16, 5.5);
   shadow.fill({ color: 0x1d3a16, alpha: 1 });
   actorLayer.addChild(cannon.root, shadow, kitten.mesh, stake);
+  // Snatch dino sits above the kitten so the talons read in front.
+  snatch = createSnatch(actorLayer);
   particles = createParticles(actorLayer);
 
   resize();
@@ -2202,6 +2253,7 @@ window.__kitten = {
   },
   get coat() { return kitten.coat(); },
   get sky() { return flybys.stats(); },
+  get snatch() { return snatch ? snatch.phase : 'idle'; },
   get cause() { return game.kitten ? game.kitten.cause : null; },
   get x() { return game.kitten ? game.kitten.x : launchPoint(game.angle).x; },
   get y() { return game.kitten ? game.kitten.y : launchPoint(game.angle).y; },
@@ -2211,6 +2263,23 @@ window.__kitten = {
   show(kind, at) {
     flybys.launch(cam, game.kitten ? game.kitten.y : cam.y, kind, at || null);
   },
+  // Demo: force a pterodactyl snatch during flight.
+  grab() {
+    if (!snatch || !game.kitten || game.phase !== 'flight' || game.kitten.dead) return false;
+    return snatch.force(game.kitten, cam);
+  },
+  // Launch meow picker: meows() lists 1–10; meow(n) previews; useMeow(n) selects.
+  meows() { return audio.meowList(); },
+  meow(n) {
+    safeAudio(() => {
+      audio.unlock();
+      if (n != null) audio.useMeow(n);
+      audio.meow(n);
+    });
+    return audio.meowPick;
+  },
+  useMeow(n) { return audio.useMeow(n); },
+  get meowPick() { return audio.meowPick; },
   retry,
   reload: reloadField,
   clearBests,
