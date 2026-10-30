@@ -1423,25 +1423,6 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (e.repeat) return;
-  // During aim/title, 1–9 and 0 preview launch meows 1–10. Tell which number wins.
-  if (game.phase === 'aim' || game.phase === 'title') {
-    let digit = '';
-    if (e.code.startsWith('Digit')) digit = e.code.slice(5);
-    else if (e.code.startsWith('Numpad') && e.code.length === 7) digit = e.code.slice(6);
-    else if (e.key >= '0' && e.key <= '9') digit = e.key;
-    if (digit.length === 1 && digit >= '0' && digit <= '9') {
-      e.preventDefault();
-      const id = digit === '0' ? 10 : Number(digit);
-      const named = audio.meowList().find((m) => m.id === id);
-      audio.useMeow(id);
-      safeAudio(() => {
-        audio.unlock();
-        audio.meow(id);
-      });
-      shout(`Meow ${id}${named ? ` — ${named.name}` : ''}`);
-      return;
-    }
-  }
   if (accept) onAction();
   else if (e.code === 'KeyP') setPaused(true);
   else if (e.code === 'KeyM') {
@@ -2274,18 +2255,12 @@ window.__kitten = {
     if (!snatch || !game.kitten || game.phase !== 'flight' || game.kitten.dead) return false;
     return snatch.force(game.kitten);
   },
-  // Launch meow picker: meows() lists 1–10; meow(n) previews; useMeow(n) selects.
-  meows() { return audio.meowList(); },
-  meow(n) {
+  meow() {
     safeAudio(() => {
       audio.unlock();
-      if (n != null) audio.useMeow(n);
-      audio.meow(n);
+      audio.meow();
     });
-    return audio.meowPick;
   },
-  useMeow(n) { return audio.useMeow(n); },
-  get meowPick() { return audio.meowPick; },
   retry,
   reload: reloadField,
   clearBests,

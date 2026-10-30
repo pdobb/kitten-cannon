@@ -1,14 +1,4 @@
-// Effects plus recorded launch meows. Samples: src/sfx/meows/CREDITS.txt
-import meowUrl01 from './sfx/meows/01.mp3';
-import meowUrl02 from './sfx/meows/02.mp3';
-import meowUrl03 from './sfx/meows/03.mp3';
-import meowUrl04 from './sfx/meows/04.mp3';
-import meowUrl05 from './sfx/meows/05.mp3';
-import meowUrl06 from './sfx/meows/06.mp3';
-import meowUrl07 from './sfx/meows/07.mp3';
-import meowUrl08 from './sfx/meows/08.mp3';
-import meowUrl09 from './sfx/meows/09.mp3';
-import meowUrl10 from './sfx/meows/10.mp3';
+// Small synthesized effects. Nothing here is from the original game's soundtrack.
 
 export function createAudio() {
   let ctx = null;
@@ -89,56 +79,24 @@ export function createAudio() {
     src.start(t);
   }
 
-  // Recorded cat meows (see src/sfx/meows/CREDITS.txt). Keys 1–0 preview these.
-  const MEOW_URLS = [
-    meowUrl01, meowUrl02, meowUrl03, meowUrl04, meowUrl05,
-    meowUrl06, meowUrl07, meowUrl08, meowUrl09, meowUrl10,
-  ];
-  const MEOWS = [
-    { id: 1, name: 'Yard yelp A' },
-    { id: 2, name: 'Yard yelp B' },
-    { id: 3, name: 'Yard yelp C' },
-    { id: 4, name: 'Yard yelp D' },
-    { id: 5, name: 'Yard yelp E' },
-    { id: 6, name: 'Yard yelp F' },
-    { id: 7, name: 'Yard yelp G' },
-    { id: 8, name: 'House short' },
-    { id: 9, name: 'Quick call' },
-    { id: 10, name: 'Mixkit meow' },
-  ];
-
-  let meowPick = 1;
-  const meowBuffers = new Array(MEOW_URLS.length);
-  let meowLoad = null;
-
-  function loadMeows() {
-    if (meowLoad) return meowLoad;
+  // A meow is a rise, then a fall, with a quiet octave on top.
+  function meowVoice(start, peakFreq, end, duration, peak) {
     const c = context();
-    meowLoad = Promise.all(
-      MEOW_URLS.map(async (url, i) => {
-        const res = await fetch(url);
-        const raw = await res.arrayBuffer();
-        meowBuffers[i] = await c.decodeAudioData(raw.slice(0));
-      }),
-    ).catch((err) => {
-      meowLoad = null;
-      throw err;
-    });
-    return meowLoad;
-  }
-
-  function playMeowSample(index) {
-    const buf = meowBuffers[index];
-    if (!buf) return;
-    const c = context();
-    const src = c.createBufferSource();
-    src.buffer = buf;
+    const t = c.currentTime;
+    const o = c.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(start, t);
+    o.frequency.linearRampToValueAtTime(peakFreq, t + duration * 0.28);
+    o.frequency.exponentialRampToValueAtTime(Math.max(1, end), t + duration);
     const g = c.createGain();
-    // Loudnorm samples peak near full scale; match old synth meow (~0.3) under the boom.
-    g.gain.value = 0.32;
-    src.connect(g);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.04);
+    g.gain.exponentialRampToValueAtTime(peak * 0.7, t + duration * 0.45);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
     g.connect(c.destination);
-    src.start();
+    o.connect(g);
+    o.start(t);
+    o.stop(t + duration + 0.02);
   }
 
   function ensureWind() {
@@ -174,8 +132,8 @@ export function createAudio() {
     unlock() {
       const c = context();
       ensureWind();
-      const ready = c.state === 'suspended' ? c.resume() : Promise.resolve();
-      return ready.then(() => loadMeows()).catch(() => {});
+      if (c.state === 'suspended') return c.resume().catch(() => {});
+      return Promise.resolve();
     },
     toggleMute() {
       muted = !muted;
@@ -204,25 +162,12 @@ export function createAudio() {
         tone(520, 0.06, 'triangle', 0.08, 220);
       });
     },
-    // Launch meow. Pass 1–10 to preview that pick; omit to use the selected one.
-    meow(which) {
+    meow() {
       if (muted) return;
-      const id = which == null ? meowPick : Math.max(1, Math.min(10, Math.round(Number(which) || 1)));
       whenReady(() => {
-        loadMeows()
-          .then(() => playMeowSample(id - 1))
-          .catch(() => {});
+        meowVoice(380, 820, 260, 0.36, 0.1);
+        tone(760, 0.16, 'sine', 0.025, 1400);
       });
-    },
-    meowList() {
-      return MEOWS.map((m) => ({ id: m.id, name: m.name }));
-    },
-    get meowPick() {
-      return meowPick;
-    },
-    useMeow(which) {
-      meowPick = Math.max(1, Math.min(10, Math.round(Number(which) || 1)));
-      return meowPick;
     },
     bounce(speed) {
       if (muted) return;
