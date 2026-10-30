@@ -248,6 +248,24 @@ export function createCannon() {
   barrel.roundRect(lip - 12, -18, 14, 36, 3);
   barrel.fill(PAL.metalDark);
 
+  // Burning wick on the breech (top rear), same spark language as the balloon bombs.
+  const wick = new Graphics();
+  wick.moveTo(-11, 9);
+  wick.quadraticCurveTo(-18, 14, -16, 21);
+  wick.stroke(strokeOf(1.8, 0xc2a15a));
+  wick.moveTo(-11, 9);
+  wick.lineTo(-12, 11);
+  wick.stroke(strokeOf(2.2, 0x4a4038));
+
+  const spark = new Graphics();
+  spark.circle(0, 0, 2.4);
+  spark.fill(0xffb703);
+  spark.circle(-0.7, 0.7, 0.9);
+  spark.fill(0xfff6d0);
+  spark.circle(0.8, -0.4, 1.1);
+  spark.fill({ color: 0xff6b1a, alpha: 0.85 });
+  spark.position.set(-16, 21);
+
   const ticks = new Container();
   for (let i = 0; i < 6; i++) {
     const dot = new Graphics();
@@ -263,7 +281,7 @@ export function createCannon() {
   const pinInk = new Graphics();
   paint(pin, pinInk, (p) => p.circle(PIVOT_X, PIVOT_Y, 6.5), PAL.brass, 2.2);
 
-  pivot.addChild(bore, barrel, barrelInk, ticks, muzzle);
+  pivot.addChild(bore, barrel, barrelInk, wick, spark, ticks, muzzle);
   root.addChild(pivot, pin, pinInk);
 
   // Near wheel last, so it covers the barrel as well as the cheek. The far
@@ -282,7 +300,7 @@ export function createCannon() {
   }
   paint(near, nearInk, (p) => p.circle(16, 29, 5), PAL.brass, 2);
   root.addChild(near, nearInk);
-  return { root, pivot, ticks, muzzle };
+  return { root, pivot, ticks, muzzle, spark };
 }
 
 function tntStick(x) {

@@ -1976,6 +1976,12 @@ function updateHud() {
     PIVOT_X - aim.x * game.recoil,
     PIVOT_Y - aim.y * game.recoil,
   );
+  if (cannon.spark) {
+    const t = playSeconds();
+    const s = 0.85 + Math.sin(t * 14) * 0.35;
+    cannon.spark.scale.set(s, s);
+    cannon.spark.alpha = 0.82 + Math.sin(t * 22) * 0.18;
+  }
 }
 
 function layoutView(jx, jy) {
