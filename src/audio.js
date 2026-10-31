@@ -169,45 +169,100 @@ export function createAudio() {
         tone(760, 0.16, 'sine', 0.025, 1400);
       });
     },
-    // Pterodactyl cry after it drops the kitten.
+    // Pterodactyl cry after it drops the kitten — harsh "SKREEaaaw" with a
+    // throaty fall. Square body + sub growl + breath rasp (not a laser swoop).
     screech() {
       if (muted) return;
       whenReady(() => {
         const c = context();
         const t = c.currentTime;
+        const dur = 0.82;
+
+        // Main cry: quick rise into a shriek, then a long falling rasp.
         const o = c.createOscillator();
-        o.type = 'sawtooth';
-        o.frequency.setValueAtTime(2400, t);
-        o.frequency.exponentialRampToValueAtTime(420, t + 0.55);
+        o.type = 'square';
+        o.frequency.setValueAtTime(920, t);
+        o.frequency.linearRampToValueAtTime(1580, t + 0.06);
+        o.frequency.exponentialRampToValueAtTime(160, t + dur);
+
+        // Throat formant rides down with the call.
         const bp = c.createBiquadFilter();
         bp.type = 'bandpass';
-        bp.Q.value = 5;
-        bp.frequency.setValueAtTime(1900, t);
-        bp.frequency.exponentialRampToValueAtTime(550, t + 0.55);
+        bp.Q.value = 3.4;
+        bp.frequency.setValueAtTime(1650, t);
+        bp.frequency.exponentialRampToValueAtTime(280, t + dur);
+
+        // Vocal-fold tremolo — the rasp that sells "creature," not "synth tone."
+        const trem = c.createGain();
+        trem.gain.value = 0.58;
+        const lfo = c.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(55, t);
+        lfo.frequency.linearRampToValueAtTime(22, t + dur);
+        const lfoDepth = c.createGain();
+        lfoDepth.gain.value = 0.52;
+        lfo.connect(lfoDepth);
+        lfoDepth.connect(trem.gain);
+
         const g = c.createGain();
         g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.2, t + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.12, t + 0.22);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.58);
+        g.gain.exponentialRampToValueAtTime(0.22, t + 0.015);
+        g.gain.setValueAtTime(0.15, t + 0.12);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
         o.connect(bp);
-        bp.connect(g);
+        bp.connect(trem);
+        trem.connect(g);
         g.connect(c.destination);
         o.start(t);
-        o.stop(t + 0.6);
-        // Thin upper harmonic + a rasp of noise.
-        const h = c.createOscillator();
-        h.type = 'triangle';
-        h.frequency.setValueAtTime(3200, t);
-        h.frequency.exponentialRampToValueAtTime(700, t + 0.4);
-        const hg = c.createGain();
-        hg.gain.setValueAtTime(0.0001, t);
-        hg.gain.exponentialRampToValueAtTime(0.07, t + 0.015);
-        hg.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
-        hg.connect(c.destination);
-        h.connect(hg);
-        h.start(t);
-        h.stop(t + 0.44);
-        noise(0.22, 0.07, 0.75, 3500, 500);
+        o.stop(t + dur + 0.02);
+        lfo.start(t);
+        lfo.stop(t + dur + 0.02);
+
+        // Bright edge on the opening shriek only.
+        const edge = c.createOscillator();
+        edge.type = 'sawtooth';
+        edge.frequency.setValueAtTime(2100, t);
+        edge.frequency.exponentialRampToValueAtTime(700, t + 0.28);
+        const edgeBp = c.createBiquadFilter();
+        edgeBp.type = 'bandpass';
+        edgeBp.Q.value = 6;
+        edgeBp.frequency.setValueAtTime(2400, t);
+        edgeBp.frequency.exponentialRampToValueAtTime(900, t + 0.28);
+        const edgeG = c.createGain();
+        edgeG.gain.setValueAtTime(0.0001, t);
+        edgeG.gain.exponentialRampToValueAtTime(0.08, t + 0.012);
+        edgeG.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+        edge.connect(edgeBp);
+        edgeBp.connect(edgeG);
+        edgeG.connect(c.destination);
+        edge.start(t);
+        edge.stop(t + 0.32);
+
+        // Sub growl under the fall.
+        const sub = c.createOscillator();
+        sub.type = 'sawtooth';
+        sub.frequency.setValueAtTime(460, t);
+        sub.frequency.linearRampToValueAtTime(780, t + 0.06);
+        sub.frequency.exponentialRampToValueAtTime(75, t + dur);
+        const subLp = c.createBiquadFilter();
+        subLp.type = 'lowpass';
+        subLp.frequency.value = 480;
+        subLp.Q.value = 0.8;
+        const subG = c.createGain();
+        subG.gain.setValueAtTime(0.0001, t);
+        subG.gain.exponentialRampToValueAtTime(0.12, t + 0.04);
+        subG.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        sub.connect(subLp);
+        subLp.connect(subG);
+        subG.connect(c.destination);
+        sub.start(t);
+        sub.stop(t + dur + 0.02);
+
+        // Breath / beak rasp over the body of the cry.
+        noise(0.7, 0.12, 0.48, 2600, 220);
+        // Short opening "kraa" click.
+        noise(0.045, 0.16, 0.9, 3600, 1100);
       });
     },
     bounce(speed) {

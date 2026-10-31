@@ -7,8 +7,9 @@ import { Container, Graphics } from 'pixi.js';
 import { FLYBY_EVERY_FT, FLYBY_Y } from './flyby.js';
 import { atTerminalSpeed, SPEED_MAX, speedFromMph } from './tune.js';
 
-// Same band gate as flybys; high enough that most long climbs still meet one.
-export const SNATCH_CHANCE = 0.22;
+// Same band gate as flybys. ~1/3 the old 0.22 rate — a long climb can still
+// roll one, but most flights never meet the bird.
+export const SNATCH_CHANCE = 0.073;
 export const SNATCH_APPROACH = 1.15;
 export const SNATCH_CARRY_MIN = 1;
 export const SNATCH_CARRY_MAX = 5;

@@ -2106,13 +2106,11 @@ function frame(now) {
       : null;
     if (snatchEvent && snatchEvent.state === 'grab') {
       noteSnatchBadge();
+      safeAudio(() => audio.screech());
     }
     if (snatchEvent && snatchEvent.state === 'drop') {
       cam.shake = Math.min(1.2, cam.shake + 0.35);
-      safeAudio(() => {
-        audio.meow();
-        audio.screech();
-      });
+      safeAudio(() => audio.meow());
       highlightSpeedBoost(snatchEvent.from, snatchEvent.vx);
       afterStep();
     }
@@ -2340,6 +2338,12 @@ window.__kitten = {
     safeAudio(() => {
       audio.unlock();
       audio.meow();
+    });
+  },
+  screech() {
+    safeAudio(() => {
+      audio.unlock();
+      audio.screech();
     });
   },
   retry,
