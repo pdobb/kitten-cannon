@@ -260,8 +260,10 @@ export function createSnatch(layer) {
 
     time += dt;
 
+    let justGrabbed = false;
     if (phase === 'approach' && time >= SNATCH_APPROACH) {
       latch(kitten);
+      justGrabbed = true;
     }
 
     const pose = snatchPose(
@@ -295,11 +297,16 @@ export function createSnatch(layer) {
     kitten.spin = -35;
     kitten.turn = 0;
 
+    if (justGrabbed) {
+      return { state: 'grab', grabbed: true };
+    }
+
     if (time < holdUntil) {
       return { state: 'carry', grabbed: true };
     }
 
     // Eject forward with a boost — never slower than the carry unless capped.
+    const fromVx = carry.vx;
     kitten.x = pose.kittenX;
     kitten.y = pose.kittenY;
     kitten.vx = ejectVx;
@@ -309,7 +316,7 @@ export function createSnatch(layer) {
     kitten.spin = 14;
     kitten.turn = -(Math.abs(kitten.vx) * 0.04);
     phase = 'done';
-    return { state: 'drop', grabbed: false, vx: ejectVx };
+    return { state: 'drop', grabbed: false, vx: ejectVx, from: fromVx };
   }
 
   function afterglow(dt, cam) {

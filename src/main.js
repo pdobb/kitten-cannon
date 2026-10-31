@@ -104,6 +104,7 @@ const SHORT_KEY = 'kitten-cannon-shortest-frames';
 const MARS_KEY = 'kitten-cannon-mars-visits';
 const TERM_KEY = 'kitten-cannon-terminal-visits';
 const POWER_KEY = 'kitten-cannon-fullpower-visits';
+const SNATCH_KEY = 'kitten-cannon-snatch-visits';
 const END_KEY = 'kitten-cannon-endings';
 const RESET_KEY = 'kitten-cannon-resets';
 // Session flag: an aim/flight is open and has not landed yet. A refresh mid-ride
@@ -232,11 +233,12 @@ const game = {
   marsVisits: loadNumber(MARS_KEY),
   terminalVisits: loadNumber(TERM_KEY),
   fullPowerVisits: loadNumber(POWER_KEY),
+  snatchVisits: loadNumber(SNATCH_KEY),
   peakY: 0,
   peakSpeed: 0,
   was: { furthest: 0, highest: 0, longest: 0, shortest: 0 },
   // One award per badge kind per ride. Reset in beginShot.
-  badgeArmed: { mars: false, terminal: false, power: false },
+  badgeArmed: { mars: false, terminal: false, power: false, snatch: false },
   hold: 0,
   squash: 0,
   sink: 0,
@@ -380,6 +382,14 @@ function tallyFullPower() {
   return true;
 }
 
+function tallySnatch() {
+  if (game.badgeArmed.snatch) return false;
+  game.badgeArmed.snatch = true;
+  game.snatchVisits += 1;
+  saveVisitCount(SNATCH_KEY, game.snatchVisits);
+  return true;
+}
+
 // Check thresholds and refresh the HUD rail when something new lands.
 function noteRideBadges() {
   const marsPop = tallyMars();
@@ -388,6 +398,23 @@ function noteRideBadges() {
   if (marsPop || termPop || powerPop) {
     paintHudRideBadges({ marsPop, termPop, powerPop });
   }
+}
+
+function noteSnatchBadge() {
+  if (!tallySnatch()) return;
+  paintHudRideBadges({ snatchPop: true });
+}
+
+function highlightSpeedBoost(fromVx, toVx) {
+  const fromMph = mphFromSpeed(fromVx);
+  const toMph = mphFromSpeed(toVx);
+  const delta = toMph - fromMph;
+  speedEl.classList.remove('boost', 'terminal');
+  void speedEl.offsetWidth;
+  speedEl.textContent = formatSpeed(toVx);
+  speedEl.classList.add('boost');
+  speedEl.classList.toggle('terminal', atTerminalSpeed(toVx));
+  if (delta > 0) shout(`+${delta} mph!`);
 }
 
 function marsDiscSvg() {
@@ -431,19 +458,35 @@ function fullPowerDiscSvg() {
   return svg;
 }
 
+function snatchDiscSvg() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  // Brown wing disc — pterodactyl express.
+  svg.innerHTML = [
+    '<circle cx="12" cy="12" r="11" fill="#b56538"/>',
+    '<path d="M4.5 13.5c3.2-1.2 5.4-4.8 6.2-8.2 1.4 3.2 4.2 5.6 7.8 6.4-2.8.6-5 2.4-6.2 4.8-1.4-1.8-3.8-2.6-7.8-3z" fill="#f2c14b"/>',
+    '<path d="M11.2 11.2l7.6-1.4-1.2 2.2z" fill="#ffe56a"/>',
+    '<circle cx="10.2" cy="10.4" r="1.1" fill="#2b2118"/>',
+  ].join('');
+  return svg;
+}
+
 const BADGE_LABEL = {
   terminal: 'Terminal Velocity',
   power: 'Full power',
+  snatch: 'Pterodactyl Express',
   mars: 'Space',
 };
 
 const BADGE_TIP = {
   terminal: 'Hit the 256 mph speed cap on a ride.',
   power: 'Launched at 100% power.',
+  snatch: 'Caught a ride on the pterodactyl.',
   mars: 'Made it to space and saw Mars.',
 };
 
-const BADGE_KINDS = ['terminal', 'power', 'mars'];
+const BADGE_KINDS = ['terminal', 'power', 'snatch', 'mars'];
 
 let badgeTipEl = null;
 let badgeTipFor = null;
@@ -451,6 +494,7 @@ let badgeTipFor = null;
 function rideBadgeIcon(kind) {
   if (kind === 'mars') return marsDiscSvg();
   if (kind === 'power') return fullPowerDiscSvg();
+  if (kind === 'snatch') return snatchDiscSvg();
   return terminalDiscSvg();
 }
 
@@ -555,7 +599,10 @@ function rideBadgeEl(kind, count, { pop = false } = {}) {
   mark.textContent = `×${count}`;
   badge.append(mark);
   if (pop) {
-    const glyph = kind === 'power' ? '★' : kind === 'terminal' ? '✦' : '✧';
+    const glyph = kind === 'power' ? '★'
+      : kind === 'terminal' ? '✦'
+        : kind === 'snatch' ? '◈'
+          : '✧';
     for (const spot of ['a', 'b', 'c', 'd', 'e', 'f']) {
       const spark = document.createElement('span');
       spark.className = `badge-spark ${spot}`;
@@ -574,18 +621,25 @@ function rideBadgeEl(kind, count, { pop = false } = {}) {
 
 const badgesEl = document.querySelector('#badges');
 
-function paintHudRideBadges({ marsPop = false, termPop = false, powerPop = false } = {}) {
+function paintHudRideBadges({
+  marsPop = false,
+  termPop = false,
+  powerPop = false,
+  snatchPop = false,
+} = {}) {
   if (!badgesEl) return;
   closeBadgeTips();
   badgesEl.replaceChildren();
   const hasMars = game.marsVisits > 0;
   const hasTerm = game.terminalVisits > 0;
   const hasPower = game.fullPowerVisits > 0;
-  if (!hasMars && !hasTerm && !hasPower) return;
+  const hasSnatch = game.snatchVisits > 0;
+  if (!hasMars && !hasTerm && !hasPower && !hasSnatch) return;
   const rail = document.createElement('div');
   rail.className = 'ride-badges';
   if (hasTerm) rail.append(rideBadgeEl('terminal', game.terminalVisits, { pop: termPop }));
   if (hasPower) rail.append(rideBadgeEl('power', game.fullPowerVisits, { pop: powerPop }));
+  if (hasSnatch) rail.append(rideBadgeEl('snatch', game.snatchVisits, { pop: snatchPop }));
   if (hasMars) rail.append(rideBadgeEl('mars', game.marsVisits, { pop: marsPop }));
   badgesEl.append(rail);
 }
@@ -666,7 +720,11 @@ function saveRecords() {
   }
 }
 
-const BEST_KEYS = [FAR_KEY, HIGH_KEY, LONG_KEY, SHORT_KEY, MARS_KEY, TERM_KEY, POWER_KEY, END_KEY, RESET_KEY];
+const BEST_KEYS = [
+  FAR_KEY, HIGH_KEY, LONG_KEY, SHORT_KEY,
+  MARS_KEY, TERM_KEY, POWER_KEY, SNATCH_KEY,
+  END_KEY, RESET_KEY,
+];
 
 function clearBests() {
   game.furthest = 0;
@@ -677,6 +735,7 @@ function clearBests() {
   game.marsVisits = 0;
   game.terminalVisits = 0;
   game.fullPowerVisits = 0;
+  game.snatchVisits = 0;
   game.endings = emptyEndings();
   game.resets = 0;
   game.was = { furthest: 0, highest: 0, longest: 0, shortest: 0 };
@@ -1082,7 +1141,7 @@ function beginShot(forcedPower) {
     longest: game.longest,
     shortest: game.shortest,
   };
-  game.badgeArmed = { mars: false, terminal: false, power: false };
+  game.badgeArmed = { mars: false, terminal: false, power: false, snatch: false };
   game.kitten = makeState(game.angle, power);
   game.feet = 0;
   game.peakY = game.kitten.y;
@@ -1094,7 +1153,7 @@ function beginShot(forcedPower) {
   game.recoil = 26;
   altitudeEl.dataset.tier = '0';
   altitudeEl.classList.remove('pop');
-  speedEl.classList.remove('terminal');
+  speedEl.classList.remove('terminal', 'boost');
   timeEl.textContent = formatFlight(0);
   stake.visible = false;
   kitten.mesh.visible = true;
@@ -1221,7 +1280,7 @@ function reloadField() {
   altitudeEl.dataset.tier = '0';
   altitudeEl.classList.remove('pop');
   speedEl.textContent = formatSpeed(0);
-  speedEl.classList.remove('terminal');
+  speedEl.classList.remove('terminal', 'boost');
   timeEl.textContent = formatFlight(0);
   game.kitten = null;
   game.feet = 0;
@@ -2031,12 +2090,16 @@ function frame(now) {
     const snatchEvent = snatch
       ? snatch.update(dt, game.kitten, cam, true, travelFeet)
       : null;
+    if (snatchEvent && snatchEvent.state === 'grab') {
+      noteSnatchBadge();
+    }
     if (snatchEvent && snatchEvent.state === 'drop') {
       cam.shake = Math.min(1.2, cam.shake + 0.35);
       safeAudio(() => {
         audio.meow();
         audio.screech();
       });
+      highlightSpeedBoost(snatchEvent.from, snatchEvent.vx);
       afterStep();
     }
     if (snatch && snatch.active) {
@@ -2234,6 +2297,7 @@ window.__kitten = {
       marsVisits: game.marsVisits,
       terminalVisits: game.terminalVisits,
       fullPowerVisits: game.fullPowerVisits,
+      snatchVisits: game.snatchVisits,
       resets: game.resets,
       endings: { ...game.endings },
     };

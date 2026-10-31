@@ -200,6 +200,17 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   color: #ffb703;
 }
 
+#speed.boost {
+  color: #ffb703;
+  animation: speed-boost 0.75s ease-out;
+}
+
+@keyframes speed-boost {
+  0% { transform: scale(0.65); }
+  40% { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
 #altitude {
   transform-origin: center bottom;
   transition: font-size 0.25s ease, color 0.25s ease;
@@ -411,6 +422,10 @@ button.ride-badge:active {
   color: #8d1d1d;
 }
 
+.ride-badge.snatch b {
+  color: #7a3f12;
+}
+
 /* Floated onto #app (position:fixed) so panel overflow:auto cannot clip it. */
 .ride-badge-tip {
   position: fixed;
@@ -515,6 +530,11 @@ button.ride-badge:active {
   box-shadow: 0 0 14px rgba(255, 90, 60, 0.85);
 }
 
+.ride-badge.snatch.pop::after {
+  border-color: #f2c14b;
+  box-shadow: 0 0 14px rgba(242, 193, 75, 0.85);
+}
+
 .ride-badge .badge-spark {
   position: absolute;
   left: 50%;
@@ -533,6 +553,7 @@ button.ride-badge:active {
 .ride-badge.mars .badge-spark { color: #ffb08a; }
 .ride-badge.terminal .badge-spark { color: #ffe56a; }
 .ride-badge.power .badge-spark { color: #ff8a6a; }
+.ride-badge.snatch .badge-spark { color: #f2c14b; }
 
 .ride-badge .badge-spark.a { --dx: -28px; --dy: -30px; }
 .ride-badge .badge-spark.b { --dx: 30px; --dy: -26px; }
