@@ -2033,7 +2033,10 @@ function frame(now) {
       : null;
     if (snatchEvent && snatchEvent.state === 'drop') {
       cam.shake = Math.min(1.2, cam.shake + 0.35);
-      safeAudio(() => audio.meow());
+      safeAudio(() => {
+        audio.meow();
+        audio.screech();
+      });
       afterStep();
     }
     if (snatch && snatch.active) {

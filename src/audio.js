@@ -169,6 +169,47 @@ export function createAudio() {
         tone(760, 0.16, 'sine', 0.025, 1400);
       });
     },
+    // Pterodactyl cry after it drops the kitten.
+    screech() {
+      if (muted) return;
+      whenReady(() => {
+        const c = context();
+        const t = c.currentTime;
+        const o = c.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(2400, t);
+        o.frequency.exponentialRampToValueAtTime(420, t + 0.55);
+        const bp = c.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.Q.value = 5;
+        bp.frequency.setValueAtTime(1900, t);
+        bp.frequency.exponentialRampToValueAtTime(550, t + 0.55);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.2, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.12, t + 0.22);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.58);
+        o.connect(bp);
+        bp.connect(g);
+        g.connect(c.destination);
+        o.start(t);
+        o.stop(t + 0.6);
+        // Thin upper harmonic + a rasp of noise.
+        const h = c.createOscillator();
+        h.type = 'triangle';
+        h.frequency.setValueAtTime(3200, t);
+        h.frequency.exponentialRampToValueAtTime(700, t + 0.4);
+        const hg = c.createGain();
+        hg.gain.setValueAtTime(0.0001, t);
+        hg.gain.exponentialRampToValueAtTime(0.07, t + 0.015);
+        hg.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+        hg.connect(c.destination);
+        h.connect(hg);
+        h.start(t);
+        h.stop(t + 0.44);
+        noise(0.22, 0.07, 0.75, 3500, 500);
+      });
+    },
     bounce(speed) {
       if (muted) return;
       const loud = Math.max(0.06, Math.min(0.22, speed / 90));

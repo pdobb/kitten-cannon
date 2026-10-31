@@ -6,13 +6,15 @@ import { HIT } from './propspec.js';
 import { skyRgb, spaceBlend, reachedMars, SPACE_FEET } from './sky.js';
 import {
   ejectSpeed,
+  rollCarryDuration,
+  rollSwoop,
   snatchPose,
   SNATCH_APPROACH,
   SNATCH_BOOST_MPH_MAX,
   SNATCH_BOOST_MPH_MIN,
-  SNATCH_CARRY,
+  SNATCH_CARRY_MAX,
+  SNATCH_CARRY_MIN,
   SNATCH_CHANCE,
-  SNATCH_DURATION,
 } from './snatch.js';
 import { CAM_FOV, CAM_Z, viewHalfHeight } from './view.js';
 import {
@@ -448,11 +450,15 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(skull.spent, true);
 }
 
-// Pterodactyl snatch: pace in, carry ~5.5s forward, eject with a boost.
+// Pterodactyl snatch: pace in, carry 1–5s on a swoop, eject with a boost.
 {
   assert.ok(SNATCH_CHANCE > 0 && SNATCH_CHANCE < 1);
-  assert.equal(SNATCH_DURATION, SNATCH_APPROACH + SNATCH_CARRY);
-  assert.ok(SNATCH_CARRY >= 5 && SNATCH_CARRY <= 6, 'hold is about 5–6 seconds');
+  assert.equal(SNATCH_CARRY_MIN, 1);
+  assert.equal(SNATCH_CARRY_MAX, 5);
+  assert.equal(rollCarryDuration(() => 0), SNATCH_CARRY_MIN);
+  assert.equal(rollCarryDuration(() => 1), SNATCH_CARRY_MAX);
+  assert.ok(rollSwoop(() => 0) > 0, 'low roll climbs');
+  assert.ok(rollSwoop(() => 0.6) < 0, 'high roll dives');
   assert.equal(speedFromMph(100), (100 * 5280) / 3600);
   assert.equal(mphFromSpeed(speedFromMph(110)), 110);
 
@@ -474,24 +480,38 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.ok(mid.dinoX > approach.dinoX, 'dino closes from behind');
   assert.ok(mid.dinoX < kitten.x, 'dino is still closing in');
 
-  const carry = { x0: kitten.x, y0: kitten.y, vx: 90, vy: 2.4 };
-  const grabbed = snatchPose(SNATCH_APPROACH, kitten, entryX, entryY, carry);
+  const carryUp = {
+    x0: kitten.x, y0: kitten.y, vx: 90, vy: 0, duration: 3, swoop: 120,
+  };
+  const grabbed = snatchPose(SNATCH_APPROACH, kitten, entryX, entryY, carryUp);
   assert.equal(grabbed.grabbed, true);
   assert.ok(Math.abs(grabbed.kittenX - (grabbed.dinoX - 6)) < 0.01);
   assert.ok(grabbed.kittenY < grabbed.dinoY);
 
-  const carried = snatchPose(
-    SNATCH_APPROACH + SNATCH_CARRY * 0.5,
+  const crest = snatchPose(
+    SNATCH_APPROACH + 1.5,
     kitten,
     entryX,
     entryY,
-    carry,
+    carryUp,
   );
-  assert.equal(carried.grabbed, true);
-  assert.ok(carried.dinoX > grabbed.dinoX, 'carry continues rightward');
-  assert.ok(carried.kittenY > kitten.y - 1, 'carry climbs or holds altitude');
-  // Half the hold at 90 px/frame × 30 Hz × (5.5/2) s ≈ 7425 px forward.
-  assert.ok(carried.kittenX > kitten.x + 5000, 'carry covers real distance');
+  assert.equal(crest.grabbed, true);
+  assert.ok(crest.dinoX > grabbed.dinoX, 'carry continues rightward');
+  assert.ok(crest.kittenY > kitten.y + 80, 'up-swoop lifts mid-carry');
+  // Half of 3s at 90 px/frame × 30 Hz ≈ 4050 px forward.
+  assert.ok(crest.kittenX > kitten.x + 3000, 'carry covers real distance');
+
+  const carryDown = {
+    x0: kitten.x, y0: kitten.y, vx: 90, vy: 0, duration: 2, swoop: -140,
+  };
+  const dive = snatchPose(
+    SNATCH_APPROACH + 1,
+    kitten,
+    entryX,
+    entryY,
+    carryDown,
+  );
+  assert.ok(dive.kittenY < kitten.y - 80, 'down-swoop drops mid-carry');
 
   const cruise = speedFromMph(100);
   const lo = ejectSpeed(cruise, () => 0);

@@ -1,7 +1,7 @@
 // Pterodactyl snatch — same beast as Flit (Gabe-Torres/flit).
-// Paces in from behind, grabs without freezing the shot, carries ~5.5 s
-// forward, then ejects the kitten with a rightward boost (never a slowdown
-// unless already at terminal).
+// Paces in from behind, grabs without freezing the shot, carries 1–5 s
+// on a swoop arc, then ejects the kitten with a rightward boost (never a
+// slowdown unless already at terminal).
 
 import { Container, Graphics } from 'pixi.js';
 import { FLYBY_EVERY_FT, FLYBY_Y } from './flyby.js';
@@ -10,8 +10,8 @@ import { atTerminalSpeed, SPEED_MAX, speedFromMph } from './tune.js';
 // Same band gate as flybys; high enough that most long climbs still meet one.
 export const SNATCH_CHANCE = 0.22;
 export const SNATCH_APPROACH = 1.15;
-export const SNATCH_CARRY = 5.5;
-export const SNATCH_DURATION = SNATCH_APPROACH + SNATCH_CARRY;
+export const SNATCH_CARRY_MIN = 1;
+export const SNATCH_CARRY_MAX = 5;
 // Eject adds this much mph on top of the carry speed (clamped at terminal).
 export const SNATCH_BOOST_MPH_MIN = 30;
 export const SNATCH_BOOST_MPH_MAX = 55;
@@ -25,6 +25,16 @@ const OUT = { width: 2.6, color: 0x6a3d16, join: 'round', cap: 'round' };
 
 function clamp(n, lo, hi) {
   return Math.max(lo, Math.min(hi, n));
+}
+
+export function rollCarryDuration(rand = Math.random) {
+  return SNATCH_CARRY_MIN + rand() * (SNATCH_CARRY_MAX - SNATCH_CARRY_MIN);
+}
+
+// Random up (+) or down (−) arc height in world px.
+export function rollSwoop(rand = Math.random) {
+  const amp = 90 + rand() * 110;
+  return rand() < 0.5 ? amp : -amp;
 }
 
 // Flit drawPterodactyl, mirrored to face +X and flipped for y-up.
@@ -84,7 +94,7 @@ function drawPterodactyl(g, flap, grabbed) {
 }
 
 // Pure pose for tests and drawing. `kitten` is the live flight body during
-// approach; `carry` is { x0, y0, vx, vy } once the talons latch.
+// approach; `carry` is { x0, y0, vx, vy, duration, swoop } once latched.
 export function snatchPose(time, kitten, entryX, entryY, carry = null) {
   const wing = Math.sin(time * 26);
   const grabX = kitten.x - TALON_X;
@@ -103,14 +113,26 @@ export function snatchPose(time, kitten, entryX, entryY, carry = null) {
       dinoY,
       grabbed: false,
       wing,
+      pitch: Math.sin(time * 3) * 0.08,
     };
   }
-  const u = clamp((time - SNATCH_APPROACH) / SNATCH_CARRY, 0, 1);
+  const origin = carry || {
+    x0: kitten.x,
+    y0: kitten.y,
+    vx: 0,
+    vy: 0,
+    duration: SNATCH_CARRY_MAX,
+    swoop: 0,
+  };
+  const dur = Math.max(SNATCH_CARRY_MIN, origin.duration || SNATCH_CARRY_MAX);
+  const u = clamp((time - SNATCH_APPROACH) / dur, 0, 1);
   // Carry advances at cruise px/frame × 30 Hz so distance keeps ticking.
-  const frames = u * SNATCH_CARRY * 30;
-  const origin = carry || { x0: kitten.x, y0: kitten.y, vx: 0, vy: 0 };
+  const frames = u * dur * 30;
+  const arc = (origin.swoop || 0) * Math.sin(u * Math.PI);
   const kittenX = origin.x0 + origin.vx * frames;
-  const kittenY = origin.y0 + origin.vy * frames;
+  const kittenY = origin.y0 + origin.vy * frames + arc;
+  // Tip the beak with the climb/dive of the arc.
+  const pitch = -0.1 - ((origin.swoop || 0) / 220) * Math.cos(u * Math.PI) * 0.35;
   return {
     kittenX,
     kittenY,
@@ -118,6 +140,7 @@ export function snatchPose(time, kitten, entryX, entryY, carry = null) {
     dinoY: kittenY - TALON_Y,
     grabbed: true,
     wing,
+    pitch,
   };
 }
 
@@ -149,6 +172,7 @@ export function createSnatch(layer) {
   let lastBand = -1;
   let carry = null;
   let ejectVx = 0;
+  let holdUntil = SNATCH_APPROACH + SNATCH_CARRY_MAX;
 
   function clear() {
     phase = 'idle';
@@ -159,6 +183,7 @@ export function createSnatch(layer) {
     lastBand = -1;
     carry = null;
     ejectVx = 0;
+    holdUntil = SNATCH_APPROACH + SNATCH_CARRY_MAX;
     root.visible = false;
     art.clear();
   }
@@ -184,20 +209,25 @@ export function createSnatch(layer) {
     entryY = kitten.y + 150;
     carry = null;
     ejectVx = 0;
+    holdUntil = SNATCH_APPROACH + SNATCH_CARRY_MAX;
     root.visible = true;
     return true;
   }
 
   function latch(kitten) {
-    // Keep forward pace at grab; mild climb while carried.
+    const duration = rollCarryDuration();
+    const swoop = rollSwoop();
+    // Keep forward pace at grab; arc handles the vertical swoop.
     const cruiseVx = Math.max(kitten.vx, speedFromMph(70));
-    const cruiseVy = 2.4;
     carry = {
       x0: kitten.x,
       y0: kitten.y,
       vx: cruiseVx,
-      vy: cruiseVy,
+      vy: 0,
+      duration,
+      swoop,
     };
+    holdUntil = SNATCH_APPROACH + duration;
     ejectVx = ejectSpeed(cruiseVx);
     phase = 'carry';
   }
@@ -243,22 +273,29 @@ export function createSnatch(layer) {
     );
     drawPterodactyl(art, pose.wing, pose.grabbed);
     root.position.set(pose.dinoX, pose.dinoY);
-    root.rotation = pose.grabbed ? -0.12 : Math.sin(time * 3) * 0.08;
+    root.rotation = pose.pitch;
 
     if (phase === 'approach') {
       // Kitten keeps normal physics; only the dino moves.
       return { state: 'approach', grabbed: false };
     }
 
+    // Instantaneous climb/dive for the HUD speed chips while held.
+    const dur = carry.duration;
+    const u = clamp((time - SNATCH_APPROACH) / dur, 0, 1);
+    // d/dt of swoop*sin(u*pi) with u = t/dur → swoop*cos(u*pi)*pi/dur, in px/s
+    // → px/frame at 30 Hz.
+    const arcVy = (carry.swoop * Math.cos(u * Math.PI) * Math.PI / dur) / 30;
+
     // Carry: ride the talons forward. Props/gravity stay paused in main.
     kitten.x = pose.kittenX;
     kitten.y = pose.kittenY;
     kitten.vx = carry.vx;
-    kitten.vy = carry.vy;
+    kitten.vy = carry.vy + arcVy;
     kitten.spin = -35;
     kitten.turn = 0;
 
-    if (time < SNATCH_DURATION) {
+    if (time < holdUntil) {
       return { state: 'carry', grabbed: true };
     }
 
@@ -266,7 +303,9 @@ export function createSnatch(layer) {
     kitten.x = pose.kittenX;
     kitten.y = pose.kittenY;
     kitten.vx = ejectVx;
-    kitten.vy = 6 + Math.random() * 8;
+    // Toss along the last swoop direction a bit.
+    const toss = carry.swoop >= 0 ? 8 + Math.random() * 8 : -2 + Math.random() * 6;
+    kitten.vy = toss;
     kitten.spin = 14;
     kitten.turn = -(Math.abs(kitten.vx) * 0.04);
     phase = 'done';
@@ -276,7 +315,7 @@ export function createSnatch(layer) {
   function afterglow(dt, cam) {
     if (phase !== 'done' || !root.visible) return;
     time += dt;
-    const age = time - SNATCH_DURATION;
+    const age = time - holdUntil;
     if (age > 2.4) {
       root.visible = false;
       art.clear();
@@ -284,9 +323,11 @@ export function createSnatch(layer) {
     }
     const flap = Math.sin(time * 26);
     drawPterodactyl(art, flap, false);
+    // Keep banking the same way the swoop went as it peels off.
+    const bank = carry && carry.swoop < 0 ? 0.22 : -0.22;
     root.x += 320 * dt;
-    root.y += 50 * dt;
-    root.rotation = -0.18;
+    root.y += (carry && carry.swoop < 0 ? -40 : 55) * dt;
+    root.rotation = bank;
     if (root.x > cam.x + 900) {
       root.visible = false;
       art.clear();
