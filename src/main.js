@@ -497,7 +497,7 @@ const BADGE_LABEL = {
 const BADGE_TIP = {
   terminal: 'Hit the 256 mph speed cap on a ride.',
   power: 'Launched at 100% power.',
-  snatch: 'Caught a ride on the pterodactyl.',
+  snatch: 'Hitched a ride with an oddly friendly... pterodactyl?!',
   mars: 'Made it to space and saw Mars.',
 };
 
