@@ -108,7 +108,7 @@
         </div>
         <p class="lede">Aim the barrel, fire when the bar is full, and see how far the kitty flies. Bombs and trampolines throw it farther. Tar pits and flytraps end the ride.</p>
         <button id="start" type="button">Start</button>
-        <p id="need-js">The game needs JavaScript and a recent browser (Safari 15+, Chrome, Firefox, or Edge). Stuck after a Brave/Messages open? Use https://pdobb.github.io/kitten-cannon/play.html or open in Safari.</p>
+        <p id="need-js">The game needs JavaScript and Safari 15+ (or current Chrome, Firefox, Edge, or Brave). From Messages, use Open in Safari — or open https://pdobb.github.io/kitten-cannon/play.html</p>
         <div class="bestline" id="title-best"></div>
       </div>
     </div>
@@ -166,13 +166,13 @@
       <button type="button" data-act="fire" id="pad-fire">Fire</button>
     </div>
   </div>
-  <!-- kc-shell:v7 -->
+  <!-- kc-shell:v8 -->
   <script>
     // ES5 on purpose: must parse even when the game bundle or an old SW shell does not.
     // Brave / iOS Messages can keep a stale service-worker page after the tab closes.
     // One reload per session clears old kitten-cannon caches and unregisters workers.
     (function () {
-      var KEY = 'kc-shell-bust-v7';
+      var KEY = 'kc-shell-bust-v8';
       try {
         if (sessionStorage.getItem(KEY)) return;
       } catch (e) {
@@ -207,20 +207,26 @@
       chain.then(function () { finish(needsReload); }).catch(function () { finish(false); });
     })();
 
-    // Only surface real parse/boot failures. Brave/iOS often fires opaque
-    // "Script error." for non-fatal shielded work; the game still runs.
+    // Opaque "Script error." is ignored. Const/strict/legacy parse noise from
+    // old WebViews is rewritten to the Safari tip (the ES5 loader also gates).
     window.addEventListener('error', function (event) {
       var msg = event.message || (event.error && event.error.message) || '';
       if (!msg || msg === 'Script error.' || msg === 'Script error') return;
+      var friendly = /const/i.test(msg) && /(strict|legacy)/i.test(msg);
+      var tip = 'This browser cannot run Kitten Cannon. Open in Safari on iOS 15 or newer'
+        + ' (share sheet → Open in Safari), or open https://pdobb.github.io/kitten-cannon/play.html';
       var pre = document.getElementById('boot-error');
       if (!pre) {
         pre = document.createElement('pre');
         pre.id = 'boot-error';
         document.body.appendChild(pre);
       }
-      pre.textContent = msg
-        + '\n\nIf this keeps showing, open https://pdobb.github.io/kitten-cannon/play.html'
-        + ' or open this page in Safari.';
+      pre.textContent = friendly ? tip : (msg + '\n\n' + tip);
+      var need = document.getElementById('need-js');
+      if (need && friendly) {
+        need.textContent = tip;
+        need.hidden = false;
+      }
     });
   </script>
   <script type="module" src="/src/main.js"></script>

@@ -2,7 +2,7 @@
 // The page inlines its script, its style, and its fonts. Paths are relative
 // to this file, which sits next to index.html on Pages.
 
-const CACHE = 'kitten-cannon-v7';
+const CACHE = 'kitten-cannon-v8';
 const SHELL = [
   './',
   './index.html',
@@ -16,7 +16,7 @@ const SHELL = [
 ];
 
 function isCurrentShell(text) {
-  return typeof text === 'string' && text.indexOf('kc-shell:v7') !== -1;
+  return typeof text === 'string' && text.indexOf('kc-shell:v8') !== -1;
 }
 
 self.addEventListener('install', (event) => {

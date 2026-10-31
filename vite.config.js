@@ -25,11 +25,15 @@ function buildVersion() {
 
 const KC_VERSION = buildVersion();
 
-// Turn the inlined module bundle into a classic script. iOS Messages / Brave
-// open the Pages link in a WebView that is picky about type=module + import.meta.
-// vite-plugin-singlefile inlines with generateBundle order:"post", so this hook
-// must also be order:"post" and registered after singlefile, or the rewrite
-// runs on empty HTML and the module tag ships again.
+// ES5 loader: probe for modern syntax, then Function(CODE) so old WebViews
+// never parse the Pixi bundle as source (that was the cream "const"/"strict
+// mode" SyntaxError). The bundle lives only inside a JSON string until then.
+const KC_UNSUPPORTED =
+  'This browser cannot run Kitten Cannon. Open in Safari on iOS 15 or newer '
+  + '(or current Chrome, Firefox, Edge, or Brave). '
+  + 'From Messages, use Open in Safari — or open '
+  + 'https://pdobb.github.io/kitten-cannon/play.html';
+
 function toClassicInline(html) {
   return html.replace(
     /<script type="module"(?: crossorigin)?>([\s\S]*?)<\/script>/,
@@ -37,9 +41,50 @@ function toClassicInline(html) {
       const classic = code
         // Pixi resolves assets from import.meta.url / import.meta.resolve.
         .replace(/import\.meta\.url/g, 'location.href')
-        .replace(/import\.meta\.resolve/g, '(null)')
-        .replace(/<\/script/gi, '<\\/script');
-      return `<script>document.addEventListener('DOMContentLoaded',function(){${classic}});</script>`;
+        .replace(/import\.meta\.resolve/g, '(null)');
+      const payload = JSON.stringify(classic);
+      return `<script>(function(){
+var CODE=${payload};
+function kcUnsupported(){
+  var need=document.getElementById('need-js');
+  if(need){
+    need.textContent=${JSON.stringify(KC_UNSUPPORTED)};
+    need.hidden=false;
+  }
+  var pre=document.getElementById('boot-error');
+  if(pre&&pre.parentNode)pre.parentNode.removeChild(pre);
+  var start=document.getElementById('start');
+  if(start)start.disabled=true;
+}
+function kcModern(){
+  try{
+    Function('const a=1;let b=2;class C{};return (\`\${a}\`,a??b,typeof C);')();
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+function kcBoot(){
+  if(!kcModern()){kcUnsupported();return;}
+  try{
+    Function(CODE)();
+  }catch(e){
+    kcUnsupported();
+    var pre=document.getElementById('boot-error');
+    if(!pre){
+      pre=document.createElement('pre');
+      pre.id='boot-error';
+      document.body.appendChild(pre);
+    }
+    pre.textContent=(e&&e.message)?String(e.message):String(e);
+  }
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',kcBoot);
+}else{
+  kcBoot();
+}
+})();</script>`;
     },
   );
 }
@@ -82,9 +127,21 @@ function classicInlineScript() {
       } catch {
         return;
       }
-      if (html.includes('type="module"') || html.includes('import.meta')) {
+      if (html.includes('type="module"')) {
         throw new Error(
-          'classic-inline-script: dist/index.html still has type="module" or import.meta',
+          'classic-inline-script: dist/index.html still has type="module"',
+        );
+      }
+      // import.meta must not appear as live source. It may exist inside the
+      // JSON-string payload only if a replace was missed — reject any form.
+      if (html.includes('import.meta')) {
+        throw new Error(
+          'classic-inline-script: dist/index.html still has import.meta',
+        );
+      }
+      if (!html.includes('var CODE=') || !html.includes('Function(CODE)')) {
+        throw new Error(
+          'classic-inline-script: dist/index.html missing ES5 Function(CODE) loader',
         );
       }
     },
