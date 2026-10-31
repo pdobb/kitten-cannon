@@ -108,7 +108,7 @@
         </div>
         <p class="lede">Aim the barrel, fire when the bar is full, and see how far the kitty flies. Bombs and trampolines throw it farther. Tar pits and flytraps end the ride.</p>
         <button id="start" type="button">Start</button>
-        <p id="need-js">The game needs JavaScript and Safari 15+ (or current Chrome, Firefox, Edge, or Brave). From Messages, use Open in Safari — or open https://pdobb.github.io/kitten-cannon/play.html</p>
+        <p id="need-js">The game needs JavaScript and Safari 15+ (or current Chrome, Firefox, Edge, or Brave). From Messages, use Open in Safari — or open https://pdobb.github.io/kitten-cannon/game.html</p>
         <div class="bestline" id="title-best"></div>
       </div>
     </div>
@@ -166,13 +166,13 @@
       <button type="button" data-act="fire" id="pad-fire">Fire</button>
     </div>
   </div>
-  <!-- kc-shell:v8 -->
+  <!-- kc-shell:v9 -->
   <script>
     // ES5 on purpose: must parse even when the game bundle or an old SW shell does not.
     // Brave / iOS Messages can keep a stale service-worker page after the tab closes.
     // One reload per session clears old kitten-cannon caches and unregisters workers.
     (function () {
-      var KEY = 'kc-shell-bust-v8';
+      var KEY = 'kc-shell-bust-v9';
       try {
         if (sessionStorage.getItem(KEY)) return;
       } catch (e) {
@@ -214,7 +214,7 @@
       if (!msg || msg === 'Script error.' || msg === 'Script error') return;
       var friendly = /const/i.test(msg) && /(strict|legacy)/i.test(msg);
       var tip = 'This browser cannot run Kitten Cannon. Open in Safari on iOS 15 or newer'
-        + ' (share sheet → Open in Safari), or open https://pdobb.github.io/kitten-cannon/play.html';
+        + ' (share sheet → Open in Safari), or open https://pdobb.github.io/kitten-cannon/game.html';
       var pre = document.getElementById('boot-error');
       if (!pre) {
         pre = document.createElement('pre');

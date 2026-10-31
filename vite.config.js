@@ -32,7 +32,7 @@ const KC_UNSUPPORTED =
   'This browser cannot run Kitten Cannon. Open in Safari on iOS 15 or newer '
   + '(or current Chrome, Firefox, Edge, or Brave). '
   + 'From Messages, use Open in Safari — or open '
-  + 'https://pdobb.github.io/kitten-cannon/play.html';
+  + 'https://pdobb.github.io/kitten-cannon/game.html';
 
 function toClassicInline(html) {
   return html.replace(

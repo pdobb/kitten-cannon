@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#8ec8ee" />
   <title>Kitten Cannon</title>
-  <!-- Fresh share URL: never lived in the pre-classic HTTP/SW cache. Clears
-       any kitten-cannon service worker, then replaces to the game. -->
+  <!-- Fresh share URL: clears workers/caches, then opens game.html (never the
+       stuck pre-classic index shell). -->
   <script>
     (function () {
-      var dest = './?play=8';
+      var dest = './game.html';
       var went = false;
       function go() {
         if (went) return;
@@ -38,6 +38,6 @@
 </head>
 <body style="font-family: system-ui, sans-serif; background: #8ec8ee; color: #2b2118; padding: 24px;">
   <p>Opening Kitten Cannon…</p>
-  <p><a href="./?play=8">Tap here if nothing happens</a></p>
+  <p><a href="./game.html">Tap here if nothing happens</a></p>
 </body>
 </html>
