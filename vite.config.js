@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
@@ -24,30 +25,51 @@ function buildVersion() {
 
 const KC_VERSION = buildVersion();
 
-// iOS will not run a type="module" script opened from a file. The bundle is
-// one inlined script with no imports, so a plain script tag runs it.
+// Turn the inlined module bundle into a classic script. iOS Messages / Brave
+// open the Pages link in a WebView that is picky about type=module + import.meta.
+// vite-plugin-singlefile inlines with generateBundle order:"post", so this hook
+// must also be order:"post" and registered after singlefile, or the rewrite
+// runs on empty HTML and the module tag ships again.
+function toClassicInline(html) {
+  return html.replace(
+    /<script type="module"(?: crossorigin)?>([\s\S]*?)<\/script>/,
+    (_, code) => {
+      const classic = code
+        // Pixi resolves assets from import.meta.url / import.meta.resolve.
+        .replace(/import\.meta\.url/g, 'location.href')
+        .replace(/import\.meta\.resolve/g, '(null)')
+        .replace(/<\/script/gi, '<\\/script');
+      return `<script>document.addEventListener('DOMContentLoaded',function(){${classic}});</script>`;
+    },
+  );
+}
+
 function classicInlineScript() {
   return {
     name: 'classic-inline-script',
     enforce: 'post',
-    generateBundle(_options, bundle) {
-      for (const item of Object.values(bundle)) {
-        if (item.type !== 'asset' || typeof item.source !== 'string') continue;
-        if (!item.fileName.endsWith('.html')) continue;
-        // defer does nothing on an inline script, so wait for the document.
-        // The bundle sits in <head>, ahead of the Start button.
-        // Pixi keeps import.meta.url on its renderer loads. A classic script
-        // cannot parse that, so the whole page never runs. location.href is
-        // the page itself, which is the base those loads would have used.
-        item.source = item.source.replace(
-          /<script type="module"(?: crossorigin)?>([\s\S]*?)<\/script>/,
-          (_, code) => {
-            const classic = code
-              .replace(/import\.meta\.url/g, 'location.href')
-              .replace(/<\/script/gi, '<\\/script');
-            return `<script>document.addEventListener('DOMContentLoaded',function(){${classic}});</script>`;
-          },
-        );
+    generateBundle: {
+      // After vite-plugin-singlefile's post generateBundle (registration order).
+      order: 'post',
+      handler(_options, bundle) {
+        for (const item of Object.values(bundle)) {
+          if (item.type !== 'asset' || typeof item.source !== 'string') continue;
+          if (!item.fileName.endsWith('.html')) continue;
+          item.source = toClassicInline(item.source);
+        }
+      },
+    },
+    // Belt: rewrite the file on disk if generateBundle somehow missed it.
+    writeBundle(options) {
+      const outDir = options.dir || (options.file ? dirname(options.file) : null);
+      if (!outDir) return;
+      const htmlPath = resolve(outDir, 'index.html');
+      try {
+        const before = readFileSync(htmlPath, 'utf8');
+        if (!before.includes('type="module"')) return;
+        writeFileSync(htmlPath, toClassicInline(before));
+      } catch {
+        // Build output not ready; generateBundle path already handled it.
       }
     },
   };

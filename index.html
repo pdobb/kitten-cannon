@@ -167,8 +167,9 @@
     </div>
   </div>
   <script>
-    window.addEventListener('error', (event) => {
-      const pre = document.createElement('pre');
+    // ES5 on purpose: this handler must parse even when the game bundle does not.
+    window.addEventListener('error', function (event) {
+      var pre = document.createElement('pre');
       pre.id = 'boot-error';
       pre.textContent = event.message || String(event.error);
       document.body.appendChild(pre);
