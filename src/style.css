@@ -471,6 +471,8 @@ button.ride-badge:active {
   z-index: 2;
 }
 
+/* :has is Safari 15.4+; .is-tip-open is toggled from JS for older 15.x. */
+.ride-badges.is-tip-open,
 .ride-badges:has(.ride-badge.is-open) {
   z-index: 4;
 }
@@ -686,8 +688,9 @@ button.ride-badge:active {
   box-shadow: none;
 }
 
-#card .panel:has(#card-back) .eyebrow,
-#pause .panel:has(#pause-back) .eyebrow {
+/* Back buttons are always in these panels; avoid :has for Safari 15.0–15.3. */
+#card .panel > .eyebrow,
+#pause .panel > .eyebrow {
   padding-left: 44px;
   padding-right: 44px;
 }
@@ -1558,8 +1561,8 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   #pause-back { top: 8px; left: 8px; width: 36px; height: 36px; border-radius: 10px; }
   #card-back svg,
   #pause-back svg { width: 20px; height: 20px; }
-  #card .panel:has(#card-back) .eyebrow,
-  #pause .panel:has(#pause-back) .eyebrow { padding-left: 40px; padding-right: 40px; }
+  #card .panel > .eyebrow,
+  #pause .panel > .eyebrow { padding-left: 40px; padding-right: 40px; }
   #card h2, #pause h2 { font-size: 26px; }
   #card-note, #pause-note { font-size: 13px; line-height: 1.2; }
   .sheet { gap: 0; }

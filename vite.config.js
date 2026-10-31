@@ -72,6 +72,22 @@ function classicInlineScript() {
         // Build output not ready; generateBundle path already handled it.
       }
     },
+    // Fail the build if a classic rewrite missed module/import.meta — those
+    // break iOS Messages → Brave and other picky WebViews.
+    closeBundle() {
+      const htmlPath = resolve(root, 'dist/index.html');
+      let html;
+      try {
+        html = readFileSync(htmlPath, 'utf8');
+      } catch {
+        return;
+      }
+      if (html.includes('type="module"') || html.includes('import.meta')) {
+        throw new Error(
+          'classic-inline-script: dist/index.html still has type="module" or import.meta',
+        );
+      }
+    },
   };
 }
 
@@ -82,6 +98,9 @@ export default defineConfig({
   },
   plugins: [viteSingleFile(), classicInlineScript()],
   build: {
+    // Pixi 8 needs WebGL2 (Safari/iOS 15+). Explicit targets keep the classic
+    // inline bundle inside that floor and document the support promise.
+    target: ['es2020', 'chrome90', 'edge90', 'firefox90', 'safari15', 'ios15'],
     // The four latin faces are small. Inlining them keeps the published page
     // one file, which is what the service worker caches for offline play.
     assetsInlineLimit: 100000,

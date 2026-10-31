@@ -47,7 +47,16 @@ import {
   SPEED_MAX,
 } from './tune.js';
 
-document.getElementById('need-js')?.remove();
+// Safari 14+ has replaceChildren; keep a tiny polyfill for older WebViews.
+if (typeof Element !== 'undefined' && !Element.prototype.replaceChildren) {
+  Element.prototype.replaceChildren = function replaceChildren(...nodes) {
+    while (this.firstChild) this.removeChild(this.firstChild);
+    if (nodes.length) this.append(...nodes);
+  };
+}
+
+const needJs = document.getElementById('need-js');
+if (needJs) needJs.remove();
 
 const buildEl = document.getElementById('build');
 if (buildEl) {
@@ -524,6 +533,9 @@ function closeBadgeTips() {
     badge.setAttribute('aria-expanded', 'false');
     badge.removeAttribute('aria-describedby');
   });
+  document.querySelectorAll('.ride-badges.is-tip-open').forEach((rail) => {
+    rail.classList.remove('is-tip-open');
+  });
   if (badgeTipEl) {
     badgeTipEl.hidden = true;
     badgeTipEl.replaceChildren();
@@ -584,6 +596,8 @@ function toggleBadgeTip(badge) {
   badge.classList.add('is-open');
   badge.setAttribute('aria-expanded', 'true');
   badge.setAttribute('aria-describedby', 'ride-badge-tip');
+  const rail = badge.closest('.ride-badges');
+  if (rail) rail.classList.add('is-tip-open');
   badgeTipFor = badge;
   placeBadgeTip(badge);
 }
