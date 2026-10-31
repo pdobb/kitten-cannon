@@ -65,9 +65,9 @@ if (buildEl) {
 }
 
 // The published page is one file. Register only that build, so the dev server
-// does not keep a worker around. updateViaCache skips a stale sw.js.
+// does not keep a worker around. updateViaCache + ?v= skip a stale sw.js.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {});
+  navigator.serviceWorker.register('./sw.js?v=6', { updateViaCache: 'none' }).catch(() => {});
 }
 
 // iPhone grays the screen out on its idle timer. A home-screen app can hold

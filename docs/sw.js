@@ -2,7 +2,7 @@
 // The page inlines its script, its style, and its fonts. Paths are relative
 // to this file, which sits next to index.html on Pages.
 
-const CACHE = 'kitten-cannon-v5';
+const CACHE = 'kitten-cannon-v6';
 const SHELL = [
   './',
   './index.html',
@@ -53,7 +53,9 @@ async function cachedPage(cache, request) {
 async function fromNetwork(request) {
   const cache = await caches.open(CACHE);
   try {
-    const fresh = await fetch(request);
+    // Bypass the HTTP disk cache so a 10-minute Pages max-age cannot keep
+    // serving the pre-classic (type=module) shell after a publish.
+    const fresh = await fetch(request, { cache: 'no-store' });
     if (fresh.ok) {
       cache.put(request, fresh.clone());
       cache.put('./index.html', fresh.clone());
@@ -69,7 +71,7 @@ async function fromCache(request) {
   const hit = (await cache.match(request)) || (await cache.match(request, { ignoreSearch: true }));
   if (hit) return hit;
   try {
-    const fresh = await fetch(request);
+    const fresh = await fetch(request, { cache: 'no-store' });
     if (fresh.ok) cache.put(request, fresh.clone());
     return fresh;
   } catch {

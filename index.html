@@ -108,7 +108,7 @@
         </div>
         <p class="lede">Aim the barrel, fire when the bar is full, and see how far the kitty flies. Bombs and trampolines throw it farther. Tar pits and flytraps end the ride.</p>
         <button id="start" type="button">Start</button>
-        <p id="need-js">The game needs JavaScript and a recent browser (Safari 15+, Chrome, Firefox, or Edge). Open this page in Safari, Chrome, Firefox, Brave, or Edge.</p>
+        <p id="need-js">The game needs JavaScript and a recent browser (Safari 15+, Chrome, Firefox, or Edge). If Brave shows a cream error box, clear site data for this page or open the link in Safari.</p>
         <div class="bestline" id="title-best"></div>
       </div>
     </div>
@@ -167,12 +167,56 @@
     </div>
   </div>
   <script>
-    // ES5 on purpose: this handler must parse even when the game bundle does not.
+    // ES5 on purpose: must parse even when the game bundle or an old SW shell does not.
+    // Brave / iOS Messages can keep a stale service-worker page after the tab closes.
+    // One reload per session clears old kitten-cannon caches and unregisters workers.
+    (function () {
+      var KEY = 'kc-shell-bust-v6';
+      try {
+        if (sessionStorage.getItem(KEY)) return;
+      } catch (e) {
+        return;
+      }
+      var needsReload = false;
+      function finish(reload) {
+        try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
+        if (reload) location.reload();
+      }
+      var chain = Promise.resolve();
+      if (navigator.serviceWorker) {
+        if (navigator.serviceWorker.controller) needsReload = true;
+        chain = chain.then(function () {
+          return navigator.serviceWorker.getRegistrations().then(function (regs) {
+            if (regs && regs.length) needsReload = true;
+            return Promise.all((regs || []).map(function (r) { return r.unregister(); }));
+          });
+        });
+      }
+      if (window.caches && caches.keys) {
+        chain = chain.then(function () {
+          return caches.keys().then(function (keys) {
+            var i;
+            for (i = 0; i < keys.length; i++) {
+              if (String(keys[i]).indexOf('kitten-cannon-') === 0) needsReload = true;
+            }
+            return Promise.all((keys || []).map(function (k) { return caches.delete(k); }));
+          });
+        });
+      }
+      chain.then(function () { finish(needsReload); }).catch(function () { finish(false); });
+    })();
+
     window.addEventListener('error', function (event) {
-      var pre = document.createElement('pre');
-      pre.id = 'boot-error';
-      pre.textContent = event.message || String(event.error);
-      document.body.appendChild(pre);
+      var pre = document.getElementById('boot-error');
+      if (!pre) {
+        pre = document.createElement('pre');
+        pre.id = 'boot-error';
+        document.body.appendChild(pre);
+      }
+      var msg = event.message || String(event.error);
+      pre.textContent = msg
+        + '\n\nIf this keeps showing in Brave, clear site data for this page'
+        + ' (Brave → shields/site settings → clear data) or open the link in Safari.';
     });
   </script>
   <script type="module" src="/src/main.js"></script>
