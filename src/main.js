@@ -58,6 +58,12 @@ if (typeof Element !== 'undefined' && !Element.prototype.replaceChildren) {
 const needJs = document.getElementById('need-js');
 if (needJs) needJs.remove();
 
+function clearBootError() {
+  const bootErr = document.getElementById('boot-error');
+  if (bootErr) bootErr.remove();
+}
+clearBootError();
+
 const buildEl = document.getElementById('build');
 if (buildEl) {
   buildEl.textContent = `v${__KC_VERSION__}`;
@@ -67,7 +73,7 @@ if (buildEl) {
 // The published page is one file. Register only that build, so the dev server
 // does not keep a worker around. updateViaCache + ?v= skip a stale sw.js.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=6', { updateViaCache: 'none' }).catch(() => {});
+  navigator.serviceWorker.register('./sw.js?v=7', { updateViaCache: 'none' }).catch(() => {});
 }
 
 // iPhone grays the screen out on its idle timer. A home-screen app can hold
@@ -2199,6 +2205,7 @@ function frame(now) {
     }
     game.checked = true;
     window.__kitten.ready = true;
+    clearBootError();
   }
 }
 

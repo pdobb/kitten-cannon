@@ -2,10 +2,11 @@
 // The page inlines its script, its style, and its fonts. Paths are relative
 // to this file, which sits next to index.html on Pages.
 
-const CACHE = 'kitten-cannon-v6';
+const CACHE = 'kitten-cannon-v7';
 const SHELL = [
   './',
   './index.html',
+  './play.html',
   './manifest.webmanifest',
   './icon-180.png',
   './icon-192.png',
@@ -13,6 +14,10 @@ const SHELL = [
   './favicon.ico',
   './favicon-32.png',
 ];
+
+function isCurrentShell(text) {
+  return typeof text === 'string' && text.indexOf('kc-shell:v7') !== -1;
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -44,10 +49,26 @@ self.addEventListener('fetch', (event) => {
 });
 
 async function cachedPage(cache, request) {
-  return (await cache.match(request))
-    || (await cache.match(request, { ignoreSearch: true }))
-    || (await cache.match('./index.html'))
-    || (await cache.match('./'));
+  const candidates = [
+    await cache.match(request),
+    await cache.match(request, { ignoreSearch: true }),
+    await cache.match('./index.html'),
+    await cache.match('./'),
+  ];
+  for (const hit of candidates) {
+    if (!hit) continue;
+    // Never revive a pre-classic module shell from Cache Storage.
+    try {
+      const text = await hit.clone().text();
+      if (isCurrentShell(text) || !text.includes('<html')) return hit;
+      if (text.includes('type="module"') || text.includes('import.meta')) continue;
+      if (text.includes('kc-shell:')) continue; // other stamp, not this build
+      return hit;
+    } catch {
+      return hit;
+    }
+  }
+  return undefined;
 }
 
 async function fromNetwork(request) {
