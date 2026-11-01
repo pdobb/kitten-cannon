@@ -798,12 +798,14 @@ button.ride-badge:active {
 
 #mute:active, #pause-btn:active { transform: translate(2px, 2px); box-shadow: none; }
 
-/* Peek-field chip: reopen the end card after a scene tap dismissed it. */
+/* Peek-field chip: reopen the end card after a scene tap dismissed it.
+   Bottom-right keeps clear of the top-left badge rail and the centered hint. */
 #show-score {
   position: absolute;
-  top: calc(14px + var(--safe-top));
-  left: 50%;
-  transform: translateX(-50%);
+  top: auto;
+  bottom: calc(16px + var(--safe-bottom));
+  left: auto;
+  right: calc(16px + var(--safe-right));
   z-index: 4;
   margin: 0;
   padding: 8px 16px;
@@ -821,7 +823,7 @@ button.ride-badge:active {
 }
 
 #show-score:active {
-  transform: translateX(-50%) translate(2px, 2px);
+  transform: translate(2px, 2px);
   box-shadow: none;
 }
 
@@ -1426,6 +1428,10 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     top: calc(10px + var(--safe-top));
     right: calc(10px + var(--safe-right));
   }
+  #show-score {
+    bottom: calc(12px + var(--safe-bottom));
+    right: calc(12px + var(--safe-right));
+  }
   #records span, .sheet span, .bestline span { font-size: 12px; }
   #records b, .sheet b, .bestline b { font-size: 16px; }
   /* Full-width bottom meter; mute/pause sit above it so they do not shorten the bar. */
@@ -1563,6 +1569,10 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   }
   #mute { left: 32px; }
   #pause-btn { left: 88px; }
+  #show-score {
+    bottom: calc(8px + var(--safe-bottom));
+    right: 32px;
+  }
 }
 
 @media (max-height: 520px) {
