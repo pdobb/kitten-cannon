@@ -949,11 +949,20 @@ function clampFieldPan() {
   cam.x = Math.max(minX, Math.min(maxX, cam.x));
 }
 
-// Drag right → camera left so the field follows the finger / pointer.
-function panFieldByScreen(dxPx) {
+// Touch needs a stronger gain — a phone swipe is short in CSS pixels next to
+// the world width, so 1:1 feels sticky. Mouse / wheel stay near 1:1.
+const PEEK_PAN_TOUCH = 2.6;
+const PEEK_PAN_MOUSE = 1;
+
+function panFieldByScreen(dxPx, gain = 1) {
   if (!resultPeeking() || !dxPx) return;
-  cam.x -= dxPx * worldPerScreenPx();
+  cam.x -= dxPx * worldPerScreenPx() * gain;
   clampFieldPan();
+}
+
+function peekPanGain(pointerType) {
+  if (pointerType === 'mouse') return PEEK_PAN_MOUSE;
+  return PEEK_PAN_TOUCH;
 }
 
 // Reframe the landing under the score card (same lead as updateCamera).
@@ -1826,7 +1835,7 @@ app.addEventListener('pointermove', (e) => {
   touchAim.lastY = e.clientY;
   // Peeked result: drag pans the field (mouse and touch). Horizontal only.
   if (resultPeeking()) {
-    panFieldByScreen(dx);
+    panFieldByScreen(dx, peekPanGain(touchAim.mouse ? 'mouse' : e.pointerType));
     return;
   }
   if (touchAim.mouse) return;
