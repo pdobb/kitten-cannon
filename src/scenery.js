@@ -332,12 +332,19 @@ export function createScenery(world) {
   sun.addChild(sunGfx);
   world.addChild(sun);
 
-  const ranges = [
+  // Build ranges one by one so a ridge-fly layer can sit on each snow crest
+  // and stay behind nearer hills (painter order).
+  const rangeSpecs = [
     // Open on the right of the title, where the sun sits. The crown is the peak on the left.
     { color: 0xc5d8ea, line: 0xa9c4da, height: 740, parallax: 0.12, seed: 0x51a3, span: 5200, snow: 0.55, grand: true, spread: 2, saddle: null, crown: { at: 4700, width: 1600 }, lead: 1200 },
     { color: 0x8aa4bc, line: 0x6d8eab, height: 268, parallax: 0.28, seed: 0x51a2, span: 3800, snow: 0.55, grand: true, saddle: [3280, 3800], crown: { at: 400, width: 800 } },
     { color: 0x6d9462, line: 0x4e7848, height: 168, parallax: 0.46, seed: 0x51a1, span: 2400, snow: 0, grand: false, saddle: null, crown: null },
-  ].map((spec) => {
+  ];
+  const ranges = [];
+  // lane index → container drawn just in front of that range, behind everything nearer.
+  const ridgeFly = [];
+  for (let i = 0; i < rangeSpecs.length; i++) {
+    const spec = rangeSpecs[i];
     const pts = peakSamples(spec.span, spec.height, spec.seed, spec.grand, spec.saddle, spec.crown, spec.lead, spec.spread || 1);
     const entry = tiledLayer(world, spec.span, (g, x0) => {
       fillRidge(g, pts, x0, spec.color, spec.line, false);
@@ -345,8 +352,13 @@ export function createScenery(world) {
     });
     entry.pts = pts;
     entry.parallax = spec.parallax;
-    return entry;
-  });
+    ranges.push(entry);
+    if (spec.snow) {
+      const fly = new Container();
+      world.addChild(fly);
+      ridgeFly[i] = fly;
+    }
+  }
 
   const foothills = [
     { color: 0x8ed468, line: 0x62b44c, base: 34, amp: 18, freq: 2, phase: 0.4, parallax: 0.66, span: 1800 },
@@ -357,9 +369,6 @@ export function createScenery(world) {
       ...tiledLayer(world, spec.span, (g, x0) => fillRidge(g, pts, x0, spec.color, spec.line)),
       parallax: spec.parallax,
     };
-  });
-  ranges.forEach((entry, i) => {
-    entry.parallax = [0.12, 0.28, 0.46][i];
   });
 
   // Crest under a world draw-x for a range lane (0 far, 1 mid, 2 near).
@@ -373,6 +382,10 @@ export function createScenery(world) {
     let local = drawX - (camX - scroll - span);
     local = ((local % span) + span) % span;
     return samplePts(entry.pts, local);
+  }
+
+  function ridgeFlyLayer(lane) {
+    return ridgeFly[lane] || null;
   }
 
   // Each band wraps on its own. Clouds stop below 50 ft, so a climb leaves them.
@@ -482,6 +495,7 @@ export function createScenery(world) {
     sky,
     flyLayer,
     ridgeAt,
+    ridgeFlyLayer,
     reshuffleClouds() {
       fillClouds((Math.random() * 0xffffffff) >>> 0);
     },

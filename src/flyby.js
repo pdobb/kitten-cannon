@@ -224,7 +224,8 @@ function pterodactyl() {
 
 // Neon Runner (thomasbreland/neon-runner) via Flit's runner skin. Flit draws
 // y-down; KC world is y-up, so Y is negated. Local +X is travel-forward.
-const RUNNER_SCALE = 2.4;
+// Tiny: sits on distant snow peaks behind nearer hills.
+const RUNNER_SCALE = 0.62;
 
 function neonRunner() {
   const mesh = new Container();
@@ -236,19 +237,19 @@ function neonRunner() {
   const body = new Graphics();
   const ink = new Graphics();
   // Dark side face, light top plane, cyan torso, magenta visor stripe, gold disc.
-  paint(body, ink, (p) => p.poly([6, 11, 13, 16, 13, -9, 6, -14]), 0x3aa8d4, 1.8);
-  paint(body, ink, (p) => p.poly([-8, 11, 6, 11, 13, 16, -1, 16]), 0xd8f6ff, 1.8);
-  paint(body, ink, (p) => p.poly([-8, 11, 6, 11, 6, -14, -8, -14]), 0x7bdcff, 2);
+  paint(body, ink, (p) => p.poly([6, 11, 13, 16, 13, -9, 6, -14]), 0x3aa8d4, 1.2);
+  paint(body, ink, (p) => p.poly([-8, 11, 6, 11, 13, 16, -1, 16]), 0xd8f6ff, 1.2);
+  paint(body, ink, (p) => p.poly([-8, 11, 6, 11, 6, -14, -8, -14]), 0x7bdcff, 1.4);
   body.poly([-8, 4, 6, 4, 6, 0.5, -8, 0.5]);
   body.fill(0xff4bd8);
-  paint(body, ink, (p) => p.ellipse(-1, -17.5, 11, 3.4), 0xffd166, 1.8);
+  paint(body, ink, (p) => p.ellipse(-1, -17.5, 11, 3.4), 0xffd166, 1.2);
   body.ellipse(-1, -17.2, 6.5, 1.5);
   body.fill(0xfff0b8);
   const glow = new Graphics();
-  glow.ellipse(-1, -17.5, 14, 5);
-  glow.fill({ color: 0x7bdcff, alpha: 0.35 });
-  glow.ellipse(-1, -17.5, 8, 2.4);
-  glow.fill({ color: 0xffd166, alpha: 0.45 });
+  glow.ellipse(-1, -17.5, 12, 4);
+  glow.fill({ color: 0x7bdcff, alpha: 0.22 });
+  glow.ellipse(-1, -17.5, 7, 2);
+  glow.fill({ color: 0xffd166, alpha: 0.28 });
   art.addChild(glow, body, ink);
   return { mesh, parts: { bulbs: [], wings: [], glow, art } };
 }
@@ -264,11 +265,10 @@ const MAKERS = {
 };
 const VISITORS = ['ufo', 'flamingo', 'magpie', 'pelican', 'bat', 'pterodactyl', 'runner'];
 
-// Mid / far range lanes (scenery range index + matching flyby z).
-// Lane 1 = mid blue ridge (best read behind the end card); 0 = far snow.
+// Snow-capped ranges only (far + mid). Prefer far — way back, occluded by nearer hills.
 const RIDGE_LANES = [
-  { lane: 1, parallax: 0.28, z: -2520 },
   { lane: 0, parallax: 0.12, z: -7187 },
+  { lane: 1, parallax: 0.28, z: -2520 },
 ];
 
 // Shuffle bag: each kind once per cycle so the UFO is not streakier than birds.
@@ -287,8 +287,11 @@ function parallaxFor(z) {
   return CAM_Z / (CAM_Z - z);
 }
 
-// ridgeAt(lane, camX, drawX) -> { y, slope } from scenery. Optional until wired.
-export function createFlybys(layer, ridgeAt = null) {
+// opts.ridgeAt(lane, camX, drawX) -> { y, slope }
+// opts.ridgeLayer(lane) -> Container behind nearer hills (snow peaks only).
+export function createFlybys(layer, opts = null) {
+  const ridgeAt = typeof opts === 'function' ? opts : (opts && opts.ridgeAt);
+  const ridgeLayer = opts && opts.ridgeLayer;
   const crafts = [];
   let wait = 0;
   let coming = false;
@@ -301,12 +304,22 @@ export function createFlybys(layer, ridgeAt = null) {
     return bag.pop();
   }
 
+  function parentFor(spec) {
+    if (spec.ridge && ridgeLayer) {
+      const nest = ridgeLayer(spec.ridgeLane);
+      if (nest) return nest;
+    }
+    return layer;
+  }
+
   function add(type, spec) {
     const built = MAKERS[type]();
+    const parent = parentFor(spec);
     const craft = {
       kind: type,
       mesh: built.mesh,
       parts: built.parts,
+      parent,
       x: spec.x,
       y: spec.y,
       z: spec.z,
@@ -315,11 +328,16 @@ export function createFlybys(layer, ridgeAt = null) {
       phase: spec.phase == null ? Math.random() * Math.PI * 2 : spec.phase,
       age: 0,
       ridge: !!spec.ridge,
-      ridgeLane: spec.ridgeLane == null ? 1 : spec.ridgeLane,
+      ridgeLane: spec.ridgeLane == null ? 0 : spec.ridgeLane,
     };
-    layer.addChild(craft.mesh);
+    parent.addChild(craft.mesh);
     crafts.push(craft);
     return craft;
+  }
+
+  function drop(craft) {
+    if (craft.parent) craft.parent.removeChild(craft.mesh);
+    craft.mesh.destroy({ children: true });
   }
 
   // kittenVx helps right-bound visitors outrun the camera so they still cross.
@@ -331,21 +349,20 @@ export function createFlybys(layer, ridgeAt = null) {
     const dir = at && at.vx != null
       ? (at.vx >= 0 ? 1 : -1)
       : (Math.random() < 0.5 ? 1 : -1);
-    // Neon Runner skis the mid/far crest — bird-like cross, grade follows the ridge.
+    // Neon Runner skis snow crests slowly — far preferred, behind nearer hills.
     if (type === 'runner') {
-      let lane = RIDGE_LANES[Math.random() < 0.72 ? 0 : 1];
+      let lane = RIDGE_LANES[Math.random() < 0.7 ? 0 : 1];
       if (at && at.z != null) {
         lane = RIDGE_LANES.reduce((best, next) => (
           Math.abs(next.z - at.z) < Math.abs(best.z - at.z) ? next : best
         ));
       }
       const z = at && at.z != null ? at.z : lane.z;
-      // Faster than sky visitors: ridge parallax (~0.12–0.28) damps on-screen speed.
-      const base = 260 + Math.random() * 90;
-      const chase = dir > 0 ? Math.max(0, kittenVx) * 0.55 + 40 : 0;
+      // Slow crawl; parallax damps on-screen speed further.
+      const base = 55 + Math.random() * 35;
+      const chase = dir > 0 ? Math.max(0, kittenVx) * 0.25 + 12 : 0;
       const speed = at && at.vx != null ? Math.abs(at.vx) : base + chase;
-      // Ortho lead — viewHalfWidthAt is the old perspective frustum and overshoots.
-      const lead = 720 + Math.random() * 260;
+      const lead = 900 + Math.random() * 320;
       add(type, {
         x: at && at.x != null ? cam.x + at.x : cam.x - dir * lead,
         y: 180,
@@ -387,10 +404,10 @@ export function createFlybys(layer, ridgeAt = null) {
       let grade = 0;
       if (craft.ridge) {
         // Sit on the painted crest (absolute Y, like the ranges). Ski the grade.
-        const hover = Math.sin(time * 5 + craft.phase) * 3;
+        const hover = Math.sin(time * 4.2 + craft.phase) * 2;
         if (ridgeAt) {
           const crest = ridgeAt(craft.ridgeLane, cam.x, drawX);
-          craft.y = crest.y + hover + 8;
+          craft.y = crest.y + hover + 4;
           grade = crest.slope;
         } else {
           craft.y = 180 + hover;
@@ -400,18 +417,21 @@ export function createFlybys(layer, ridgeAt = null) {
         craft.y += craft.vy * dt;
         drawY = cam.y + (craft.y - cam.y) * parallax + Math.sin(time * 1.5 + craft.phase) * 10;
       }
-      const shown = parallax / 0.2;
+      // Ridge runners keep depth scale from parallax so far snow reads tiny.
+      const shown = craft.ridge ? Math.max(0.22, parallax * 1.15) : parallax / 0.2;
       craft.mesh.position.set(drawX, drawY);
       if (craft.ridge) {
         craft.mesh.scale.set(shown * face, shown);
         // Pitch with the slope like a car on the road; tiny hover wobble.
-        craft.mesh.rotation = face * Math.atan(grade) + Math.sin(time * 3.2 + craft.phase) * 0.03;
+        craft.mesh.rotation = face * Math.atan(grade) + Math.sin(time * 2.6 + craft.phase) * 0.025;
       } else {
         craft.mesh.scale.set(shown * face, shown);
         craft.mesh.rotation = Math.sin(time * 1.2 + craft.phase) * 0.1;
       }
       if (craft.parts.glow) {
-        craft.parts.glow.alpha = 0.65 + Math.sin(time * 7 + craft.phase) * 0.35;
+        craft.parts.glow.alpha = craft.ridge
+          ? 0.35 + Math.sin(time * 5 + craft.phase) * 0.2
+          : 0.65 + Math.sin(time * 7 + craft.phase) * 0.35;
       }
       const bulbs = craft.parts.bulbs || [];
       for (let b = 0; b < bulbs.length; b++) {
@@ -427,8 +447,7 @@ export function createFlybys(layer, ridgeAt = null) {
       const past = Math.abs(craft.x - cam.x) > viewHalfWidthAt(craft.z) + 420
         && Math.sign(craft.x - cam.x) === Math.sign(craft.vx || 1);
       if (past || craft.age > 72) {
-        layer.removeChild(craft.mesh);
-        craft.mesh.destroy({ children: true });
+        drop(craft);
         crafts.splice(i, 1);
       }
     }
@@ -447,7 +466,9 @@ export function createFlybys(layer, ridgeAt = null) {
     }
     if (!coming) return;
     wait -= dt;
-    if (wait <= 0 && crafts.length < 1) {
+    // Ridge skiers live on a deeper layer and linger; they do not block sky visitors.
+    const skyBusy = crafts.some((c) => !c.ridge);
+    if (wait <= 0 && !skyBusy) {
       launch(cam, kittenY, null, null, kittenVx);
       coming = false;
     }
@@ -455,9 +476,7 @@ export function createFlybys(layer, ridgeAt = null) {
 
   function clear() {
     for (let i = crafts.length - 1; i >= 0; i--) {
-      const craft = crafts[i];
-      layer.removeChild(craft.mesh);
-      craft.mesh.destroy({ children: true });
+      drop(crafts[i]);
       crafts.splice(i, 1);
     }
     wait = 0;

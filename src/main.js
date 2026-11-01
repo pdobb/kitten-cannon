@@ -267,22 +267,21 @@ const game = {
   runnerCue: 0,
 };
 
-// End-card mountain cameo after a 1000 ft+ ride. Mid ridge, bird-like cross.
+// End-card mountain cameo after a 1000 ft+ ride. Far snow ridge, slow ski.
 const RESULT_RUNNER_WAIT = 2;
 const RESULT_RUNNER_FEET = 1000;
-const RESULT_RUNNER_PARALLAX = 0.28;
-const RESULT_RUNNER_Z = -2520;
+const RESULT_RUNNER_PARALLAX = 0.12;
+const RESULT_RUNNER_Z = -7187;
 
 function launchResultRunner() {
   if (!flybys) return;
   const halfW = (view && view.halfW) || 520;
-  // Spawn just off the left of the orthographic view. Parallax scales motion,
-  // so world speed is screen speed / parallax or the skate crawls on a still cam.
-  const screenSpeed = Math.max(100, halfW * 0.42);
+  // Slow crawl across the far snow. Parallax damps motion; keep screen drift gentle.
+  const screenSpeed = Math.max(28, halfW * 0.085);
   flybys.launch(cam, cam.y, 'runner', {
     z: RESULT_RUNNER_Z,
     vx: screenSpeed / RESULT_RUNNER_PARALLAX,
-    x: -(halfW + 72) / RESULT_RUNNER_PARALLAX,
+    x: -(halfW + 48) / RESULT_RUNNER_PARALLAX,
   }, 0);
 }
 const cam = { x: 500, y: 120, z: 980, shake: 0 };
@@ -2254,7 +2253,10 @@ async function boot() {
   if (pixi.renderer.events) pixi.renderer.events.autoPreventDefault = false;
 
   scenery = createScenery(world);
-  flybys = createFlybys(scenery.flyLayer, (lane, camX, drawX) => scenery.ridgeAt(lane, camX, drawX));
+  flybys = createFlybys(scenery.flyLayer, {
+    ridgeAt: (lane, camX, drawX) => scenery.ridgeAt(lane, camX, drawX),
+    ridgeLayer: (lane) => scenery.ridgeFlyLayer(lane),
+  });
   pixi.stage.addChild(scenery.sky, world);
   world.addChild(propLayer, actorLayer);
 
