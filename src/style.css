@@ -232,13 +232,14 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
 }
 
 /* Ride badges sit above the bests chip so they stay put when #records
-   shows/hides on start and end. Badges stay one horizontal row (no wrap). */
+   shows/hides on start and end. Badges stay one horizontal row (no wrap).
+   z-index 5 keeps the rail above #card (3) on the end screen. */
 #left-hud {
   position: absolute;
   top: calc(16px + var(--safe-top));
   left: calc(16px + var(--safe-left));
   right: auto;
-  z-index: 4;
+  z-index: 5;
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
@@ -269,8 +270,20 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   position: relative;
   width: max-content;
   max-width: 100%;
+  box-sizing: border-box;
   pointer-events: none;
   overflow: visible;
+}
+
+/* Title and result hide #records. Give the badge rail its own cream plate
+   so the icons stay readable over the sky and above the score card. */
+#app[data-phase="title"] #badges:not(:empty),
+#app[data-phase="result"] #badges:not(:empty) {
+  padding: 6px 10px 7px;
+  background: #fff6e4;
+  border: 3px solid #2b2118;
+  border-radius: 14px;
+  box-shadow: 3px 3px 0 #2b2118;
 }
 
 #records p, .bestline p, .sheet p {
