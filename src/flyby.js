@@ -222,6 +222,37 @@ function pterodactyl() {
   return { mesh, parts: { bulbs: [], wings: [wing] } };
 }
 
+// Neon Runner (thomasbreland/neon-runner) via Flit's runner skin. Flit draws
+// y-down; KC world is y-up, so Y is negated. Local +X is travel-forward.
+const RUNNER_SCALE = 2.4;
+
+function neonRunner() {
+  const mesh = new Container();
+  const art = new Container();
+  // Lift so the gold disc sits near local y = 0 (ridge contact).
+  art.position.y = 17.5 * RUNNER_SCALE;
+  art.scale.set(RUNNER_SCALE);
+  mesh.addChild(art);
+  const body = new Graphics();
+  const ink = new Graphics();
+  // Dark side face, light top plane, cyan torso, magenta visor stripe, gold disc.
+  paint(body, ink, (p) => p.poly([6, 11, 13, 16, 13, -9, 6, -14]), 0x3aa8d4, 1.8);
+  paint(body, ink, (p) => p.poly([-8, 11, 6, 11, 13, 16, -1, 16]), 0xd8f6ff, 1.8);
+  paint(body, ink, (p) => p.poly([-8, 11, 6, 11, 6, -14, -8, -14]), 0x7bdcff, 2);
+  body.poly([-8, 4, 6, 4, 6, 0.5, -8, 0.5]);
+  body.fill(0xff4bd8);
+  paint(body, ink, (p) => p.ellipse(-1, -17.5, 11, 3.4), 0xffd166, 1.8);
+  body.ellipse(-1, -17.2, 6.5, 1.5);
+  body.fill(0xfff0b8);
+  const glow = new Graphics();
+  glow.ellipse(-1, -17.5, 14, 5);
+  glow.fill({ color: 0x7bdcff, alpha: 0.35 });
+  glow.ellipse(-1, -17.5, 8, 2.4);
+  glow.fill({ color: 0xffd166, alpha: 0.45 });
+  art.addChild(glow, body, ink);
+  return { mesh, parts: { bulbs: [], wings: [], glow, art } };
+}
+
 const MAKERS = {
   ufo,
   flamingo,
@@ -229,8 +260,15 @@ const MAKERS = {
   pelican,
   bat,
   pterodactyl,
+  runner: neonRunner,
 };
-const VISITORS = ['ufo', 'flamingo', 'magpie', 'pelican', 'bat', 'pterodactyl'];
+const VISITORS = ['ufo', 'flamingo', 'magpie', 'pelican', 'bat', 'pterodactyl', 'runner'];
+
+// Mid / far range parallax (see scenery ranges). z = CAM_Z - CAM_Z / parallax.
+const RIDGE_LANES = [
+  { parallax: 0.28, z: -2520, y0: 150, y1: 250 },
+  { parallax: 0.12, z: -7187, y0: 360, y1: 620 },
+];
 
 // Shuffle bag: each kind once per cycle so the UFO is not streakier than birds.
 function freshBag() {
@@ -274,6 +312,8 @@ export function createFlybys(layer) {
       vy: spec.vy,
       phase: spec.phase == null ? Math.random() * Math.PI * 2 : spec.phase,
       age: 0,
+      ridge: !!spec.ridge,
+      ridgeY: spec.ridgeY == null ? spec.y : spec.ridgeY,
     };
     layer.addChild(craft.mesh);
     crafts.push(craft);
@@ -287,6 +327,32 @@ export function createFlybys(layer) {
     if (kind === 'rocket' || kind === 'starship') return;
     const type = MAKERS[kind] ? kind : pickKind();
     const dir = Math.random() < 0.5 ? 1 : -1;
+    // Neon Runner skims mid/far ridges instead of the high sky lane.
+    if (type === 'runner') {
+      let lane = RIDGE_LANES[Math.random() < 0.62 ? 0 : 1];
+      if (at && at.z != null) {
+        lane = RIDGE_LANES.reduce((best, next) => (
+          Math.abs(next.z - at.z) < Math.abs(best.z - at.z) ? next : best
+        ));
+      }
+      const z = at && at.z != null ? at.z : lane.z;
+      const base = 95 + Math.random() * 40;
+      const chase = dir > 0 ? Math.max(0, kittenVx) * 0.7 + 28 : 0;
+      const speed = at && at.vx != null ? Math.abs(at.vx) : base + chase;
+      const lead = viewHalfWidthAt(z) + (dir > 0 ? 300 : 180) + Math.random() * 220;
+      const ridgeY = lane.y0 + Math.random() * (lane.y1 - lane.y0);
+      const y = at && at.y != null ? ridgeY + at.y : ridgeY;
+      add(type, {
+        x: at ? cam.x + at.x : cam.x - dir * lead,
+        y,
+        z,
+        vx: at && at.vx != null ? at.vx : dir * speed,
+        vy: 0,
+        ridge: true,
+        ridgeY: y,
+      });
+      return;
+    }
     const base = 70 + Math.random() * 30;
     // Camera tracks a rightward kitten. Against-traffic (dir < 0) crosses easily;
     // with-traffic needs a push or it stays off the left edge forever.
@@ -311,16 +377,28 @@ export function createFlybys(layer) {
       const parallax = parallaxFor(craft.z);
       craft.age += dt;
       craft.x += craft.vx * dt;
-      craft.y += craft.vy * dt;
-      const bob = Math.sin(time * 1.5 + craft.phase) * 10;
+      if (craft.ridge) {
+        // Hover bob along the ridge — stay on the mountain band, not the sky.
+        craft.y = craft.ridgeY + Math.sin(time * 4.2 + craft.phase) * 7;
+      } else {
+        craft.y += craft.vy * dt;
+      }
+      const bob = craft.ridge ? 0 : Math.sin(time * 1.5 + craft.phase) * 10;
       const shown = parallax / 0.2;
       const face = (craft.vx || 1) >= 0 ? 1 : -1;
       craft.mesh.position.set(
         cam.x + (craft.x - cam.x) * parallax,
         cam.y + (craft.y - cam.y) * parallax + bob,
       );
-      craft.mesh.scale.set(shown * face, shown);
-      craft.mesh.rotation = Math.sin(time * 1.2 + craft.phase) * 0.1;
+      if (craft.ridge) {
+        const bounce = 1 + Math.sin(time * 8.5 + craft.phase) * 0.04;
+        const squat = 1 - Math.sin(time * 8.5 + craft.phase) * 0.05;
+        craft.mesh.scale.set(shown * face * bounce, shown * squat);
+        craft.mesh.rotation = face * (-0.06 + Math.sin(time * 3.4 + craft.phase) * 0.05);
+      } else {
+        craft.mesh.scale.set(shown * face, shown);
+        craft.mesh.rotation = Math.sin(time * 1.2 + craft.phase) * 0.1;
+      }
       if (craft.parts.glow) {
         craft.parts.glow.alpha = 0.65 + Math.sin(time * 7 + craft.phase) * 0.35;
       }
