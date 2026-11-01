@@ -275,17 +275,6 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   overflow: visible;
 }
 
-/* Title and result hide #records. Give the badge rail its own cream plate
-   so the icons stay readable over the sky and above the score card. */
-#app[data-phase="title"] #badges:not(:empty),
-#app[data-phase="result"] #badges:not(:empty) {
-  padding: 6px 10px 7px;
-  background: #fff6e4;
-  border: 3px solid #2b2118;
-  border-radius: 14px;
-  box-shadow: 3px 3px 0 #2b2118;
-}
-
 #records p, .bestline p, .sheet p {
   display: flex;
   justify-content: space-between;
@@ -798,15 +787,15 @@ button.ride-badge:active {
 
 #mute:active, #pause-btn:active { transform: translate(2px, 2px); box-shadow: none; }
 
-/* Peek-field chip: reopen the end card after a scene tap dismissed it.
-   Bottom-right keeps clear of the top-left badge rail and the centered hint. */
+/* Peek-field chip: lives in #left-hud under the badge rail so it clears
+   the desktop Again pad (bottom-right) and stays with the achievements. */
 #show-score {
-  position: absolute;
+  position: relative;
   top: auto;
-  bottom: calc(16px + var(--safe-bottom));
+  bottom: auto;
   left: auto;
-  right: calc(16px + var(--safe-right));
-  z-index: 4;
+  right: auto;
+  z-index: auto;
   margin: 0;
   padding: 8px 16px;
   border: 3px solid #2b2118;
@@ -820,6 +809,7 @@ button.ride-badge:active {
   color: #2b2118;
   cursor: pointer;
   line-height: 1;
+  pointer-events: auto;
 }
 
 #show-score:active {
@@ -1428,10 +1418,6 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
     top: calc(10px + var(--safe-top));
     right: calc(10px + var(--safe-right));
   }
-  #show-score {
-    bottom: calc(12px + var(--safe-bottom));
-    right: calc(12px + var(--safe-right));
-  }
   #records span, .sheet span, .bestline span { font-size: 12px; }
   #records b, .sheet b, .bestline b { font-size: 16px; }
   /* Full-width bottom meter; mute/pause sit above it so they do not shorten the bar. */
@@ -1569,10 +1555,6 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   }
   #mute { left: 32px; }
   #pause-btn { left: 88px; }
-  #show-score {
-    bottom: calc(8px + var(--safe-bottom));
-    right: 32px;
-  }
 }
 
 @media (max-height: 520px) {
