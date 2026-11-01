@@ -914,7 +914,56 @@ function showResultCard() {
   if (game.phase !== 'result') return false;
   cardEl.classList.remove('hidden');
   paintShowScore();
+  snapResultCamera();
   return true;
+}
+
+// World units per CSS pixel at the current view scale (orthographic).
+function worldPerScreenPx() {
+  const w = canvas.clientWidth || window.innerWidth || 1;
+  const halfW = (view && view.halfW) || aimFocus().halfW;
+  return (halfW * 2) / w;
+}
+
+// While peeking, pan between the aim home and a little past the landing.
+function fieldPanBounds() {
+  const home = aimFocus();
+  const k = game.kitten;
+  const halfW = home.halfW;
+  const lead = Math.min(220, halfW * 0.42);
+  const minX = home.x;
+  const maxX = k ? Math.max(home.x, k.x + lead + halfW * 0.15) : home.x;
+  return { minX, maxX };
+}
+
+function clampFieldPan() {
+  const { minX, maxX } = fieldPanBounds();
+  if (maxX <= minX) {
+    cam.x = minX;
+    return;
+  }
+  cam.x = Math.max(minX, Math.min(maxX, cam.x));
+}
+
+// Drag right → camera left so the field follows the finger / pointer.
+function panFieldByScreen(dxPx) {
+  if (!resultPeeking() || !dxPx) return;
+  cam.x -= dxPx * worldPerScreenPx();
+  clampFieldPan();
+}
+
+// Reframe the landing under the score card (same lead as updateCamera).
+function snapResultCamera() {
+  if (game.phase !== 'result' || !game.kitten) return;
+  const home = aimFocus();
+  const halfW = home.halfW;
+  const lead = Math.min(220, halfW * 0.42);
+  const viewW = canvas.clientWidth || window.innerWidth;
+  const cardPx = Math.min(560, Math.max(0, viewW - 32));
+  const cardHalfWorld = (cardPx * 0.5) / Math.max(1, viewW) * (halfW * 2);
+  const focusLead = Math.min(halfW * 0.78, Math.max(lead, cardHalfWorld + 48));
+  cam.x = game.kitten.x + focusLead;
+  cam.y = Math.max(120, game.kitten.y - 36);
 }
 
 // Title / score / pause / live HUD share one duration row that toggles
@@ -1541,6 +1590,13 @@ window.addEventListener('keydown', (e) => {
       return;
     }
   }
+  // Peeked field: ← → pan (and hold-repeat). Up/down still unused here.
+  if (resultPeeking() && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
+    e.preventDefault();
+    const step = aimFocus().halfW * 0.12;
+    panFieldByScreen(e.code === 'ArrowLeft' ? step : -step);
+    return;
+  }
   if (aiming) {
     if (!e.repeat) pressAimKey(e.code);
     return;
@@ -1724,7 +1780,22 @@ app.addEventListener('pointerdown', (e) => {
   }
   // First press outside the score panel peeks the landed field. Stay in result
   // so a later tap / Space / Again still retries. Mouse and touch both count.
-  if (dismissResultCard()) return;
+  // Same gesture can keep dragging to pan once peeked (suppressAction so a
+  // plain release does not Fire again).
+  if (dismissResultCard()) {
+    if (e.pointerType !== 'mouse') safeAudio(() => audio.unlock());
+    touchAim = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      moved: false,
+      mouse: e.pointerType === 'mouse',
+      suppressAction: true,
+    };
+    return;
+  }
   if (e.pointerType !== 'mouse') safeAudio(() => audio.unlock());
   touchAim = {
     id: e.pointerId,
@@ -1747,9 +1818,14 @@ app.addEventListener('pointermove', (e) => {
     if (Math.hypot(adx, ady) < 16) return;
     touchAim.moved = true;
   }
-  if (touchAim.mouse) return;
   touchAim.lastX = e.clientX;
   touchAim.lastY = e.clientY;
+  // Peeked result: drag pans the field (mouse and touch). Horizontal only.
+  if (resultPeeking()) {
+    panFieldByScreen(dx);
+    return;
+  }
+  if (touchAim.mouse) return;
   if (game.phase === 'aim' || game.phase === 'title') {
     // Screen y grows downward, so a negative dy is up.
     game.angle -= (dx + dy) * 0.32;
@@ -1776,6 +1852,15 @@ const macScrollAim = /Mac|PPC/i.test(navigator.platform)
   || /Mac OS X/i.test(navigator.userAgent);
 app.addEventListener('wheel', (e) => {
   if (wipeOpen() || game.paused) return;
+  // Peeked field: scroll / trackpad pans left-right (both deltas → horizontal).
+  if (resultPeeking()) {
+    closeBadgeTips();
+    e.preventDefault();
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 32 : 1;
+    const sign = macScrollAim ? -1 : 1;
+    panFieldByScreen((e.deltaX + e.deltaY) * unit * sign);
+    return;
+  }
   if (game.phase !== 'aim' && game.phase !== 'title') return;
   closeBadgeTips();
   e.preventDefault();
@@ -2018,7 +2103,9 @@ function aimFocus() {
 }
 
 function updateCamera(dt) {
-  const flying = game.phase === 'flight' || game.phase === 'result';
+  const peeking = resultPeeking();
+  // Peeking frees horizontal pan; flight and the open score card still lock on.
+  const flying = game.phase === 'flight' || (game.phase === 'result' && !peeking);
   const k = game.kitten;
   // One distance for the whole flight. The camera follows; it does not zoom.
   // The lead shrinks on a narrow screen so the kitten stays in frame.
@@ -2029,15 +2116,19 @@ function updateCamera(dt) {
   // further ahead so the landing flag clears that card. Flight keeps the
   // shorter lead. The clamp keeps the kitten on screen.
   let focusLead = lead;
-  if (game.phase === 'result') {
+  if (game.phase === 'result' && !peeking) {
     const viewW = canvas.clientWidth || window.innerWidth;
     const cardPx = Math.min(560, Math.max(0, viewW - 32));
     const cardHalfWorld = (cardPx * 0.5) / Math.max(1, viewW) * (halfW * 2);
     focusLead = Math.min(halfW * 0.78, Math.max(lead, cardHalfWorld + 48));
   }
-  const focusX = flying ? k.x + focusLead : home.x;
-  const focusY = flying ? Math.max(120, k.y - 36) : 120;
-  if (flying) {
+  const focusX = flying && k ? k.x + focusLead : home.x;
+  const focusY = (flying || peeking) && k ? Math.max(120, k.y - 36) : 120;
+  if (peeking) {
+    // Player pans cam.x; keep height on the landing and clamp the range.
+    cam.y = focusY;
+    clampFieldPan();
+  } else if (flying) {
     cam.x = focusX;
     cam.y = focusY;
   } else {
@@ -2397,6 +2488,7 @@ window.__kitten = {
   get cause() { return game.kitten ? game.kitten.cause : null; },
   get x() { return game.kitten ? game.kitten.x : launchPoint(game.angle).x; },
   get y() { return game.kitten ? game.kitten.y : launchPoint(game.angle).y; },
+  get camX() { return cam.x; },
   start: startAim,
   aim(n) { game.angle = n; clampAngle(); },
   fire(power) { beginShot(power == null ? null : Number(power)); },
