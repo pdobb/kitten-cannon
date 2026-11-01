@@ -268,9 +268,9 @@ const game = {
   runnerCue: 0,
 };
 
-// End-card mountain cameo after a 1000 ft+ ride. Mid snow ridge, slow ski.
+// End-card mountain cameo after a 100 ft+ ride. Mid snow ridge, slow ski.
 const RESULT_RUNNER_WAIT = 2;
-const RESULT_RUNNER_FEET = 1000;
+const RESULT_RUNNER_FEET = 100;
 const RESULT_RUNNER_PARALLAX = 0.28;
 const RESULT_RUNNER_Z = -2520;
 
@@ -1299,7 +1299,7 @@ function finish() {
     stake.visible = true;
   }
   setPhase('result');
-  // Neon Runner skis the ridges after a 1000 ft+ landing.
+  // Neon Runner skis the ridges after a 100 ft+ landing.
   // ?cue=runner (or __kitten.cueRunner) forces the cameo for local demos.
   const forceRunner = params.has('cue') && params.get('cue') === 'runner';
   game.runnerCue = (forceRunner || game.feet >= RESULT_RUNNER_FEET)
@@ -2403,7 +2403,7 @@ window.__kitten = {
   show(kind, at) {
     flybys.launch(cam, game.kitten ? game.kitten.y : cam.y, kind, at || null);
   },
-  // Demo: schedule the end-screen Neon Runner cameo (same path as a 1000 ft+ finish).
+  // Demo: schedule the end-screen Neon Runner cameo (same path as a 100 ft+ finish).
   cueRunner(wait = RESULT_RUNNER_WAIT) {
     if (game.phase !== 'result' && game.phase !== 'flight') {
       // On title/aim, spawn immediately so the ridge path is visible without a shot.
