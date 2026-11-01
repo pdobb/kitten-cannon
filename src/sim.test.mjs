@@ -14,7 +14,10 @@ import {
   SNATCH_BOOST_MPH_MIN,
   SNATCH_CARRY_MAX,
   SNATCH_CARRY_MIN,
-  SNATCH_CHANCE,
+  SNATCH_CHANCE_MAX,
+  SNATCH_CHANCE_MIN,
+  SNATCH_CHANCE_PER_BAND,
+  snatchChanceAt,
 } from './snatch.js';
 import { CAM_FOV, CAM_Z, viewHalfHeight } from './view.js';
 import {
@@ -454,7 +457,19 @@ function shot(angle, power, props, frames = 30 * 60) {
 
 // Pterodactyl snatch: pace in, carry 1–5s on a swoop, eject with a boost.
 {
-  assert.ok(SNATCH_CHANCE > 0 && SNATCH_CHANCE < 1);
+  assert.equal(snatchChanceAt(0), SNATCH_CHANCE_MIN);
+  assert.equal(snatchChanceAt(9999), SNATCH_CHANCE_MIN);
+  assert.equal(
+    snatchChanceAt(10000),
+    SNATCH_CHANCE_MIN + SNATCH_CHANCE_PER_BAND,
+  );
+  assert.equal(
+    snatchChanceAt(50000),
+    SNATCH_CHANCE_MIN + 5 * SNATCH_CHANCE_PER_BAND,
+  );
+  assert.equal(snatchChanceAt(1e9), SNATCH_CHANCE_MAX);
+  assert.ok(SNATCH_CHANCE_MIN < SNATCH_CHANCE_MAX);
+  assert.ok(SNATCH_CHANCE_MAX < 1);
   assert.equal(SNATCH_CARRY_MIN, 1);
   assert.equal(SNATCH_CARRY_MAX, 5);
   assert.equal(rollCarryDuration(() => 0), SNATCH_CARRY_MIN);

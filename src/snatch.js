@@ -7,9 +7,12 @@ import { Container, Graphics } from 'pixi.js';
 import { FLYBY_EVERY_FT, FLYBY_Y } from './flyby.js';
 import { atTerminalSpeed, SPEED_MAX, speedFromMph } from './tune.js';
 
-// Same band gate as flybys. ~1/3 the old 0.22 rate — a long climb can still
-// roll one, but most flights never meet the bird.
-export const SNATCH_CHANCE = 0.073;
+// Same band gate as flybys (every FLYBY_EVERY_FT). Chance ramps with travel
+// so short hops rarely meet the bird and long climbs almost always do —
+// still at most one snatch per flight (phase leaves idle after arming).
+export const SNATCH_CHANCE_MIN = 0.035;
+export const SNATCH_CHANCE_PER_BAND = 0.04;
+export const SNATCH_CHANCE_MAX = 0.42;
 export const SNATCH_APPROACH = 1.15;
 export const SNATCH_CARRY_MIN = 1;
 export const SNATCH_CARRY_MAX = 5;
@@ -30,6 +33,16 @@ function clamp(n, lo, hi) {
 
 export function rollCarryDuration(rand = Math.random) {
   return SNATCH_CARRY_MIN + rand() * (SNATCH_CARRY_MAX - SNATCH_CARRY_MIN);
+}
+
+// Per-band roll probability at this travel distance. Grows with each
+// FLYBY_EVERY_FT band, capped at SNATCH_CHANCE_MAX.
+export function snatchChanceAt(travelFeet) {
+  const band = Math.max(0, Math.floor(travelFeet / FLYBY_EVERY_FT));
+  return Math.min(
+    SNATCH_CHANCE_MAX,
+    SNATCH_CHANCE_MIN + band * SNATCH_CHANCE_PER_BAND,
+  );
 }
 
 // Random up (+) or down (−) arc height in world px.
@@ -194,7 +207,7 @@ export function createSnatch(layer) {
     if (band <= lastBand) return;
     lastBand = band;
     if (phase !== 'idle') return;
-    if (Math.random() < SNATCH_CHANCE) {
+    if (Math.random() < snatchChanceAt(travelFeet)) {
       phase = 'armed';
       wait = 0.8 + Math.random() * 1.6;
     }
