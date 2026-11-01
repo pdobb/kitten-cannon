@@ -268,21 +268,21 @@ const game = {
   runnerCue: 0,
 };
 
-// End-card mountain cameo after a 1000 ft+ ride. Far snow ridge, slow ski.
+// End-card mountain cameo after a 1000 ft+ ride. Mid snow ridge, slow ski.
 const RESULT_RUNNER_WAIT = 2;
 const RESULT_RUNNER_FEET = 1000;
-const RESULT_RUNNER_PARALLAX = 0.12;
-const RESULT_RUNNER_Z = -7187;
+const RESULT_RUNNER_PARALLAX = 0.28;
+const RESULT_RUNNER_Z = -2520;
 
 function launchResultRunner() {
   if (!flybys) return;
   const halfW = (view && view.halfW) || 520;
-  // Slow crawl across the far snow. Parallax damps motion; keep screen drift gentle.
-  const screenSpeed = Math.max(28, halfW * 0.085);
+  // Slow crawl across the mid snow. Parallax damps motion; keep screen drift gentle.
+  const screenSpeed = Math.max(32, halfW * 0.1);
   flybys.launch(cam, cam.y, 'runner', {
     z: RESULT_RUNNER_Z,
     vx: screenSpeed / RESULT_RUNNER_PARALLAX,
-    x: -(halfW + 48) / RESULT_RUNNER_PARALLAX,
+    x: -(halfW + 56) / RESULT_RUNNER_PARALLAX,
   }, 0);
 }
 const cam = { x: 500, y: 120, z: 980, shake: 0 };

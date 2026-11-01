@@ -224,8 +224,8 @@ function pterodactyl() {
 
 // Neon Runner (thomasbreland/neon-runner) via Flit's runner skin. Flit draws
 // y-down; KC world is y-up, so Y is negated. Local +X is travel-forward.
-// Tiny: sits on distant snow peaks behind nearer hills.
-const RUNNER_SCALE = 0.62;
+// Mid snow peaks (closer than the far range); still behind the green hills.
+const RUNNER_SCALE = 0.95;
 
 function neonRunner() {
   const mesh = new Container();
@@ -265,10 +265,10 @@ const MAKERS = {
 };
 const VISITORS = ['ufo', 'flamingo', 'magpie', 'pelican', 'bat', 'pterodactyl', 'runner'];
 
-// Snow-capped ranges only (far + mid). Prefer far — way back, occluded by nearer hills.
+// Snow-capped ranges only. Prefer mid blue peaks; far snow is rarer / deeper.
 const RIDGE_LANES = [
-  { lane: 0, parallax: 0.12, z: -7187 },
   { lane: 1, parallax: 0.28, z: -2520 },
+  { lane: 0, parallax: 0.12, z: -7187 },
 ];
 
 // Shuffle bag: each kind once per cycle so the UFO is not streakier than birds.
@@ -349,9 +349,9 @@ export function createFlybys(layer, opts = null) {
     const dir = at && at.vx != null
       ? (at.vx >= 0 ? 1 : -1)
       : (Math.random() < 0.5 ? 1 : -1);
-    // Neon Runner skis snow crests slowly — far preferred, behind nearer hills.
+    // Neon Runner skis snow crests slowly — mid preferred, behind nearer green hills.
     if (type === 'runner') {
-      let lane = RIDGE_LANES[Math.random() < 0.7 ? 0 : 1];
+      let lane = RIDGE_LANES[Math.random() < 0.78 ? 0 : 1];
       if (at && at.z != null) {
         lane = RIDGE_LANES.reduce((best, next) => (
           Math.abs(next.z - at.z) < Math.abs(best.z - at.z) ? next : best
