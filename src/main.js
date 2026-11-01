@@ -563,9 +563,9 @@ function placeBadgeTip(badge) {
   tip.hidden = false;
   tip.style.left = '0px';
   tip.style.top = '0px';
-  // Lay out at 0,0 first so width/height are real, then pick a side that fits.
-  // Badges live top-left: prefer right, then below. Never open upward into the
-  // iOS status / Dynamic Island blur where the tip title becomes unreadable.
+  // Lay out at 0,0 first so width/height are real, then park under the badge.
+  // Always below — never beside or above into the iOS status / Dynamic Island
+  // blur where the tip title becomes unreadable.
   const br = badge.getBoundingClientRect();
   const tr = tip.getBoundingClientRect();
   const pad = 8;
@@ -575,28 +575,13 @@ function placeBadgeTip(badge) {
     .trim();
   const safeTop = Math.max(0, Number.parseFloat(safeTopRaw) || 0);
   const minTop = pad + safeTop;
-  const preferRight = br.left < window.innerWidth * 0.45;
-  let left = preferRight ? br.right + gap : br.left - tr.width - gap;
-  // Align with the badge top (not vertical center) so the title stays clear
-  // of the system bar when the rail is at the top of the screen.
-  let top = Math.max(minTop, br.top);
-  let placed = preferRight ? 'right' : 'left';
-  const overflowsX = left < pad || left + tr.width > window.innerWidth - pad;
-  if (overflowsX) {
-    left = preferRight ? br.left - tr.width - gap : br.right + gap;
-    placed = preferRight ? 'left' : 'right';
-  }
-  if (left < pad || left + tr.width > window.innerWidth - pad) {
-    left = Math.min(Math.max(pad, br.left), window.innerWidth - pad - tr.width);
-    top = Math.max(minTop, br.bottom + gap);
-    placed = 'below';
-  }
-  // Keep below/beside — never flip above the badge into the top chrome.
-  top = Math.max(minTop, Math.min(top, window.innerHeight - tr.height - pad));
+  let left = br.left + (br.width - tr.width) / 2;
+  let top = br.bottom + gap;
   left = Math.max(pad, Math.min(left, window.innerWidth - tr.width - pad));
+  top = Math.max(minTop, Math.min(top, window.innerHeight - tr.height - pad));
   tip.style.left = `${Math.round(left)}px`;
   tip.style.top = `${Math.round(top)}px`;
-  tip.dataset.place = placed;
+  tip.dataset.place = 'below';
 }
 
 function toggleBadgeTip(badge) {
