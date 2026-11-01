@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { buildCourse, resetCourse } from './course.js';
 import { createKitten, resolveHit, runUntilDone, step } from './physics.js';
-import { FLYBY_CHANCE, FLYBY_EVERY_FT, FLYBY_Y } from './flyby.js';
+import { BIRD_CRUISE_MPH, FLYBY_CHANCE, FLYBY_EVERY_FT, FLYBY_Y } from './flyby.js';
 import { HIT } from './propspec.js';
 import { skyRgb, spaceBlend, reachedMars, SPACE_FEET } from './sky.js';
 import {
@@ -433,6 +433,8 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.ok(FLYBY_CHANCE >= 0.6);
   assert.equal(FLYBY_EVERY_FT, 10000);
   assert.ok(FLYBY_Y > 500);
+  // Flit birds cruise ~42 mph left→right so relative motion flips with the kitten.
+  assert.equal(BIRD_CRUISE_MPH, 42);
 }
 
 // Head samples count. A balloon on the skull connects; body center alone would miss.

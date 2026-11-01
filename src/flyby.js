@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { paint, strokeOf } from './look.js';
+import { speedFromMph, STEP } from './tune.js';
 import { CAM_Z, viewHalfWidthAt } from './view.js';
 
 // Visitors wait until the kitten is above the low cloud lanes.
@@ -8,6 +9,28 @@ export const FLYBY_Y = 980;
 export const FLYBY_CHANCE = 0.67;
 // After the first high roll, try again every this many feet of travel.
 export const FLYBY_EVERY_FT = 10000;
+
+// Flit cameos always cruise left→right. ~42 mph sits above a plain lob and
+// below a balloon-boosted run, so a slow kitten is passed and a fast one
+// overtakes. Convert frame vx → world units/sec to match craft.x += vx*dt.
+export const BIRD_CRUISE_MPH = 42;
+const BIRD_CRUISE_SPREAD = 8;
+// Flit-style auto-flap hop (y-up). Numbers are world units; parallax shrinks
+// the on-screen arc. Flit itself uses gravity 1550 / flap −540 on a 680px stage.
+const BIRD_FLAP_VY = 340;
+const BIRD_GRAVITY = 1050;
+const BIRD_MAX_FALL = 460;
+const BIRD_FLAP_EVERY = 0.55;
+const BIRD_KINDS = new Set(['flamingo', 'magpie', 'pelican', 'bat', 'pterodactyl']);
+
+function isBird(kind) {
+  return BIRD_KINDS.has(kind);
+}
+
+function birdCruiseSpeed() {
+  const mph = BIRD_CRUISE_MPH + (Math.random() * 2 - 1) * BIRD_CRUISE_SPREAD;
+  return speedFromMph(mph) / STEP;
+}
 
 const INK = 0x2b2118;
 const STROKE = 0x6a3d16;
@@ -315,6 +338,7 @@ export function createFlybys(layer, opts = null) {
   function add(type, spec) {
     const built = MAKERS[type]();
     const parent = parentFor(spec);
+    const bird = isBird(type);
     const craft = {
       kind: type,
       mesh: built.mesh,
@@ -329,6 +353,12 @@ export function createFlybys(layer, opts = null) {
       age: 0,
       ridge: !!spec.ridge,
       ridgeLane: spec.ridgeLane == null ? 0 : spec.ridgeLane,
+      bird,
+      // Flit hop: hopY rides on top of lane y; flapIn counts down to next flap.
+      hopY: 0,
+      hopVy: bird ? BIRD_FLAP_VY * (0.4 + Math.random() * 0.4) : 0,
+      flapIn: bird ? Math.random() * BIRD_FLAP_EVERY : 0,
+      sinceFlap: bird ? Math.random() * 0.4 : 10,
     };
     parent.addChild(craft.mesh);
     crafts.push(craft);
@@ -340,17 +370,17 @@ export function createFlybys(layer, opts = null) {
     craft.mesh.destroy({ children: true });
   }
 
-  // kittenVx helps right-bound visitors outrun the camera so they still cross.
-  // Birds and the UFO share the same speed band so each kind stays on screen alike.
+  // kittenVx (px/frame) still paces the UFO chase band. Flit birds ignore it and
+  // cruise at BIRD_CRUISE_MPH so relative motion flips with the kitten's speed.
   function launch(cam, kittenY, kind, at, kittenVx = 0) {
     // Rockets are gone. Asking for one does not launch a visitor instead.
     if (kind === 'rocket' || kind === 'starship') return;
     const type = MAKERS[kind] ? kind : pickKind();
-    const dir = at && at.vx != null
-      ? (at.vx >= 0 ? 1 : -1)
-      : (Math.random() < 0.5 ? 1 : -1);
     // Neon Runner skis snow crests slowly — mid preferred, behind nearer green hills.
     if (type === 'runner') {
+      const dir = at && at.vx != null
+        ? (at.vx >= 0 ? 1 : -1)
+        : (Math.random() < 0.5 ? 1 : -1);
       let lane = RIDGE_LANES[Math.random() < 0.78 ? 0 : 1];
       if (at && at.z != null) {
         lane = RIDGE_LANES.reduce((best, next) => (
@@ -374,11 +404,22 @@ export function createFlybys(layer, opts = null) {
       });
       return;
     }
-    const base = 70 + Math.random() * 30;
-    // Camera tracks a rightward kitten. Against-traffic (dir < 0) crosses easily;
-    // with-traffic needs a push or it stays off the left edge forever.
-    const chase = dir > 0 ? Math.max(0, kittenVx) * 0.85 + 40 : 0;
-    const speed = base + chase;
+    // Flit birds always enter from the left and fly right. UFO keeps the old
+    // left/right roll with a chase push so it still crosses the camera.
+    const bird = isBird(type);
+    const dir = at && at.vx != null
+      ? (at.vx >= 0 ? 1 : -1)
+      : (bird ? 1 : (Math.random() < 0.5 ? 1 : -1));
+    let speed;
+    if (at && at.vx != null) {
+      speed = Math.abs(at.vx);
+    } else if (bird) {
+      speed = birdCruiseSpeed();
+    } else {
+      const base = 70 + Math.random() * 30;
+      const chase = dir > 0 ? Math.max(0, kittenVx) * 0.85 + 40 : 0;
+      speed = base + chase;
+    }
     // Closer than the old −5400 lane so Flit cameos read clearly, not as specks.
     const z = at && at.z != null ? at.z : -3200 - Math.random() * 1000;
     const lead = viewHalfWidthAt(z) + (dir > 0 ? 360 : 220) + Math.random() * 280;
@@ -388,7 +429,7 @@ export function createFlybys(layer, opts = null) {
       y: at && at.y != null ? kittenY + at.y : kittenY + lift,
       z,
       vx: at && at.vx != null ? at.vx : dir * speed,
-      vy: at && at.vy != null ? at.vy : (Math.random() - 0.5) * 8,
+      vy: at && at.vy != null ? at.vy : (bird ? 0 : (Math.random() - 0.5) * 8),
     });
   }
 
@@ -413,6 +454,32 @@ export function createFlybys(layer, opts = null) {
           craft.y = 180 + hover;
         }
         drawY = craft.y;
+      } else if (craft.bird) {
+        // Flit-style bounce: auto-flap up, arc down under gravity, nose follows vy.
+        craft.sinceFlap += dt;
+        craft.flapIn -= dt;
+        if (craft.flapIn <= 0) {
+          craft.hopVy = BIRD_FLAP_VY * (0.85 + Math.random() * 0.3);
+          craft.flapIn = BIRD_FLAP_EVERY * (0.85 + Math.random() * 0.35);
+          craft.sinceFlap = 0;
+        }
+        craft.hopVy -= BIRD_GRAVITY * dt;
+        if (craft.hopVy < -BIRD_MAX_FALL) craft.hopVy = -BIRD_MAX_FALL;
+        craft.hopY += craft.hopVy * dt;
+        // Soft floor so a long glide does not sink out of the sky band.
+        if (craft.hopY < -80) {
+          craft.hopY = -80;
+          if (craft.hopVy < 0) {
+            craft.hopVy = BIRD_FLAP_VY * 0.7;
+            craft.sinceFlap = 0;
+            craft.flapIn = BIRD_FLAP_EVERY * (0.85 + Math.random() * 0.35);
+          }
+        }
+        if (craft.hopY > 160) {
+          craft.hopY = 160;
+          if (craft.hopVy > 0) craft.hopVy = 0;
+        }
+        drawY = cam.y + (craft.y + craft.hopY - cam.y) * parallax;
       } else {
         craft.y += craft.vy * dt;
         drawY = cam.y + (craft.y - cam.y) * parallax + Math.sin(time * 1.5 + craft.phase) * 10;
@@ -424,6 +491,12 @@ export function createFlybys(layer, opts = null) {
         craft.mesh.scale.set(shown * face, shown);
         // Pitch with the slope like a car on the road; tiny hover wobble.
         craft.mesh.rotation = face * Math.atan(grade) + Math.sin(time * 2.6 + craft.phase) * 0.025;
+      } else if (craft.bird) {
+        craft.mesh.scale.set(shown * face, shown);
+        // Flit nose: climb tips up, dive tips down (clamp like Flit's vy/640).
+        const target = Math.max(-0.55, Math.min(1.05, craft.hopVy / 420));
+        const rate = craft.hopVy > 0 ? 14 : 7;
+        craft.mesh.rotation += (target - craft.mesh.rotation) * Math.min(1, dt * rate);
       } else {
         craft.mesh.scale.set(shown * face, shown);
         craft.mesh.rotation = Math.sin(time * 1.2 + craft.phase) * 0.1;
@@ -439,8 +512,11 @@ export function createFlybys(layer, opts = null) {
         bulbs[b].alpha = 0.45 + Math.max(0, wave) * 0.55;
       }
       const wings = craft.parts.wings || [];
+      // Flit flaps harder right after a hop; UFO/others keep a steady beat.
+      const flapBoost = craft.bird ? Math.max(0, 1 - craft.sinceFlap / 0.28) : 0;
+      const wingHz = 9 + flapBoost * 18;
       for (let w = 0; w < wings.length; w++) {
-        wings[w].rotation = Math.sin(time * 9 + craft.phase) * 0.42;
+        wings[w].rotation = Math.sin(time * wingHz + craft.phase) * (0.42 + flapBoost * 0.2);
       }
       // Despawn once past the far edge. Age cap is a long safety only — birds
       // used to use a faster lane and vanish before you could clock them.
@@ -493,8 +569,10 @@ export function createFlybys(layer, opts = null) {
       return crafts.map((craft) => ({
         kind: craft.kind,
         x: craft.x,
-        y: craft.y,
+        y: craft.y + (craft.hopY || 0),
         z: craft.z,
+        vx: craft.vx,
+        hopY: craft.hopY || 0,
       }));
     },
   };
