@@ -110,7 +110,11 @@
         </div>
         <p class="lede">Aim the barrel, fire when the bar is full, and see how far the kitty flies. Bombs and trampolines throw it farther. Tar pits and flytraps end the ride.</p>
         <button id="start" type="button">Start</button>
-        <p id="need-js">This browser is incompatible with Kitten Cannon. Try another one, such as Safari, Firefox, or Chrome.</p>
+        <!-- Hidden until a real boot failure; otherwise it flashes on every hard refresh. -->
+        <p id="need-js" hidden>This browser is incompatible with Kitten Cannon. Try another one, such as Safari, Firefox, or Chrome.</p>
+        <noscript>
+          <p class="need-js-noscript">This browser is incompatible with Kitten Cannon. Try another one, such as Safari, Firefox, or Chrome.</p>
+        </noscript>
         <div class="bestline" id="title-best"></div>
       </div>
     </div>
@@ -168,13 +172,13 @@
       <button type="button" data-act="fire" id="pad-fire">Fire</button>
     </div>
   </div>
-  <!-- kc-shell:v11 -->
+  <!-- kc-shell:v12 -->
   <script>
     // ES5 on purpose: must parse even when the game bundle or an old SW shell does not.
     // Home-screen PWAs (especially iOS) keep a frozen shell; clear workers/caches and
     // reload once so the standalone app can pick up layout fixes like badge placement.
     (function () {
-      var KEY = 'kc-shell-bust-v11';
+      var KEY = 'kc-shell-bust-v12';
       var standalone = false;
       try {
         standalone = (window.navigator.standalone === true)

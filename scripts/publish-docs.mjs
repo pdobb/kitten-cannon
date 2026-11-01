@@ -47,7 +47,7 @@ const redirector = `<!DOCTYPE html>
   <link rel="canonical" href="https://pdobb.github.io/kitten-cannon/game.html" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <title>Kitten Cannon</title>
-  <!-- kc-shell:v11-redirect -->
+  <!-- kc-shell:v12-redirect -->
   <script>
     (function () {
       var dest = './game.html?from=index';

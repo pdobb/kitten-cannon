@@ -1291,13 +1291,18 @@ h2 {
   text-wrap: balance;
 }
 
-#need-js {
+#need-js,
+.need-js-noscript {
   margin: 0;
   font-family: Nunito, sans-serif;
   font-weight: 800;
   font-size: clamp(14px, min(3.6vw, 3vh), 16px);
   line-height: 1.4;
   color: #8d1d1d;
+}
+
+#need-js[hidden] {
+  display: none !important;
 }
 
 button, #mute, #pause-btn {
