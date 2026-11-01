@@ -2296,10 +2296,22 @@ function applyQuery() {
 }
 
 boot().catch((error) => {
-  const pre = document.createElement('pre');
-  pre.id = 'boot-error';
-  pre.textContent = error && error.stack ? error.stack : String(error);
-  document.body.appendChild(pre);
+  const tip = 'This browser is incompatible with Kitten Cannon. Try another one, such as Safari, Firefox, or Chrome.';
+  const need = document.getElementById('need-js');
+  if (need) {
+    need.textContent = tip;
+    need.hidden = false;
+  }
+  let pre = document.getElementById('boot-error');
+  if (!pre) {
+    pre = document.createElement('pre');
+    pre.id = 'boot-error';
+    document.body.appendChild(pre);
+  }
+  pre.textContent = tip;
+  const start = document.getElementById('start');
+  if (start) start.disabled = true;
+  console.error(error);
 });
 
 window.__kitten = {

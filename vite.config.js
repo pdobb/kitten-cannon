@@ -28,11 +28,9 @@ const KC_VERSION = buildVersion();
 // ES5 loader: probe for modern syntax, then Function(CODE) so old WebViews
 // never parse the Pixi bundle as source (that was the cream "const"/"strict
 // mode" SyntaxError). The bundle lives only inside a JSON string until then.
+// Shown for any boot/load failure — keep browser-agnostic.
 const KC_UNSUPPORTED =
-  'This browser cannot run Kitten Cannon. Open in Safari on iOS 15 or newer '
-  + '(or current Chrome, Firefox, Edge, or Brave). '
-  + 'From Messages, use Open in Safari — or open '
-  + 'https://pdobb.github.io/kitten-cannon/game.html';
+  'This browser is incompatible with Kitten Cannon. Try another one, such as Safari, Firefox, or Chrome.';
 
 function toClassicInline(html) {
   return html.replace(
@@ -43,16 +41,23 @@ function toClassicInline(html) {
         .replace(/import\.meta\.url/g, 'location.href')
         .replace(/import\.meta\.resolve/g, '(null)');
       const payload = JSON.stringify(classic);
+      const tip = JSON.stringify(KC_UNSUPPORTED);
       return `<script>(function(){
 var CODE=${payload};
 function kcUnsupported(){
+  var tip=${tip};
   var need=document.getElementById('need-js');
   if(need){
-    need.textContent=${JSON.stringify(KC_UNSUPPORTED)};
+    need.textContent=tip;
     need.hidden=false;
   }
   var pre=document.getElementById('boot-error');
-  if(pre&&pre.parentNode)pre.parentNode.removeChild(pre);
+  if(!pre){
+    pre=document.createElement('pre');
+    pre.id='boot-error';
+    document.body.appendChild(pre);
+  }
+  pre.textContent=tip;
   var start=document.getElementById('start');
   if(start)start.disabled=true;
 }
@@ -70,13 +75,6 @@ function kcBoot(){
     Function(CODE)();
   }catch(e){
     kcUnsupported();
-    var pre=document.getElementById('boot-error');
-    if(!pre){
-      pre=document.createElement('pre');
-      pre.id='boot-error';
-      document.body.appendChild(pre);
-    }
-    pre.textContent=(e&&e.message)?String(e.message):String(e);
   }
 }
 if(document.readyState==='loading'){
