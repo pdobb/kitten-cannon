@@ -925,14 +925,18 @@ function worldPerScreenPx() {
   return (halfW * 2) / w;
 }
 
-// While peeking, pan between the aim home and a little past the landing.
+// While peeking, pan from the aim home to at least 100 ft past the landing
+// so the Neon Runner ridge ski stays in reach.
+const PEEK_AHEAD_FT = 100;
+
 function fieldPanBounds() {
   const home = aimFocus();
   const k = game.kitten;
   const halfW = home.halfW;
   const lead = Math.min(220, halfW * 0.42);
+  const ahead = PEEK_AHEAD_FT * PIXELS_PER_FOOT;
   const minX = home.x;
-  const maxX = k ? Math.max(home.x, k.x + lead + halfW * 0.15) : home.x;
+  const maxX = k ? Math.max(home.x, k.x + lead + ahead) : home.x;
   return { minX, maxX };
 }
 
