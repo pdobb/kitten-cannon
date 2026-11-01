@@ -173,6 +173,7 @@ const cardKickerEl = document.querySelector('#card-kicker');
 const cardFeetEl = document.querySelector('#card-feet');
 const cardNoteEl = document.querySelector('#card-note');
 const cardBestEl = document.querySelector('#card-best');
+const showScoreEl = document.querySelector('#show-score');
 const padFireEl = document.querySelector('#pad-fire');
 const wipeEl = document.querySelector('#wipe');
 const wipeCancelEl = document.querySelector('#wipe-cancel');
@@ -884,16 +885,35 @@ function setPhase(phase) {
   cardEl.classList.toggle('hidden', phase !== 'result');
   padFireEl.textContent = phase === 'result' ? 'Again' : 'Fire';
   paintRecords();
+  paintShowScore();
 }
 
 function resultCardOpen() {
   return game.phase === 'result' && !cardEl.classList.contains('hidden');
 }
 
+function resultPeeking() {
+  return game.phase === 'result' && cardEl.classList.contains('hidden');
+}
+
+function paintShowScore() {
+  if (!showScoreEl) return;
+  showScoreEl.classList.toggle('hidden', !resultPeeking());
+}
+
 // Peek the landed field. Phase stays result so the next field tap / Space retries.
 function dismissResultCard() {
   if (!resultCardOpen()) return false;
   cardEl.classList.add('hidden');
+  paintShowScore();
+  return true;
+}
+
+// Bring the end card back after a field peek.
+function showResultCard() {
+  if (game.phase !== 'result') return false;
+  cardEl.classList.remove('hidden');
+  paintShowScore();
   return true;
 }
 
@@ -1511,9 +1531,15 @@ window.addEventListener('keydown', (e) => {
     if (!e.repeat && (accept || e.code === 'Escape' || e.code === 'KeyP')) setPaused(false);
     return;
   }
-  if (resultCardOpen() && !e.repeat && e.code === 'Escape') {
-    dismissResultCard();
-    return;
+  if (!e.repeat && e.code === 'Escape') {
+    if (resultCardOpen()) {
+      dismissResultCard();
+      return;
+    }
+    if (resultPeeking()) {
+      showResultCard();
+      return;
+    }
   }
   if (aiming) {
     if (!e.repeat) pressAimKey(e.code);
@@ -1600,6 +1626,7 @@ bindTap(document.querySelector('#again'), retry);
 bindTap(document.querySelector('#card-back'), goTitle);
 bindTap(document.querySelector('#pause-back'), goTitle);
 bindTap(document.querySelector('#reload'), reloadField);
+if (showScoreEl) bindTap(showScoreEl, showResultCard);
 
 function paintMute(muted) {
   muteEl.classList.toggle('is-muted', muted);

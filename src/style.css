@@ -785,6 +785,38 @@ button.ride-badge:active {
 
 #mute:active, #pause-btn:active { transform: translate(2px, 2px); box-shadow: none; }
 
+/* Peek-field chip: reopen the end card after a scene tap dismissed it. */
+#show-score {
+  position: absolute;
+  top: calc(14px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  margin: 0;
+  padding: 8px 16px;
+  border: 3px solid #2b2118;
+  border-radius: 14px;
+  background: #fff6e4;
+  box-shadow: 3px 3px 0 #2b2118;
+  font-family: Nunito, sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: #2b2118;
+  cursor: pointer;
+  line-height: 1;
+}
+
+#show-score:active {
+  transform: translateX(-50%) translate(2px, 2px);
+  box-shadow: none;
+}
+
+#app.is-paused #show-score,
+#app.is-wiping #show-score {
+  visibility: hidden;
+}
+
 #app.is-paused, #app.is-paused * { animation-play-state: paused; }
 #app.is-paused #title,
 #app.is-paused #card { visibility: hidden; }
