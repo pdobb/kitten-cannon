@@ -1280,8 +1280,12 @@ function finish() {
     stake.visible = true;
   }
   setPhase('result');
-  // Neon Runner skis the ridges only after a 1000 ft+ landing.
-  game.runnerCue = game.feet >= RESULT_RUNNER_FEET ? RESULT_RUNNER_WAIT : 0;
+  // Neon Runner skis the ridges after a 1000 ft+ landing.
+  // ?cue=runner (or __kitten.cueRunner) forces the cameo for local demos.
+  const forceRunner = params.has('cue') && params.get('cue') === 'runner';
+  game.runnerCue = (forceRunner || game.feet >= RESULT_RUNNER_FEET)
+    ? RESULT_RUNNER_WAIT
+    : 0;
 }
 
 // A new page: a new roll of the field, record stakes only, nothing spent.
@@ -2369,6 +2373,16 @@ window.__kitten = {
   fire(power) { beginShot(power == null ? null : Number(power)); },
   show(kind, at) {
     flybys.launch(cam, game.kitten ? game.kitten.y : cam.y, kind, at || null);
+  },
+  // Demo: schedule the end-screen Neon Runner cameo (same path as a 1000 ft+ finish).
+  cueRunner(wait = RESULT_RUNNER_WAIT) {
+    if (game.phase !== 'result' && game.phase !== 'flight') {
+      // On title/aim, spawn immediately so the ridge path is visible without a shot.
+      launchResultRunner();
+      return true;
+    }
+    game.runnerCue = Math.max(0.05, Number(wait) || RESULT_RUNNER_WAIT);
+    return true;
   },
   // Demo: force a pterodactyl snatch during flight.
   grab() {
