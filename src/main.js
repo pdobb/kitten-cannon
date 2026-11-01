@@ -267,8 +267,9 @@ const game = {
   runnerCue: 0,
 };
 
-// End-card mountain cameo. Mid ridge, skating right, every landing.
+// End-card mountain cameo after a 1000 ft+ ride. Mid ridge, bird-like cross.
 const RESULT_RUNNER_WAIT = 2;
+const RESULT_RUNNER_FEET = 1000;
 const RESULT_RUNNER_PARALLAX = 0.28;
 const RESULT_RUNNER_Z = -2520;
 
@@ -1279,7 +1280,8 @@ function finish() {
     stake.visible = true;
   }
   setPhase('result');
-  game.runnerCue = RESULT_RUNNER_WAIT;
+  // Neon Runner skis the ridges only after a 1000 ft+ landing.
+  game.runnerCue = game.feet >= RESULT_RUNNER_FEET ? RESULT_RUNNER_WAIT : 0;
 }
 
 // A new page: a new roll of the field, record stakes only, nothing spent.
@@ -2248,7 +2250,7 @@ async function boot() {
   if (pixi.renderer.events) pixi.renderer.events.autoPreventDefault = false;
 
   scenery = createScenery(world);
-  flybys = createFlybys(scenery.flyLayer);
+  flybys = createFlybys(scenery.flyLayer, (lane, camX, drawX) => scenery.ridgeAt(lane, camX, drawX));
   pixi.stage.addChild(scenery.sky, world);
   world.addChild(propLayer, actorLayer);
 

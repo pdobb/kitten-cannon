@@ -264,10 +264,11 @@ const MAKERS = {
 };
 const VISITORS = ['ufo', 'flamingo', 'magpie', 'pelican', 'bat', 'pterodactyl', 'runner'];
 
-// Mid / far range parallax (see scenery ranges). z = CAM_Z - CAM_Z / parallax.
+// Mid / far range lanes (scenery range index + matching flyby z).
+// Lane 1 = mid blue ridge (best read behind the end card); 0 = far snow.
 const RIDGE_LANES = [
-  { parallax: 0.28, z: -2520, y0: 150, y1: 250 },
-  { parallax: 0.12, z: -7187, y0: 360, y1: 620 },
+  { lane: 1, parallax: 0.28, z: -2520 },
+  { lane: 0, parallax: 0.12, z: -7187 },
 ];
 
 // Shuffle bag: each kind once per cycle so the UFO is not streakier than birds.
@@ -286,7 +287,8 @@ function parallaxFor(z) {
   return CAM_Z / (CAM_Z - z);
 }
 
-export function createFlybys(layer) {
+// ridgeAt(lane, camX, drawX) -> { y, slope } from scenery. Optional until wired.
+export function createFlybys(layer, ridgeAt = null) {
   const crafts = [];
   let wait = 0;
   let coming = false;
@@ -313,7 +315,7 @@ export function createFlybys(layer) {
       phase: spec.phase == null ? Math.random() * Math.PI * 2 : spec.phase,
       age: 0,
       ridge: !!spec.ridge,
-      ridgeY: spec.ridgeY == null ? spec.y : spec.ridgeY,
+      ridgeLane: spec.ridgeLane == null ? 1 : spec.ridgeLane,
     };
     layer.addChild(craft.mesh);
     crafts.push(craft);
@@ -329,9 +331,9 @@ export function createFlybys(layer) {
     const dir = at && at.vx != null
       ? (at.vx >= 0 ? 1 : -1)
       : (Math.random() < 0.5 ? 1 : -1);
-    // Neon Runner skims mid/far ridges instead of the high sky lane.
+    // Neon Runner skis the mid/far crest — bird-like cross, grade follows the ridge.
     if (type === 'runner') {
-      let lane = RIDGE_LANES[Math.random() < 0.62 ? 0 : 1];
+      let lane = RIDGE_LANES[Math.random() < 0.72 ? 0 : 1];
       if (at && at.z != null) {
         lane = RIDGE_LANES.reduce((best, next) => (
           Math.abs(next.z - at.z) < Math.abs(best.z - at.z) ? next : best
@@ -344,16 +346,14 @@ export function createFlybys(layer) {
       const speed = at && at.vx != null ? Math.abs(at.vx) : base + chase;
       // Ortho lead — viewHalfWidthAt is the old perspective frustum and overshoots.
       const lead = 720 + Math.random() * 260;
-      const ridgeY = lane.y0 + Math.random() * (lane.y1 - lane.y0);
-      const y = at && at.y != null ? ridgeY + at.y : ridgeY;
       add(type, {
         x: at && at.x != null ? cam.x + at.x : cam.x - dir * lead,
-        y,
+        y: 180,
         z,
         vx: at && at.vx != null ? at.vx : dir * speed,
         vy: 0,
         ridge: true,
-        ridgeY: y,
+        ridgeLane: lane.lane,
       });
       return;
     }
@@ -381,24 +381,31 @@ export function createFlybys(layer) {
       const parallax = parallaxFor(craft.z);
       craft.age += dt;
       craft.x += craft.vx * dt;
+      const face = (craft.vx || 1) >= 0 ? 1 : -1;
+      const drawX = cam.x + (craft.x - cam.x) * parallax;
+      let drawY;
+      let grade = 0;
       if (craft.ridge) {
-        // Hover bob along the ridge — stay on the mountain band, not the sky.
-        craft.y = craft.ridgeY + Math.sin(time * 4.2 + craft.phase) * 7;
+        // Sit on the painted crest (absolute Y, like the ranges). Ski the grade.
+        const hover = Math.sin(time * 5 + craft.phase) * 3;
+        if (ridgeAt) {
+          const crest = ridgeAt(craft.ridgeLane, cam.x, drawX);
+          craft.y = crest.y + hover + 8;
+          grade = crest.slope;
+        } else {
+          craft.y = 180 + hover;
+        }
+        drawY = craft.y;
       } else {
         craft.y += craft.vy * dt;
+        drawY = cam.y + (craft.y - cam.y) * parallax + Math.sin(time * 1.5 + craft.phase) * 10;
       }
-      const bob = craft.ridge ? 0 : Math.sin(time * 1.5 + craft.phase) * 10;
       const shown = parallax / 0.2;
-      const face = (craft.vx || 1) >= 0 ? 1 : -1;
-      craft.mesh.position.set(
-        cam.x + (craft.x - cam.x) * parallax,
-        cam.y + (craft.y - cam.y) * parallax + bob,
-      );
+      craft.mesh.position.set(drawX, drawY);
       if (craft.ridge) {
-        const bounce = 1 + Math.sin(time * 8.5 + craft.phase) * 0.04;
-        const squat = 1 - Math.sin(time * 8.5 + craft.phase) * 0.05;
-        craft.mesh.scale.set(shown * face * bounce, shown * squat);
-        craft.mesh.rotation = face * (-0.06 + Math.sin(time * 3.4 + craft.phase) * 0.05);
+        craft.mesh.scale.set(shown * face, shown);
+        // Pitch with the slope like a car on the road; tiny hover wobble.
+        craft.mesh.rotation = face * Math.atan(grade) + Math.sin(time * 3.2 + craft.phase) * 0.03;
       } else {
         craft.mesh.scale.set(shown * face, shown);
         craft.mesh.rotation = Math.sin(time * 1.2 + craft.phase) * 0.1;

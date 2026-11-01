@@ -159,6 +159,20 @@ function track(entry, camX, parallax) {
   entry.layer.position.x = camX - scroll - span;
 }
 
+// Crest height and grade at a local x along a peakSamples polyline.
+function samplePts(pts, x) {
+  let i = 1;
+  while (i < pts.length - 1 && pts[i].x < x) i += 1;
+  const a = pts[i - 1];
+  const b = pts[i];
+  const dx = b.x - a.x;
+  const t = dx <= 0 ? 0 : (x - a.x) / dx;
+  return {
+    y: a.y + (b.y - a.y) * t,
+    slope: dx <= 0 ? 0 : (b.y - a.y) / dx,
+  };
+}
+
 const CLOUD_LAYOUTS = [
   [[0, 0.05, 0.5, 0.36], [0.42, 0, 0.34, 0.24], [-0.36, 0.02, 0.28, 0.2]],
   [[-1.1, 0, 0.55, 0.36], [-0.45, 0.1, 0.5, 0.4], [0.2, 0.14, 0.58, 0.38], [0.85, 0.04, 0.46, 0.32], [1.35, -0.02, 0.34, 0.26]],
@@ -325,10 +339,13 @@ export function createScenery(world) {
     { color: 0x6d9462, line: 0x4e7848, height: 168, parallax: 0.46, seed: 0x51a1, span: 2400, snow: 0, grand: false, saddle: null, crown: null },
   ].map((spec) => {
     const pts = peakSamples(spec.span, spec.height, spec.seed, spec.grand, spec.saddle, spec.crown, spec.lead, spec.spread || 1);
-    return tiledLayer(world, spec.span, (g, x0) => {
+    const entry = tiledLayer(world, spec.span, (g, x0) => {
       fillRidge(g, pts, x0, spec.color, spec.line, false);
       if (spec.snow) fillSnow(g, pts, x0, spec.height * spec.snow);
     });
+    entry.pts = pts;
+    entry.parallax = spec.parallax;
+    return entry;
   });
 
   const foothills = [
@@ -344,6 +361,19 @@ export function createScenery(world) {
   ranges.forEach((entry, i) => {
     entry.parallax = [0.12, 0.28, 0.46][i];
   });
+
+  // Crest under a world draw-x for a range lane (0 far, 1 mid, 2 near).
+  // Matches track(): layer.x = camX - scroll - span.
+  function ridgeAt(lane, camX, drawX) {
+    const entry = ranges[lane];
+    if (!entry || !entry.pts) return { y: 120, slope: 0 };
+    const span = entry.span;
+    const p = entry.parallax;
+    const scroll = ((camX * p) % span + span) % span;
+    let local = drawX - (camX - scroll - span);
+    local = ((local % span) + span) % span;
+    return samplePts(entry.pts, local);
+  }
 
   // Each band wraps on its own. Clouds stop below 50 ft, so a climb leaves them.
   // clearLaunch: keep the barrel sky open on the title / aim view.
@@ -451,6 +481,7 @@ export function createScenery(world) {
   return {
     sky,
     flyLayer,
+    ridgeAt,
     reshuffleClouds() {
       fillClouds((Math.random() * 0xffffffff) >>> 0);
     },
