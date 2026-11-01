@@ -166,22 +166,33 @@
       <button type="button" data-act="fire" id="pad-fire">Fire</button>
     </div>
   </div>
-  <!-- kc-shell:v9 -->
+  <!-- kc-shell:v10 -->
   <script>
     // ES5 on purpose: must parse even when the game bundle or an old SW shell does not.
-    // Brave / iOS Messages can keep a stale service-worker page after the tab closes.
-    // One reload per session clears old kitten-cannon caches and unregisters workers.
+    // Home-screen PWAs (especially iOS) keep a frozen shell; clear workers/caches and
+    // reload once so the standalone app can pick up layout fixes like badge placement.
     (function () {
-      var KEY = 'kc-shell-bust-v9';
+      var KEY = 'kc-shell-bust-v10';
+      var standalone = false;
       try {
-        if (sessionStorage.getItem(KEY)) return;
+        standalone = (window.navigator.standalone === true)
+          || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+          || (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches);
+      } catch (e) {}
+      try {
+        if (!standalone && sessionStorage.getItem(KEY)) return;
+        if (standalone && sessionStorage.getItem(KEY) === '1') return;
       } catch (e) {
         return;
       }
       var needsReload = false;
       function finish(reload) {
         try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
-        if (reload) location.reload();
+        if (reload) {
+          var url = location.href.split('#')[0];
+          var join = url.indexOf('?') >= 0 ? '&' : '?';
+          location.replace(url + join + 'pwa=' + Date.now());
+        }
       }
       var chain = Promise.resolve();
       if (navigator.serviceWorker) {
@@ -204,7 +215,9 @@
           });
         });
       }
-      chain.then(function () { finish(needsReload); }).catch(function () { finish(false); });
+      // Standalone builds often never check the network until something forces it.
+      if (standalone) needsReload = true;
+      chain.then(function () { finish(needsReload); }).catch(function () { finish(standalone); });
     })();
 
     // Any real load error → generic incompatible-browser copy. Opaque

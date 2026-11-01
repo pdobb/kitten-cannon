@@ -45,11 +45,12 @@ const redirector = `<!DOCTYPE html>
   <meta property="og:url" content="https://pdobb.github.io/kitten-cannon/game.html" />
   <meta property="og:image" content="https://pdobb.github.io/kitten-cannon/og.png?v=6" />
   <link rel="canonical" href="https://pdobb.github.io/kitten-cannon/game.html" />
+  <link rel="manifest" href="./manifest.webmanifest" />
   <title>Kitten Cannon</title>
-  <!-- kc-shell:v9-redirect -->
+  <!-- kc-shell:v10-redirect -->
   <script>
     (function () {
-      var dest = './game.html';
+      var dest = './game.html?from=index';
       var done = false;
       function go() {
         if (done) return;
@@ -78,7 +79,7 @@ const redirector = `<!DOCTYPE html>
 </head>
 <body style="margin:0;font-family:system-ui,sans-serif;background:#8ec8ee;color:#2b2118;padding:24px">
   <p>Loading Kitten Cannon…</p>
-  <p><a href="./game.html">Tap here if nothing happens</a></p>
+  <p><a href="./game.html?from=index">Tap here if nothing happens</a></p>
 </body>
 </html>
 `;

@@ -1,9 +1,9 @@
 {
-  "id": "./",
+  "id": "./game.html",
   "name": "Kitten Cannon",
   "short_name": "Kitten Cannon",
   "description": "Aim the barrel and see how far the kitty flies.",
-  "start_url": "./",
+  "start_url": "./game.html",
   "scope": "./",
   "display": "fullscreen",
   "background_color": "#8ec8ee",
