@@ -263,7 +263,27 @@ const game = {
   endings: loadEndings(),
   resets: loadNumber(RESET_KEY),
   attemptOpen: false,
+  // Seconds until the end-screen Neon Runner skims the ridges (0 = none).
+  runnerCue: 0,
 };
+
+// End-card mountain cameo. Mid ridge, skating right, every landing.
+const RESULT_RUNNER_WAIT = 2;
+const RESULT_RUNNER_PARALLAX = 0.28;
+const RESULT_RUNNER_Z = -2520;
+
+function launchResultRunner() {
+  if (!flybys) return;
+  const halfW = (view && view.halfW) || 520;
+  // Spawn just off the left of the orthographic view. Parallax scales motion,
+  // so world speed is screen speed / parallax or the skate crawls on a still cam.
+  const screenSpeed = Math.max(100, halfW * 0.42);
+  flybys.launch(cam, cam.y, 'runner', {
+    z: RESULT_RUNNER_Z,
+    vx: screenSpeed / RESULT_RUNNER_PARALLAX,
+    x: -(halfW + 72) / RESULT_RUNNER_PARALLAX,
+  }, 0);
+}
 const cam = { x: 500, y: 120, z: 980, shake: 0 };
 const hold = { ArrowUp: 0, ArrowDown: 0 };
 // Physical keys currently held per aim direction (arrows and W/S share a slot).
@@ -1128,6 +1148,7 @@ function safeAudio(fn) {
 
 function startAim() {
   if (!kitten || !flybys) return;
+  game.runnerCue = 0;
   flybys.clear();
   if (snatch) snatch.clear();
   setPhase('aim');
@@ -1151,6 +1172,7 @@ function beginShot(forcedPower) {
     shortest: game.shortest,
   };
   game.badgeArmed = { mars: false, terminal: false, power: false, snatch: false };
+  game.runnerCue = 0;
   game.kitten = makeState(game.angle, power);
   game.feet = 0;
   game.peakY = game.kitten.y;
@@ -1257,6 +1279,7 @@ function finish() {
     stake.visible = true;
   }
   setPhase('result');
+  game.runnerCue = RESULT_RUNNER_WAIT;
 }
 
 // A new page: a new roll of the field, record stakes only, nothing spent.
@@ -1311,6 +1334,7 @@ function reloadField() {
   cam.x = home.x;
   cam.y = home.y;
   if (onTitle) {
+    game.runnerCue = 0;
     flybys.clear();
     if (snatch) snatch.clear();
     setPhase('title');
@@ -2169,6 +2193,13 @@ function frame(now) {
   shadow.visible = kitten.mesh.visible;
 
   scenery.update(time, draw, view);
+  if (game.phase === 'result' && game.runnerCue > 0) {
+    game.runnerCue -= dt;
+    if (game.runnerCue <= 0) {
+      game.runnerCue = 0;
+      launchResultRunner();
+    }
+  }
   const flyingNow = game.phase === 'flight' && game.kitten && !game.kitten.dead;
   const travelNow = game.kitten
     ? feetFromTravel(game.kitten.startX, game.kitten.x)

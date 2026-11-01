@@ -326,7 +326,9 @@ export function createFlybys(layer) {
     // Rockets are gone. Asking for one does not launch a visitor instead.
     if (kind === 'rocket' || kind === 'starship') return;
     const type = MAKERS[kind] ? kind : pickKind();
-    const dir = Math.random() < 0.5 ? 1 : -1;
+    const dir = at && at.vx != null
+      ? (at.vx >= 0 ? 1 : -1)
+      : (Math.random() < 0.5 ? 1 : -1);
     // Neon Runner skims mid/far ridges instead of the high sky lane.
     if (type === 'runner') {
       let lane = RIDGE_LANES[Math.random() < 0.62 ? 0 : 1];
@@ -336,14 +338,16 @@ export function createFlybys(layer) {
         ));
       }
       const z = at && at.z != null ? at.z : lane.z;
-      const base = 95 + Math.random() * 40;
-      const chase = dir > 0 ? Math.max(0, kittenVx) * 0.7 + 28 : 0;
+      // Faster than sky visitors: ridge parallax (~0.12–0.28) damps on-screen speed.
+      const base = 260 + Math.random() * 90;
+      const chase = dir > 0 ? Math.max(0, kittenVx) * 0.55 + 40 : 0;
       const speed = at && at.vx != null ? Math.abs(at.vx) : base + chase;
-      const lead = viewHalfWidthAt(z) + (dir > 0 ? 300 : 180) + Math.random() * 220;
+      // Ortho lead — viewHalfWidthAt is the old perspective frustum and overshoots.
+      const lead = 720 + Math.random() * 260;
       const ridgeY = lane.y0 + Math.random() * (lane.y1 - lane.y0);
       const y = at && at.y != null ? ridgeY + at.y : ridgeY;
       add(type, {
-        x: at ? cam.x + at.x : cam.x - dir * lead,
+        x: at && at.x != null ? cam.x + at.x : cam.x - dir * lead,
         y,
         z,
         vx: at && at.vx != null ? at.vx : dir * speed,
@@ -363,8 +367,8 @@ export function createFlybys(layer) {
     const lead = viewHalfWidthAt(z) + (dir > 0 ? 360 : 220) + Math.random() * 280;
     const lift = (Math.random() < 0.6 ? 1 : -1) * (220 + Math.random() * 180);
     add(type, {
-      x: at ? cam.x + at.x : cam.x - dir * lead,
-      y: at ? kittenY + at.y : kittenY + lift,
+      x: at && at.x != null ? cam.x + at.x : cam.x - dir * lead,
+      y: at && at.y != null ? kittenY + at.y : kittenY + lift,
       z,
       vx: at && at.vx != null ? at.vx : dir * speed,
       vy: at && at.vy != null ? at.vy : (Math.random() - 0.5) * 8,
