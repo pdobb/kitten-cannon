@@ -5,10 +5,24 @@ import { CAM_Z, viewHalfWidthAt } from './view.js';
 
 // Visitors wait until the kitten is above the low cloud lanes.
 export const FLYBY_Y = 980;
-// Most high flights get a visitor (~2 in 3). Re-rolls every FLYBY_EVERY_FT.
-export const FLYBY_CHANCE = 0.67;
 // After the first high roll, try again every this many feet of travel.
 export const FLYBY_EVERY_FT = 10000;
+// Chance ramps with travel so short hops are quieter and long climbs busier.
+// Still at most FLYBY_MAX_PER_FLIGHT spontaneous visitors per ride.
+export const FLYBY_CHANCE_MIN = 0.5;
+export const FLYBY_CHANCE_PER_BAND = 0.12;
+export const FLYBY_CHANCE_MAX = 0.95;
+export const FLYBY_MAX_PER_FLIGHT = 3;
+// Alias of the first-band rate for older callers/tests.
+export const FLYBY_CHANCE = FLYBY_CHANCE_MIN;
+
+export function flybyChanceAt(travelFeet) {
+  const band = Math.max(0, Math.floor(travelFeet / FLYBY_EVERY_FT));
+  return Math.min(
+    FLYBY_CHANCE_MAX,
+    FLYBY_CHANCE_MIN + band * FLYBY_CHANCE_PER_BAND,
+  );
+}
 
 // Flit cameos always cruise left→right. ~42 mph sits above a plain lob and
 // below a balloon-boosted run, so a slow kitten is passed and a fast one
@@ -320,6 +334,8 @@ export function createFlybys(layer, opts = null) {
   let coming = false;
   // Travel-feet band of the last spawn roll (−1 = not yet).
   let lastBand = -1;
+  // Spontaneous launches this flight (demos via launch() do not count).
+  let spawned = 0;
   let bag = freshBag();
 
   function pickKind() {
@@ -534,7 +550,11 @@ export function createFlybys(layer, opts = null) {
     const band = Math.max(0, Math.floor(travelFeet / FLYBY_EVERY_FT));
     if (band > lastBand) {
       lastBand = band;
-      if (!coming && Math.random() < FLYBY_CHANCE) {
+      if (
+        !coming
+        && spawned < FLYBY_MAX_PER_FLIGHT
+        && Math.random() < flybyChanceAt(travelFeet)
+      ) {
         coming = true;
         // Short wait so the visitor still crosses before a short hop lands.
         wait = 0.4 + Math.random() * 1.2;
@@ -544,9 +564,10 @@ export function createFlybys(layer, opts = null) {
     wait -= dt;
     // Ridge skiers live on a deeper layer and linger; they do not block sky visitors.
     const skyBusy = crafts.some((c) => !c.ridge);
-    if (wait <= 0 && !skyBusy) {
+    if (wait <= 0 && !skyBusy && spawned < FLYBY_MAX_PER_FLIGHT) {
       launch(cam, kittenY, null, null, kittenVx);
       coming = false;
+      spawned += 1;
     }
   }
 
@@ -558,6 +579,7 @@ export function createFlybys(layer, opts = null) {
     wait = 0;
     coming = false;
     lastBand = -1;
+    spawned = 0;
     bag = freshBag();
   }
 

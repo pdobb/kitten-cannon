@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { buildCourse, resetCourse } from './course.js';
 import { createKitten, resolveHit, runUntilDone, step } from './physics.js';
-import { BIRD_CRUISE_MPH, FLYBY_CHANCE, FLYBY_EVERY_FT, FLYBY_Y } from './flyby.js';
+import {
+  BIRD_CRUISE_MPH,
+  FLYBY_CHANCE_MAX,
+  FLYBY_CHANCE_MIN,
+  FLYBY_CHANCE_PER_BAND,
+  FLYBY_EVERY_FT,
+  FLYBY_MAX_PER_FLIGHT,
+  FLYBY_Y,
+  flybyChanceAt,
+} from './flyby.js';
 import { HIT } from './propspec.js';
 import { skyRgb, spaceBlend, reachedMars, SPACE_FEET } from './sky.js';
 import {
@@ -431,10 +440,24 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.equal(nearLob.kitten.cause, 'spikes');
 }
 
-// Flit cameos: most high flights, and a fresh roll every 10k ft.
+// Flit cameos: chance ramps with travel, up to three per flight.
 {
-  assert.ok(FLYBY_CHANCE >= 0.6);
   assert.equal(FLYBY_EVERY_FT, 10000);
+  assert.equal(FLYBY_MAX_PER_FLIGHT, 3);
+  assert.equal(flybyChanceAt(0), FLYBY_CHANCE_MIN);
+  assert.equal(flybyChanceAt(9999), FLYBY_CHANCE_MIN);
+  assert.equal(
+    flybyChanceAt(10000),
+    FLYBY_CHANCE_MIN + FLYBY_CHANCE_PER_BAND,
+  );
+  assert.equal(
+    flybyChanceAt(20000),
+    FLYBY_CHANCE_MIN + 2 * FLYBY_CHANCE_PER_BAND,
+  );
+  assert.equal(flybyChanceAt(40000), FLYBY_CHANCE_MAX);
+  assert.equal(flybyChanceAt(1e9), FLYBY_CHANCE_MAX);
+  assert.ok(FLYBY_CHANCE_MIN < FLYBY_CHANCE_MAX);
+  assert.ok(FLYBY_CHANCE_MAX < 1);
   assert.ok(FLYBY_Y > 500);
   // Flit birds cruise ~42 mph left→right so relative motion flips with the kitten.
   assert.equal(BIRD_CRUISE_MPH, 42);
