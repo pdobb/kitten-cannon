@@ -287,12 +287,17 @@ function launchResultRunner() {
 }
 const cam = { x: 500, y: 120, z: 980, shake: 0 };
 const hold = { ArrowUp: 0, ArrowDown: 0 };
-// Physical keys currently held per aim direction (arrows and W/S share a slot).
+// Physical keys currently held per aim direction. Up/left/W/A raise;
+// down/right/S/D lower. Shared slots so mixed holds release cleanly.
 const aimHeld = { ArrowUp: new Set(), ArrowDown: new Set() };
 
 function aimDir(code) {
-  if (code === 'ArrowUp' || code === 'KeyW') return 'ArrowUp';
-  if (code === 'ArrowDown' || code === 'KeyS') return 'ArrowDown';
+  if (code === 'ArrowUp' || code === 'ArrowLeft' || code === 'KeyW' || code === 'KeyA') {
+    return 'ArrowUp';
+  }
+  if (code === 'ArrowDown' || code === 'ArrowRight' || code === 'KeyS' || code === 'KeyD') {
+    return 'ArrowDown';
+  }
   return null;
 }
 
