@@ -13,6 +13,7 @@
 //
 // Here +y is up. Falling is vy < 0. Distances are still Flash pixels.
 
+import { reachedMars } from './sky.js';
 import {
   ARM_FRAME,
   BOUNCE,
@@ -21,6 +22,7 @@ import {
   SETTLE,
   SPEED_MAX,
   aimVector,
+  feetFromAltitude,
   launchPoint,
 } from './tune.js';
 
@@ -209,10 +211,15 @@ export function step(k, props) {
   const y1 = y0 + k.vy;
   // Horizontal speed barely changes on a clean arc, so a rate taken only
   // from vx looks constant. The rate eases toward tumbleTarget, and a hit
-  // kicks it, so the sprite speeds up instead of snapping.
-  const target = tumbleTarget(k.vx, k.vy);
-  k.turn += (target - k.turn) * 0.25;
-  k.spin += k.turn;
+  // kicks it, so the sprite speeds up instead of snapping. In space there is
+  // no tumble — freeze the pose until the kitten drops back into air.
+  if (reachedMars(feetFromAltitude(k.y))) {
+    k.turn = 0;
+  } else {
+    const target = tumbleTarget(k.vx, k.vy);
+    k.turn += (target - k.turn) * 0.25;
+    k.spin += k.turn;
+  }
 
   // One sample per 10px. Horizontal speed tops out at SPEED_MAX, so the walk
   // stays bounded while still catching a crate on a fast boost.

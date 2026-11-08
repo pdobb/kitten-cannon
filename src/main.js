@@ -1248,13 +1248,22 @@ function suitSparkle(x, y) {
   });
 }
 
-// One-shot per ride: clear SPACE_FEET and the suit + helmet pop on.
+// Pop the NASA suit on when the ride crosses SPACE_FEET.
 function noteSpaceSuit() {
   if (!kitten || !game.kitten) return false;
   if (kitten.suited()) return false;
   if (!reachedMars(feetFromAltitude(game.kitten.y))) return false;
   if (!kitten.setSuited(true)) return false;
   suitSparkle(game.kitten.x, game.kitten.y);
+  return true;
+}
+
+// Drop the suit once the kitten falls back under SPACE_FEET.
+function noteSpaceSuitExit() {
+  if (!kitten || !game.kitten) return false;
+  if (!kitten.suited()) return false;
+  if (reachedMars(feetFromAltitude(game.kitten.y))) return false;
+  clearSpaceSuit();
   return true;
 }
 
@@ -1332,6 +1341,7 @@ function afterStep() {
   if (speed > game.peakSpeed) game.peakSpeed = speed;
   noteRideBadges();
   noteSpaceSuit();
+  noteSpaceSuitExit();
 }
 
 function commitRecords() {

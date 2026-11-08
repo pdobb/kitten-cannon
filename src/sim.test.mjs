@@ -362,6 +362,26 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.ok(Math.abs(bomb.turn) > 11, 'a crate should speed the tumble');
 }
 
+// Above SPACE_FEET the kitten holds its pose. Below that, tumble resumes.
+{
+  const k = createKitten(72, POWER_MAX);
+  k.y = GROUND_Y + (SPACE_FEET + 80) * PIXELS_PER_FOOT;
+  k.vx = 120;
+  k.vy = 8;
+  k.spin = 37;
+  k.turn = -6;
+  const held = k.spin;
+  step(k, []);
+  assert.equal(k.turn, 0);
+  assert.equal(k.spin, held);
+
+  k.y = GROUND_Y + 400 * PIXELS_PER_FOOT;
+  k.vy = -24;
+  step(k, []);
+  assert.ok(Math.abs(k.turn) > 0.01, 'tumble should restart in the atmosphere');
+  assert.ok(Math.abs(k.spin - held) > 0.01, 'spin should move again under SPACE_FEET');
+}
+
 // A full bar flies on its own. A low bar is a short hop. A full-power 32°
 // shot catches crates with its nose and ends in a flytrap. A 70° lob's head
 // clips an early balloon, then the wider tar catches the descent.
