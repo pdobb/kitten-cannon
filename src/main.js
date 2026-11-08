@@ -13,7 +13,7 @@ import { createKitten as makeState, step } from './physics.js';
 import { createFlybys } from './flyby.js';
 import { createScenery } from './scenery.js';
 import { createSnatch } from './snatch.js';
-import { reachedMars } from './sky.js';
+import { reachedMars, SPACE_FEET } from './sky.js';
 import { applyWorld, viewHalfWidth } from './view.js';
 import {
   ANGLE_MAX,
@@ -1220,6 +1220,43 @@ function muzzleBlast(angleDeg) {
   });
 }
 
+// Soft star-dust pop when the pressure suit materializes at SPACE_FEET.
+function suitSparkle(x, y) {
+  if (!particles) return;
+  burst(x, y, [0xffffff, 0xc8ecff, 0xfff6d6], 6, 95, 0.45, 8, {
+    spread: Math.PI,
+    lift: 0.4,
+    grow: 0.55,
+    gravity: 18,
+    drag: 0.9,
+    jitter: 10,
+    fade: 0.95,
+  });
+  burst(x, y, [0xa8d4ff, 0xe8f4ff], 4, 55, 0.65, 14, {
+    spread: Math.PI,
+    lift: 0.55,
+    grow: 1.1,
+    gravity: 8,
+    drag: 1.4,
+    jitter: 6,
+    fade: 0.4,
+  });
+}
+
+// One-shot per ride: clear SPACE_FEET and the suit + helmet pop on.
+function noteSpaceSuit() {
+  if (!kitten || !game.kitten) return false;
+  if (kitten.suited()) return false;
+  if (!reachedMars(feetFromAltitude(game.kitten.y))) return false;
+  if (!kitten.setSuited(true)) return false;
+  suitSparkle(game.kitten.x, game.kitten.y);
+  return true;
+}
+
+function clearSpaceSuit() {
+  if (kitten) kitten.setSuited(false);
+}
+
 function safeAudio(fn) {
   try {
     fn();
@@ -1233,6 +1270,7 @@ function startAim() {
   game.runnerCue = 0;
   flybys.clear();
   if (snatch) snatch.clear();
+  clearSpaceSuit();
   setPhase('aim');
   stake.visible = false;
   kitten.mesh.visible = true;
@@ -1255,6 +1293,7 @@ function beginShot(forcedPower) {
   };
   game.badgeArmed = { mars: false, terminal: false, power: false, snatch: false };
   game.runnerCue = 0;
+  clearSpaceSuit();
   game.kitten = makeState(game.angle, power);
   game.feet = 0;
   game.peakY = game.kitten.y;
@@ -1287,6 +1326,7 @@ function afterStep() {
   const speed = rightwardSpeed(k.vx);
   if (speed > game.peakSpeed) game.peakSpeed = speed;
   noteRideBadges();
+  noteSpaceSuit();
 }
 
 function commitRecords() {
@@ -1415,6 +1455,7 @@ function reloadField() {
   hold.ArrowDown = 0;
   aimHeld.ArrowUp.clear();
   aimHeld.ArrowDown.clear();
+  clearSpaceSuit();
   kitten.mesh.visible = true;
   stake.visible = false;
   const home = aimFocus();
@@ -2311,6 +2352,7 @@ function frame(now) {
 
   updateProps(time, dt);
   placeKitten(time);
+  if (kitten.tickSuit) kitten.tickSuit(dt);
   updateHud();
   updateCamera(dt);
 
@@ -2445,6 +2487,13 @@ function applyQuery() {
   const peakFt = Number(params.get('peak') || 0);
   if (peakFt > 0) {
     game.peakY = Math.max(game.peakY, GROUND_Y + peakFt * PIXELS_PER_FOOT);
+    // A space peak demo also lifts the live kitten so the suit can materialize.
+    if (game.kitten && peakFt >= SPACE_FEET) {
+      game.kitten.y = Math.max(game.kitten.y, GROUND_Y + peakFt * PIXELS_PER_FOOT);
+      const suitStyle = params.get('suit');
+      if (suitStyle && kitten.setSuitStyle) kitten.setSuitStyle(suitStyle);
+      noteSpaceSuit();
+    }
   }
   if (params.has('terminal')) {
     game.peakSpeed = Math.max(game.peakSpeed, SPEED_MAX);
@@ -2496,6 +2545,7 @@ window.__kitten = {
     return poles.map((pole) => ({ x: pole.x, feet: pole.feet, rank: pole.rank }));
   },
   get coat() { return kitten.coat(); },
+  get suited() { return kitten ? kitten.suited() : false; },
   get sky() { return flybys.stats(); },
   get snatch() { return snatch ? snatch.phase : 'idle'; },
   get cause() { return game.kitten ? game.kitten.cause : null; },
@@ -2522,6 +2572,55 @@ window.__kitten = {
   grab() {
     if (!snatch || !game.kitten || game.phase !== 'flight' || game.kitten.dead) return false;
     return snatch.force(game.kitten);
+  },
+  // Demo: materialize (or clear) the space suit. Pass a style name from SUIT_STYLES.
+  suit(on = true) {
+    if (!kitten) return false;
+    if (on === false || on === 0) {
+      clearSpaceSuit();
+      return { suited: false, style: kitten.suitStyle() };
+    }
+    const style = typeof on === 'string' ? on : null;
+    if (style && kitten.setSuitStyle) kitten.setSuitStyle(style);
+    const fresh = !kitten.suited();
+    if (fresh) kitten.setSuited(true);
+    else {
+      kitten.setSuited(false);
+      kitten.setSuited(true);
+    }
+    const at = game.kitten
+      ? { x: game.kitten.x, y: game.kitten.y }
+      : kittenAnchor();
+    if (fresh) suitSparkle(at.x, at.y);
+    return { suited: true, style: kitten.suitStyle() };
+  },
+  // Demo: lift the flying kitten to `ft` and run the space-suit check.
+  lift(ft) {
+    if (!game.kitten || game.phase !== 'flight') return false;
+    const feet = Number(ft);
+    if (!(feet >= 0)) return false;
+    game.kitten.y = GROUND_Y + feet * PIXELS_PER_FOOT;
+    afterStep();
+    return kitten.suited();
+  },
+  // Demo: big centered portrait of a suit style for comparison screenshots.
+  shotSuit(style = 'nasa', zoom = 3.4) {
+    if (!kitten || !game.kitten) return false;
+    if (!game.paused) setPaused(true);
+    if (style) kitten.setSuitStyle(style);
+    kitten.setSuited(false);
+    kitten.setSuited(true);
+    if (kitten.tickSuit) kitten.tickSuit(10);
+    cam.x = game.kitten.x;
+    cam.y = game.kitten.y;
+    cam.shake = 0;
+    kitten.mesh.position.set(game.kitten.x, game.kitten.y);
+    kitten.mesh.rotation = 0;
+    kitten.mesh.scale.set(zoom, zoom);
+    layoutView(0, 0);
+    scenery.update(playSeconds(), { x: view.camX, y: view.camY }, view);
+    pixi.render();
+    return { suited: true, style: kitten.suitStyle(), zoom };
   },
   meow() {
     safeAudio(() => {
