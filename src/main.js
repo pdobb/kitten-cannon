@@ -2566,6 +2566,8 @@ window.__kitten = {
   get cause() { return game.kitten ? game.kitten.cause : null; },
   get x() { return game.kitten ? game.kitten.x : launchPoint(game.angle).x; },
   get y() { return game.kitten ? game.kitten.y : launchPoint(game.angle).y; },
+  get spin() { return game.kitten ? game.kitten.spin : game.angle; },
+  get turn() { return game.kitten ? game.kitten.turn : 0; },
   get camX() { return cam.x; },
   start: startAim,
   aim(n) { game.angle = n; clampAngle(); },

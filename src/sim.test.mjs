@@ -362,7 +362,8 @@ function shot(angle, power, props, frames = 30 * 60) {
   assert.ok(Math.abs(bomb.turn) > 11, 'a crate should speed the tumble');
 }
 
-// Above SPACE_FEET the kitten holds its pose. Below that, tumble resumes.
+// Above SPACE_FEET the kitten keeps the tumble rate it entered with (no air
+// to change it). Below that, air tumble resumes (rate eases toward motion).
 {
   const k = createKitten(72, POWER_MAX);
   k.y = GROUND_Y + (SPACE_FEET + 80) * PIXELS_PER_FOOT;
@@ -370,16 +371,30 @@ function shot(angle, power, props, frames = 30 * 60) {
   k.vy = 8;
   k.spin = 37;
   k.turn = -6;
-  const held = k.spin;
+  const before = k.spin;
   step(k, []);
-  assert.equal(k.turn, 0);
-  assert.equal(k.spin, held);
+  assert.equal(k.turn, -6, 'space freezes the entry tumble rate');
+  assert.equal(k.spin, before - 6);
+
+  const spaceSpin = k.spin;
+  step(k, []);
+  assert.equal(k.turn, -6, 'space tumble stays constant across steps');
+  assert.equal(k.spin, spaceSpin - 6);
+
+  // A positive (counterclockwise) entry rate also freezes — no air to reverse it.
+  k.turn = 3.5;
+  const flipSpin = k.spin;
+  step(k, []);
+  assert.equal(k.turn, 3.5, 'space preserves tumble direction');
+  assert.equal(k.spin, flipSpin + 3.5);
 
   k.y = GROUND_Y + 400 * PIXELS_PER_FOOT;
   k.vy = -24;
+  k.turn = -4;
+  const airSpin = k.spin;
   step(k, []);
-  assert.ok(Math.abs(k.turn) > 0.01, 'tumble should restart in the atmosphere');
-  assert.ok(Math.abs(k.spin - held) > 0.01, 'spin should move again under SPACE_FEET');
+  assert.ok(Math.abs(k.turn) > 4.01, 'air tumble should speed up under SPACE_FEET');
+  assert.ok(Math.abs(k.spin - airSpin) > 4.01, 'spin should move faster under SPACE_FEET');
 }
 
 // A full bar flies on its own. A low bar is a short hop. A full-power 32°
