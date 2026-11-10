@@ -56,6 +56,10 @@ function tumbleTarget(vx, vy) {
   return -(Math.abs(vx) * 0.045 + vy * vy * 0.012);
 }
 
+// In space there is no air to push the rate around, so the kitten keeps a
+// fixed clockwise tumble (~1 rev / 3s at 30Hz). Same sign as air tumble.
+const SPACE_TUMBLE = -4;
+
 // Ground objects only connect when the kitten is on the way down, same as the
 // Flash hit tests (`ysp > 0` with +y down). Balloons, flytraps, and TNT connect
 // either way. The whole crate counts, not only a fall onto the lid.
@@ -212,14 +216,14 @@ export function step(k, props) {
   // Horizontal speed barely changes on a clean arc, so a rate taken only
   // from vx looks constant. The rate eases toward tumbleTarget, and a hit
   // kicks it, so the sprite speeds up instead of snapping. In space there is
-  // no tumble — freeze the pose until the kitten drops back into air.
+  // no wind, so the rate locks to a slow constant and never reverses.
   if (reachedMars(feetFromAltitude(k.y))) {
-    k.turn = 0;
+    k.turn = SPACE_TUMBLE;
   } else {
     const target = tumbleTarget(k.vx, k.vy);
     k.turn += (target - k.turn) * 0.25;
-    k.spin += k.turn;
   }
+  k.spin += k.turn;
 
   // One sample per 10px. Horizontal speed tops out at SPEED_MAX, so the walk
   // stays bounded while still catching a crate on a fast boost.
