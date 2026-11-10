@@ -1267,6 +1267,12 @@ function noteSpaceSuitExit() {
   return true;
 }
 
+// Rush scales with horizontal speed in air. Above SPACE_FEET there is no air.
+function flightWind(k) {
+  if (!k || reachedMars(feetFromAltitude(k.y))) return 0;
+  return Math.min(1, Math.abs(k.vx) / 240);
+}
+
 function clearSpaceSuit() {
   if (kitten) kitten.setSuited(false);
 }
@@ -2333,7 +2339,7 @@ function frame(now) {
         acc -= STEP;
       }
       afterStep();
-      audio.wind(Math.min(1, Math.abs(game.kitten.vx) / 240));
+      audio.wind(flightWind(game.kitten));
       commitRecords();
     } else {
       acc += dt;
@@ -2351,8 +2357,8 @@ function frame(now) {
         acc -= STEP;
         steps += 1;
       }
-      // Loudness levels off around the old 240 px/frame. The flight itself does not.
-      audio.wind(Math.min(1, Math.abs(game.kitten.vx) / 240));
+      // Loudness levels off around the old 240 px/frame. Vacuum is silent.
+      audio.wind(flightWind(game.kitten));
       commitRecords();
     }
   } else {
