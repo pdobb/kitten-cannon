@@ -212,12 +212,14 @@ export function step(k, props) {
   // Horizontal speed barely changes on a clean arc, so a rate taken only
   // from vx looks constant. The rate eases toward tumbleTarget, and a hit
   // kicks it, so the sprite speeds up instead of snapping. In space there is
-  // no air, so turn freezes at the rate and direction it had on entry.
-  if (!reachedMars(feetFromAltitude(k.y))) {
+  // no tumble — freeze the pose until the kitten drops back into air.
+  if (reachedMars(feetFromAltitude(k.y))) {
+    k.turn = 0;
+  } else {
     const target = tumbleTarget(k.vx, k.vy);
     k.turn += (target - k.turn) * 0.25;
+    k.spin += k.turn;
   }
-  k.spin += k.turn;
 
   // One sample per 10px. Horizontal speed tops out at SPEED_MAX, so the walk
   // stays bounded while still catching a crate on a fast boost.
