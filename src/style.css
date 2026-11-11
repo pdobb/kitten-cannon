@@ -283,21 +283,83 @@ button, .panel, h1, h2, #distance, #banner, #power-cheer {
   line-height: 1.35;
 }
 
-#records p.duration-best,
-.bestline p.duration-best,
-.sheet p.duration-best {
+.sheet p.best-expand {
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
 }
 
-#records p.duration-best:focus-visible,
-.bestline p.duration-best:focus-visible,
-.sheet p.duration-best:focus-visible {
+.sheet p.best-expand:focus-visible {
   outline: 2px solid #2b2118;
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+.sheet p.best-expand span.best-label::after {
+  content: ' ▸';
+  font-size: 0.85em;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.sheet p.best-expand.is-open span.best-label::after {
+  content: ' ▾';
+}
+
+.sheet p.best-place,
+.sheet p.best-short {
+  padding-left: 12px;
+  gap: 12px;
+}
+
+.sheet p.best-place span,
+.sheet p.best-short span {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 12px;
+}
+
+.sheet p.awards-kicker {
+  display: block;
+  margin: 10px 0 4px;
+  text-align: center;
+  color: #d23b2e;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  font-family: Nunito, sans-serif;
+}
+
+.sheet .ride-awards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 10px;
+  margin: 0 0 4px;
+}
+
+.sheet .ride-award {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 3px;
+  border: 2px solid #2b2118;
+  border-radius: 999px;
+  background: #fff6e4;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #2b2118;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.sheet .ride-award.terminal { color: #b8860b; }
+.sheet .ride-award.power { color: #d23b2e; }
+.sheet .ride-award.snatch { color: #6b4423; }
+.sheet .ride-award.mars { color: #a0452c; }
 
 #records p {
   white-space: nowrap;
@@ -643,6 +705,7 @@ button.ride-badge:active {
 }
 
 #card-back,
+#card-dismiss,
 #pause-back {
   position: absolute;
   top: 10px;
@@ -662,7 +725,13 @@ button.ride-badge:active {
   user-select: none;
 }
 
+#card-dismiss {
+  left: auto;
+  right: 10px;
+}
+
 #card-back svg,
+#card-dismiss svg,
 #pause-back svg {
   width: 22px;
   height: 22px;
@@ -670,6 +739,7 @@ button.ride-badge:active {
 }
 
 #card-back:active,
+#card-dismiss:active,
 #pause-back:active {
   transform: translate(2px, 2px);
   box-shadow: none;
@@ -1585,11 +1655,15 @@ button#wipe-cancel:active, button#wipe-confirm:active, #pad button:active {
   }
   #card .panel, #pause .panel { padding: 8px 14px; gap: 4px; }
   #card-back,
+  #card-dismiss,
   #pause-back { top: 8px; left: 8px; width: 36px; height: 36px; border-radius: 10px; }
+  #card-dismiss { left: auto; right: 8px; }
   #card-back svg,
+  #card-dismiss svg,
   #pause-back svg { width: 20px; height: 20px; }
   #card .panel > .eyebrow,
   #pause .panel > .eyebrow { padding-left: 40px; padding-right: 40px; }
+  .sheet p.awards-kicker { font-size: 13px; letter-spacing: 0.1em; margin: 6px 0 2px; }
   #card h2, #pause h2 { font-size: 26px; }
   #card-note, #pause-note { font-size: 13px; line-height: 1.2; }
   .sheet { gap: 0; }

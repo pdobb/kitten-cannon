@@ -126,6 +126,11 @@
             <path fill="none" stroke="#2b2118" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M13.5 5.5L7 12l6.5 6.5M7 12h13" />
           </svg>
         </button>
+        <button id="card-dismiss" type="button" aria-label="Dismiss score">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="none" stroke="#2b2118" stroke-width="2.4" stroke-linecap="round" d="M7 7l10 10M17 7L7 17" />
+          </svg>
+        </button>
         <p class="eyebrow" id="card-kicker">Score</p>
         <h2 id="card-feet">0 ft</h2>
         <p id="card-note"></p>
@@ -172,13 +177,13 @@
       <button type="button" data-act="fire" id="pad-fire">Fire</button>
     </div>
   </div>
-  <!-- kc-shell:v12 -->
+  <!-- kc-shell:v13 -->
   <script>
     // ES5 on purpose: must parse even when the game bundle or an old SW shell does not.
     // Home-screen PWAs (especially iOS) keep a frozen shell; clear workers/caches and
     // reload once so the standalone app can pick up layout fixes like badge placement.
     (function () {
-      var KEY = 'kc-shell-bust-v12';
+      var KEY = 'kc-shell-bust-v13';
       var standalone = false;
       try {
         standalone = (window.navigator.standalone === true)

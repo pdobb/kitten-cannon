@@ -115,6 +115,11 @@ const FAR_KEY = 'kitten-cannon-best-ft';
 const HIGH_KEY = 'kitten-cannon-highest-ft';
 const LONG_KEY = 'kitten-cannon-longest-frames';
 const SHORT_KEY = 'kitten-cannon-shortest-frames';
+// Top-3 boards (JSON arrays). Scalar FAR/HIGH/LONG keys stay as #1 for poles/HUD.
+const TOP_FAR_KEY = 'kitten-cannon-top-ft';
+const TOP_HIGH_KEY = 'kitten-cannon-top-high-ft';
+const TOP_LONG_KEY = 'kitten-cannon-top-long-frames';
+const PLACE_LABELS = ['1st', '2nd', '3rd'];
 // Fastest used to be a personal-best row. The terminal badge covers speed now.
 const MARS_KEY = 'kitten-cannon-mars-visits';
 const TERM_KEY = 'kitten-cannon-terminal-visits';
@@ -173,6 +178,7 @@ const cardKickerEl = document.querySelector('#card-kicker');
 const cardFeetEl = document.querySelector('#card-feet');
 const cardNoteEl = document.querySelector('#card-note');
 const cardBestEl = document.querySelector('#card-best');
+const cardDismissEl = document.querySelector('#card-dismiss');
 const showScoreEl = document.querySelector('#show-score');
 const padFireEl = document.querySelector('#pad-fire');
 const wipeEl = document.querySelector('#wipe');
@@ -235,16 +241,23 @@ function ensureProp(prop) {
 
 const params = new URLSearchParams(location.search);
 
+const bootTopFar = loadTop3(TOP_FAR_KEY, FAR_KEY);
+const bootTopHigh = loadTop3(TOP_HIGH_KEY, HIGH_KEY);
+const bootTopLong = loadTop3(TOP_LONG_KEY, LONG_KEY);
+
 const game = {
   phase: 'title',
   angle: DEFAULT_ANGLE,
   power: POWER_MIN,
   kitten: null,
   feet: 0,
-  furthest: loadNumber(FAR_KEY),
+  topFar: bootTopFar,
+  topHigh: bootTopHigh,
+  topLong: bootTopLong,
+  furthest: bootTopFar[0] || 0,
   furthestX: 0,
-  highest: loadNumber(HIGH_KEY),
-  longest: loadNumber(LONG_KEY),
+  highest: bootTopHigh[0] || 0,
+  longest: bootTopLong[0] || 0,
   shortest: loadNumber(SHORT_KEY),
   marsVisits: loadNumber(MARS_KEY),
   terminalVisits: loadNumber(TERM_KEY),
@@ -252,7 +265,15 @@ const game = {
   snatchVisits: loadNumber(SNATCH_KEY),
   peakY: 0,
   peakSpeed: 0,
-  was: { furthest: 0, highest: 0, longest: 0, shortest: 0 },
+  was: {
+    furthest: 0,
+    highest: 0,
+    longest: 0,
+    shortest: 0,
+    topFar: [],
+    topHigh: [],
+    topLong: [],
+  },
   // One award per badge kind per ride. Reset in beginShot.
   badgeArmed: { mars: false, terminal: false, power: false, snatch: false },
   hold: 0,
@@ -307,6 +328,35 @@ function loadNumber(key) {
   } catch {
     return 0;
   }
+}
+
+// Up to three distinct positive scores, highest first. Seeds from an old scalar.
+function loadTop3(key, scalarKey) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const nums = parsed
+          .map((n) => Math.round(Number(n)))
+          .filter((n) => Number.isFinite(n) && n > 0);
+        const uniq = [...new Set(nums)].sort((a, b) => b - a).slice(0, 3);
+        if (uniq.length) return uniq;
+      }
+    }
+  } catch {
+    // Private mode or bad JSON — fall through to scalar.
+  }
+  const n = Math.round(loadNumber(scalarKey));
+  return n > 0 ? [n] : [];
+}
+
+function insertTop3(list, value) {
+  const n = Math.round(Number(value));
+  if (!(n > 0)) return (list || []).slice(0, 3);
+  return [...new Set([...(list || []), n].filter((v) => v > 0))]
+    .sort((a, b) => b - a)
+    .slice(0, 3);
 }
 
 function emptyEndings() {
@@ -750,6 +800,9 @@ function saveRecords() {
     localStorage.setItem(HIGH_KEY, String(game.highest));
     localStorage.setItem(LONG_KEY, String(game.longest));
     localStorage.setItem(SHORT_KEY, String(game.shortest));
+    localStorage.setItem(TOP_FAR_KEY, JSON.stringify(game.topFar));
+    localStorage.setItem(TOP_HIGH_KEY, JSON.stringify(game.topHigh));
+    localStorage.setItem(TOP_LONG_KEY, JSON.stringify(game.topLong));
   } catch {
     // Private mode can refuse storage. The score still shows for this run.
   }
@@ -757,11 +810,15 @@ function saveRecords() {
 
 const BEST_KEYS = [
   FAR_KEY, HIGH_KEY, LONG_KEY, SHORT_KEY,
+  TOP_FAR_KEY, TOP_HIGH_KEY, TOP_LONG_KEY,
   MARS_KEY, TERM_KEY, POWER_KEY, SNATCH_KEY,
   END_KEY, RESET_KEY,
 ];
 
 function clearBests() {
+  game.topFar = [];
+  game.topHigh = [];
+  game.topLong = [];
   game.furthest = 0;
   game.furthestX = 0;
   game.highest = 0;
@@ -773,8 +830,16 @@ function clearBests() {
   game.snatchVisits = 0;
   game.endings = emptyEndings();
   game.resets = 0;
-  game.was = { furthest: 0, highest: 0, longest: 0, shortest: 0 };
-  durationBestKind = 'long';
+  game.was = {
+    furthest: 0,
+    highest: 0,
+    longest: 0,
+    shortest: 0,
+    topFar: [],
+    topHigh: [],
+    topLong: [],
+  };
+  expandedBest = { far: false, high: false, long: false };
   lastBestMarks = null;
   try {
     for (const key of BEST_KEYS) localStorage.removeItem(key);
@@ -789,7 +854,11 @@ function clearBests() {
   paintHudRideBadges();
   if (game.phase === 'result' && game.kitten) {
     cardBestEl.replaceChildren();
-    appendPersonalStats(cardBestEl, null, game.kitten.cause, { resets: true });
+    appendPersonalStats(cardBestEl, null, game.kitten.cause, {
+      resets: true,
+      expandable: true,
+      awards: true,
+    });
   }
   if (game.paused) fillPauseCard();
 }
@@ -984,38 +1053,58 @@ function snapResultCamera() {
   cam.y = Math.max(120, game.kitten.y - 36);
 }
 
-// Title / score / pause / live HUD share one duration row that toggles
-// Longest ↔ Shortest. Kind resets to Longest on finish and after clear.
-let durationBestKind = 'long';
+// End-sheet expandable podium state. Compact lists (title / pause / HUD) stay flat.
+let expandedBest = { far: false, high: false, long: false };
 let lastBestMarks = null;
-
-function durationBestRow() {
-  if (durationBestKind === 'short') {
-    return ['Shortest', game.shortest > 0 ? formatFlight(flightSeconds(game.shortest)) : '—', 'short'];
-  }
-  return ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long'];
-}
 
 function recordRows() {
   return [
     ['Furthest', game.furthest > 0 ? formatFt(game.furthest) : '—', 'far'],
     ['Highest', game.highest > 0 ? formatFt(game.highest) : '—', 'high'],
-    durationBestRow(),
+    ['Longest', game.longest > 0 ? formatFlight(flightSeconds(game.longest)) : '—', 'long'],
   ];
 }
 
-function toggleDurationBest() {
-  durationBestKind = durationBestKind === 'long' ? 'short' : 'long';
-  paintDurationBestLists();
+function boardForKey(key) {
+  if (key === 'far') return game.topFar;
+  if (key === 'high') return game.topHigh;
+  if (key === 'long') return game.topLong;
+  return [];
 }
 
-function paintDurationBestLists() {
-  paintRecords();
-  if (game.phase === 'result') {
-    cardBestEl.replaceChildren();
-    appendPersonalStats(cardBestEl, lastBestMarks, game.kitten ? game.kitten.cause : null, { resets: true });
-  }
-  if (game.paused) fillPauseCard();
+function formatBoardValue(key, value) {
+  if (key === 'long') return formatFlight(flightSeconds(value));
+  return formatFt(value);
+}
+
+function rideValueForKey(key) {
+  if (!game.kitten) return 0;
+  if (key === 'far') return game.feet;
+  if (key === 'high') return feetFromAltitude(game.peakY);
+  if (key === 'long') return game.kitten.frame;
+  return 0;
+}
+
+function wasBoardForKey(key) {
+  if (key === 'far') return game.was.topFar || [];
+  if (key === 'high') return game.was.topHigh || [];
+  if (key === 'long') return game.was.topLong || [];
+  return [];
+}
+
+function rebuildResultSheet() {
+  if (game.phase !== 'result') return;
+  cardBestEl.replaceChildren();
+  appendPersonalStats(cardBestEl, lastBestMarks, game.kitten ? game.kitten.cause : null, {
+    resets: true,
+    expandable: true,
+    awards: true,
+  });
+}
+
+function toggleBestExpand(key) {
+  expandedBest[key] = !expandedBest[key];
+  rebuildResultSheet();
 }
 
 // Height bands. Each step up is a little louder. Distance stays the big number.
@@ -1077,36 +1166,100 @@ function appendBestsKicker(el, { clear = false } = {}) {
   el.append(best);
 }
 
-function appendPersonalStats(el, marks, cause, { resets = false } = {}) {
+function appendRideAwards(el) {
+  const earned = BADGE_KINDS.filter((kind) => game.badgeArmed[kind]);
+  if (!earned.length) return;
+  const kicker = document.createElement('p');
+  kicker.className = 'awards-kicker';
+  kicker.textContent = 'Awards';
+  el.append(kicker);
+  const row = document.createElement('div');
+  row.className = 'ride-awards';
+  for (const kind of earned) {
+    const chip = document.createElement('span');
+    chip.className = `ride-award ${kind}`;
+    chip.textContent = BADGE_LABEL[kind];
+    row.append(chip);
+  }
+  el.append(row);
+}
+
+function appendPersonalStats(el, marks, cause, {
+  resets = false,
+  expandable = false,
+  awards = false,
+} = {}) {
+  if (awards) appendRideAwards(el);
   appendBestsKicker(el);
-  appendRecordRows(el, marks);
+  appendRecordRows(el, marks, { expandable });
   appendEndingRows(el, cause, true, resets);
 }
 
-function appendRecordRows(el, marks) {
+function appendPodium(el, key, marks) {
+  const board = boardForKey(key);
+  const rideVal = rideValueForKey(key);
+  const wasBoard = wasBoardForKey(key);
+  for (let i = 0; i < board.length; i++) {
+    const value = board[i];
+    const row = document.createElement('p');
+    row.className = 'best-place';
+    const isNew = rideVal > 0 && value === rideVal && !wasBoard.includes(value);
+    if (isNew) row.classList.add('fresh');
+    const name = document.createElement('span');
+    name.textContent = PLACE_LABELS[i];
+    const num = document.createElement('b');
+    const formatted = formatBoardValue(key, value);
+    num.textContent = isNew ? `${formatted}  new` : formatted;
+    row.append(name, num);
+    el.append(row);
+  }
+  if (key === 'long') {
+    const shortRow = document.createElement('p');
+    shortRow.className = 'best-short';
+    if (marks && marks.short) shortRow.classList.add('fresh');
+    const name = document.createElement('span');
+    name.textContent = 'Shortest';
+    const num = document.createElement('b');
+    const shortVal = game.shortest > 0 ? formatFlight(flightSeconds(game.shortest)) : '—';
+    num.textContent = marks && marks.short ? `${shortVal}  new` : shortVal;
+    shortRow.append(name, num);
+    el.append(shortRow);
+  }
+}
+
+function appendRecordRows(el, marks, { expandable = false } = {}) {
   for (const [label, value, key] of recordRows()) {
     const row = document.createElement('p');
-    if (marks && marks[key]) row.className = 'fresh';
+    if (marks && marks[key]) row.classList.add('fresh');
     const name = document.createElement('span');
+    name.className = expandable ? 'best-label' : '';
     name.textContent = label;
     const num = document.createElement('b');
     num.textContent = marks && marks[key] ? `${value}  new` : value;
     row.append(name, num);
-    if (key === 'long' || key === 'short') {
-      const other = key === 'long' ? 'Shortest' : 'Longest';
-      row.classList.add('duration-best');
+    if (expandable) {
+      const open = !!expandedBest[key];
+      row.classList.add('best-expand');
+      if (open) row.classList.add('is-open');
       row.setAttribute('role', 'button');
       row.setAttribute('tabindex', '0');
-      row.setAttribute('aria-label', `${label} ${value}. Show ${other}.`);
-      bindTap(row, toggleDurationBest);
+      row.setAttribute('aria-expanded', open ? 'true' : 'false');
+      row.setAttribute(
+        'aria-label',
+        open ? `${label} ${value}. Hide rankings.` : `${label} ${value}. Show 1st, 2nd, and 3rd.`,
+      );
+      bindTap(row, () => toggleBestExpand(key));
       row.addEventListener('keydown', (e) => {
         if (e.code !== 'Enter' && e.code !== 'Space' && e.code !== 'NumpadEnter') return;
         e.preventDefault();
         e.stopPropagation();
-        toggleDurationBest();
+        toggleBestExpand(key);
       });
+      el.append(row);
+      if (open) appendPodium(el, key, marks);
+    } else {
+      el.append(row);
     }
-    el.append(row);
   }
 }
 
@@ -1310,6 +1463,9 @@ function beginShot(forcedPower) {
     highest: game.highest,
     longest: game.longest,
     shortest: game.shortest,
+    topFar: game.topFar.slice(),
+    topHigh: game.topHigh.slice(),
+    topLong: game.topLong.slice(),
   };
   game.badgeArmed = { mars: false, terminal: false, power: false, snatch: false };
   game.runnerCue = 0;
@@ -1387,9 +1543,19 @@ function finish() {
   afterStep();
   commitRecords();
   game.feet = feetFromTravel(k.startX, k.x);
+  const high = feetFromAltitude(game.peakY);
+  // Fold this finished ride into the top-3 boards (mid-flight only updates #1 scalars).
+  game.topFar = insertTop3(game.topFar, game.feet);
+  game.topHigh = insertTop3(game.topHigh, high);
+  game.topLong = insertTop3(game.topLong, k.frame);
+  game.furthest = game.topFar[0] || 0;
+  game.highest = game.topHigh[0] || 0;
+  game.longest = game.topLong[0] || 0;
+  saveRecords();
+  paintRecords();
   const marks = {
     far: game.feet > game.was.furthest,
-    high: feetFromAltitude(game.peakY) > game.was.highest,
+    high: high > game.was.highest,
     long: k.frame > game.was.longest,
     short: k.frame > 0 && (game.was.shortest === 0 || k.frame < game.was.shortest),
   };
@@ -1404,10 +1570,14 @@ function finish() {
   tallyEnding(k.cause);
   // Ride completed — not a mid-game reset.
   clearAttempt();
-  durationBestKind = 'long';
+  expandedBest = { far: false, high: false, long: false };
   lastBestMarks = marks;
   cardBestEl.replaceChildren();
-  appendPersonalStats(cardBestEl, marks, k.cause, { resets: true });
+  appendPersonalStats(cardBestEl, marks, k.cause, {
+    resets: true,
+    expandable: true,
+    awards: true,
+  });
   // Badges already awarded mid-flight / at launch on the HUD rail.
   paintHudRideBadges();
   if (game.furthest > game.was.furthest) plantPole(game.furthestX, game.furthest);
@@ -1756,6 +1926,7 @@ bindTap(document.querySelector('#start'), startAim);
 bindTap(document.querySelector('#again'), retry);
 bindTap(document.querySelector('#card-back'), goTitle);
 bindTap(document.querySelector('#pause-back'), goTitle);
+if (cardDismissEl) bindTap(cardDismissEl, dismissResultCard);
 bindTap(document.querySelector('#reload'), reloadField);
 if (showScoreEl) bindTap(showScoreEl, showResultCard);
 
@@ -1830,7 +2001,7 @@ wipeEl.addEventListener('pointerdown', (e) => {
 let touchAim = null;
 function fieldTarget(target) {
   // Cream dialog panels and the live bests chip absorb taps so they do not
-  // Start / Fire / toggle Shortest and launch in the same gesture.
+  // Start / Fire / launch in the same gesture.
   return !(target && target.closest && target.closest(
     'button, a, #wipe, #title .panel, #card .panel, #pause .panel, #records',
   ));
